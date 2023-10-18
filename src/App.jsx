@@ -1,42 +1,32 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+import "./App.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Layout from "./layouts/Layout";
+import Connexion from "./Pages/Connexion/Connexion";
+import Apropos from "./Pages/Apropos/Apropos";
 
 function App() {
-  const [listUtilisateurs, setListUtilisateurs] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function getUtilisateurs() {
-      try {
-        const brutResponse = await fetch("http://localhost:8080/utilisateurs");
-        if (!brutResponse.ok) {
-          throw new Error('Erreur de réseau');
-        }
-        const response = await brutResponse.json();
-        setListUtilisateurs(response);
-        setLoading(false); // Marquez le chargement comme terminé
-      } catch (error) {
-        console.error('Une erreur s\'est produite :', error);
-        setLoading(false); // Assurez-vous de marquer le chargement comme terminé en cas d'erreur
-      }
-    }
-
-    getUtilisateurs();
-  }, []);
-
-  // Vous pouvez mapper la liste d'utilisateurs pour les afficher
-  const utilisateursItems = listUtilisateurs.map((utilisateur, index) => (
-    <li key={index}>{utilisateur.nom} {utilisateur.prenom}</li>
-  ));
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <Connexion />,
+      children: [
+        {
+          path: "/apropos",
+          element: <Apropos />,
+        },
+        {
+          path: "/accueil",
+          element: <Layout />,
+        },
+      ],
+    },
+  ]);
 
   return (
-    <div>
-      {loading ? (
-        <p>Chargement en cours...</p>
-      ) : (
-        <div>{utilisateursItems}</div>
-      )}
-    </div>
+    <>
+      <RouterProvider router={router} />
+    </>
   );
 }
 
