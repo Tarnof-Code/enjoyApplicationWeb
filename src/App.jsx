@@ -2,14 +2,16 @@ import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layouts/Layout";
-import Connexion from "./Pages/Connexion/Connexion";
+import ErrorPage from "./error-page";
 import Apropos from "./Pages/Apropos/Apropos";
+import Accueil from "./Pages/Accueil/Accueil";
 
 function App() {
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <Connexion />,
+      element: <Layout />,
+      errorElement: <ErrorPage />,
       children: [
         {
           path: "/apropos",
@@ -17,7 +19,7 @@ function App() {
         },
         {
           path: "/accueil",
-          element: <Layout />,
+          element: <Accueil />,
         },
       ],
     },
