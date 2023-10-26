@@ -6,13 +6,12 @@ import { useSelector } from "react-redux";
 function Accueil() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const token = useSelector((state) => state.jwt.jwt);
+  const jwtToken = useSelector((state) => state.jwt.jwt);
 
   useEffect(() => {
     async function getUtilisateurs() {
-      console.log(token);
       try {
-        const response = await fetchUtilisateurs(token);
+        const response = await fetchUtilisateurs(jwtToken);
         setListUtilisateurs(response);
         setLoading(false);
       } catch (error) {

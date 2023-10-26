@@ -9,6 +9,7 @@ function Connexion() {
     email: "",
     motDePasse: "",
   });
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   //  const dispatch = useDispatch();
@@ -23,7 +24,7 @@ function Connexion() {
     }
   };
 
-  if (isLoggedIn) return <Navigate to="/accueil" />;
+  if (isLoggedIn) return <Navigate to="/profil" />;
 
   return (
     <div className={styles.main}>

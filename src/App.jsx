@@ -5,6 +5,7 @@ import Layout from "./layouts/Layout";
 import ErrorPage from "./error-page";
 import Apropos from "./Pages/Apropos/Apropos";
 import Accueil from "./Pages/Accueil/Accueil";
+import Profil from "./Pages/Profil/Profil";
 
 function App() {
   const router = createBrowserRouter([
@@ -20,6 +21,10 @@ function App() {
         {
           path: "/accueil",
           element: <Accueil />,
+        },
+        {
+          path: "/profil",
+          element: <Profil />,
         },
       ],
     },
