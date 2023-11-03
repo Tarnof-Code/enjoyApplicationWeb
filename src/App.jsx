@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./error-page";
 import Apropos from "./Pages/Apropos/Apropos";
-import Accueil from "./Pages/Accueil/Accueil";
+import Liste_utilisateurs from "./Pages/Liste_utilisateurs/Liste_utilisateurs";
 import Profil from "./Pages/Profil/Profil";
 
 function App() {
@@ -19,8 +19,8 @@ function App() {
           element: <Apropos />,
         },
         {
-          path: "/accueil",
-          element: <Accueil />,
+          path: "/liste_utilisateurs",
+          element: <Liste_utilisateurs />,
         },
         {
           path: "/profil",

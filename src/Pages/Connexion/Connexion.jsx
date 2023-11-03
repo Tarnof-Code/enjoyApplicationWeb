@@ -1,30 +1,40 @@
 import React, { useState } from "react";
 import { Form, FormGroup, Label, Input, Button } from "reactstrap";
-import { loginUser } from "../../api/connexionApi";
 import { Navigate } from "react-router-dom";
 import styles from "./Connexion.module.scss";
+import { accountService } from "../../services/account.service";
+import { useNavigate } from "react-router-dom";
 
 function Connexion() {
-  const [formData, setFormData] = useState({
+  let navigate = useNavigate();
+
+  const [credentials, setCredentials] = useState({
     email: "",
     motDePasse: "",
   });
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  //  const dispatch = useDispatch();
+  const onChange = (e) => {
+    setCredentials({
+      ...credentials,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleLogin = async () => {
     try {
-      const response = await loginUser(formData);
-      console.log("Connexion réussie", response);
-      setIsLoggedIn(true);
+      const response = await accountService
+        .login(credentials)
+        .then((response) => {
+          accountService.saveAccessToken(response.data.access_token);
+          navigate("/profil", { replace: true });
+        });
+      console.log("Connexion réussie");
     } catch (error) {
       console.error("Erreur lors de la connexion", error);
     }
   };
 
-  if (isLoggedIn) return <Navigate to="/profil" />;
+  if (accountService.isLogged()) return <Navigate to="/profil" />;
 
   return (
     <div className={styles.main}>
@@ -37,21 +47,17 @@ function Connexion() {
             name="email"
             placeholder="Renseignez votre email"
             type="email"
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
+            onChange={onChange}
           />
         </FormGroup>
         <FormGroup>
           <Label for="passwordConnexion">Mot de passe</Label>
           <Input
             id="passwordConnexion"
-            name="password"
+            name="motDePasse"
             placeholder="Renseignez votre mot de passe"
             type="password"
-            onChange={(e) =>
-              setFormData({ ...formData, motDePasse: e.target.value })
-            }
+            onChange={onChange}
           />
         </FormGroup>
         <Button onClick={handleLogin}>Se connecter</Button>

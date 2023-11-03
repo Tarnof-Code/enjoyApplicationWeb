@@ -1,28 +1,29 @@
 import styles from "./Profil.module.scss";
-import { useEffect, useState } from "react";
-import { fetchProfil } from "../../api/utilisateursApi";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
 import formaterDate from "../../Helpers/formaterDate";
+import { accountService } from "../../services/account.service";
+import { utilisateurService } from "../../services/utilisateur.service";
+import { Navigate } from "react-router-dom";
 
 function Profil() {
   const [loading, setLoading] = useState(true);
-  const jwtToken = useSelector((state) => state.jwt.jwt);
   const [utilisateur, setUtilisateur] = useState(null);
 
   useEffect(() => {
     async function getProfil() {
       try {
-        const response = await fetchProfil(jwtToken);
-        setUtilisateur(response);
+        const response = await utilisateurService.getUser();
+        setUtilisateur(response.data);
         setLoading(false);
       } catch (error) {
         console.error("Une erreur s'est produite :", error);
         setLoading(false);
       }
     }
-
     getProfil();
-  }, [jwtToken]);
+  }, []);
+
+  //  if (!accountService.isLogged()) return <Navigate to="/" />;
 
   return (
     <div>

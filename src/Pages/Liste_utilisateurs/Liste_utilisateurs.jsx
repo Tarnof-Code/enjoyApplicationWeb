@@ -1,7 +1,7 @@
-import styles from "./Accueil.module.scss";
+import styles from "./Liste_utilisateurs.module.scss";
 import { useEffect, useState } from "react";
-import { fetchUtilisateurs } from "../../api/utilisateursApi";
 import { useSelector } from "react-redux";
+import { utilisateurService } from "../../services/utilisateur.service";
 
 function Accueil() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
@@ -11,8 +11,8 @@ function Accueil() {
   useEffect(() => {
     async function getUtilisateurs() {
       try {
-        const response = await fetchUtilisateurs(jwtToken);
-        setListUtilisateurs(response);
+        const response = await utilisateurService.getAllUsers();
+        setListUtilisateurs(response.data);
         setLoading(false);
       } catch (error) {
         console.error("Une erreur s'est produite :", error);
