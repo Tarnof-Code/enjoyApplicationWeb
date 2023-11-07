@@ -23,7 +23,7 @@ function Profil() {
     getProfil();
   }, []);
 
-  //  if (!accountService.isLogged()) return <Navigate to="/" />;
+  if (!accountService.isLogged()) return <Navigate to="/" />;
 
   return (
     <div>

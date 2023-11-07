@@ -58,9 +58,8 @@ let getTokenInfo = () => {
 }
 
 let refreshAccessToken = async () => {
+    logout();
     const response = await Axios.post('/auth/refresh-token')
-    console.log(response.data.access_token)
-
     return response
 }
 

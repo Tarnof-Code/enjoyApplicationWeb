@@ -21,19 +21,16 @@ Axios.interceptors.request.use(request => {
 
 // Intercepteur de réponse API pour vérification de la session
 Axios.interceptors.response.use(response => {
-    return response
-}, error => {
+    return response;
+}, async error => {
     if (error.response.status === 401) {
-        accountService.logout()
-        const response = accountService
-            .refreshAccessToken()
-            .then((response) => {
-                accountService.saveAccessToken(response.data.access_token);
-            })
-        //   window.location = '/'
+        const refreshResponse = await accountService.refreshAccessToken();
+        accountService.saveAccessToken(refreshResponse.data.access_token);
+        return Axios(error.config);
     } else {
-        return Promise.reject(error)
+        return Promise.reject(error);
     }
-})
+});
+
 
 export default Axios
