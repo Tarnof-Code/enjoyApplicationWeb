@@ -30,6 +30,7 @@ let saveAccessToken = (access_token) => {
  */
 let logout = () => {
     localStorage.removeItem('access_token')
+    window.location.href = "/";
 }
 
 /**

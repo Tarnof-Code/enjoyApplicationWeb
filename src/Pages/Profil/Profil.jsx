@@ -1,6 +1,6 @@
 import styles from "./Profil.module.scss";
 import React, { useEffect, useState } from "react";
-import formaterDate from "../../Helpers/formaterDate";
+import formaterDate from "../../helpers/formaterDate";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { Navigate } from "react-router-dom";
