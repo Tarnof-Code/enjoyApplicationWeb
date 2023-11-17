@@ -1,10 +1,10 @@
 // redux/store.js
 import { configureStore } from '@reduxjs/toolkit';
-import jwtReducer from './auth/jwtSlice';
+import authReducer from './auth/authSlice';
 
 const store = configureStore({
     reducer: {
-        jwt: jwtReducer,
+        auth: authReducer,
     },
 });
 

@@ -1,5 +1,7 @@
 import Axios from './caller.service'
 import { accountService } from './account.service'
+import store from "../redux/store"
+import { setUser } from '../redux/auth/authSlice'
 
 
 let getAllUsers = async () => {
@@ -18,6 +20,9 @@ let getUser = async () => {
         const response = await Axios.get(`/utilisateurs/profil?email=${userEmail}`, {
             withCredentials: true
         })
+        if (response) {
+            store.dispatch(setUser({ role: response.data.role }));
+        }
         return response
     } catch {
         throw new Error("access_token est manquant ou erreur de réseau")

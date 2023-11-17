@@ -4,6 +4,8 @@ import { Navigate } from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
 import { useNavigate } from "react-router-dom";
+import store from "../../redux/store";
+import { setUser } from "../../redux/auth/authSlice";
 
 function Connexion() {
   let navigate = useNavigate();
@@ -25,8 +27,9 @@ function Connexion() {
       const response = await accountService
         .login(credentials)
         .then((response) => {
+          console.log(response.data);
           accountService.saveAccessToken(response.data.access_token);
-          navigate("/profil", { replace: true });
+          navigate("/dashboard", { replace: true });
         });
       console.log("Connexion réussie");
     } catch (error) {
@@ -34,7 +37,7 @@ function Connexion() {
     }
   };
 
-  if (accountService.isLogged()) return <Navigate to="/profil" />;
+  if (accountService.isLogged()) return <Navigate to="/dashboard" />;
 
   return (
     <div className={styles.main}>

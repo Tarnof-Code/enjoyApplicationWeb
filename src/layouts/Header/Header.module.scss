@@ -8,9 +8,10 @@
 .navbar {
   background-color: #121851;
   color: white;
-  padding: 1em 2em;
+  padding: 0.3em 2em;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .brand {
@@ -26,4 +27,12 @@
     color: #f94a56;
     cursor: pointer;
   }
+  margin-right: 1em;
+  font-weight: 100;
+  padding: 0%;
+}
+
+.sous_menu {
+  color: black;
+  font-weight: 400;
 }

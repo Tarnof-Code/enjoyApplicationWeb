@@ -25,6 +25,7 @@ Axios.interceptors.response.use(response => {
 }, async error => {
     if (error.response.status === 401) {
         const refreshResponse = await accountService.refreshAccessToken();
+        console.log(refreshResponse)
         accountService.saveAccessToken(refreshResponse.data.access_token);
         return Axios(error.config);
     } else {
