@@ -21,6 +21,7 @@
     "react-router-dom": "^6.17.0",
     "reactstrap": "^9.2.0",
     "redux": "^4.2.1",
+    "redux-persist": "^6.0.0",
     "sass": "^1.69.3",
     "universal-cookie": "^6.1.1"
   },
