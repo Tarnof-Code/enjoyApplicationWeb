@@ -37,24 +37,29 @@ function Admin_header() {
               </Link>
             </NavItem>
             <NavItem>
-              <Link to={"/"} className={styles.link}>
-                Les séjours
+              <Link to={"/liste_utilisateurs"} className={styles.link}>
+                Les utilisateurs
               </Link>
             </NavItem>
-            <UncontrolledDropdown nav inNavbar>
+            {/* <UncontrolledDropdown nav inNavbar>
               <DropdownToggle nav caret className={styles.link}>
                 Utilisateurs
               </DropdownToggle>
               <DropdownMenu end>
                 <DropdownItem>
                   <Link to={"/liste_utilisateurs"} className={styles.sous_menu}>
-                    Tous
+                    Tous les utilisateurs
                   </Link>
                 </DropdownItem>
-                <DropdownItem>Directeurs</DropdownItem>
-                <DropdownItem>Animateurs</DropdownItem>
+                <DropdownItem>Les directeurs</DropdownItem>
+                <DropdownItem>Les animateurs</DropdownItem>
               </DropdownMenu>
-            </UncontrolledDropdown>
+            </UncontrolledDropdown> */}
+            <NavItem>
+              <Link to={"/"} className={styles.link}>
+                Les séjours
+              </Link>
+            </NavItem>
           </Nav>
           <NavLink onClick={accountService.logout} className={styles.link}>
             Se déconnecter
