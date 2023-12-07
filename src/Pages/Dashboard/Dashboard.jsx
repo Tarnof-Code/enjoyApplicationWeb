@@ -14,7 +14,6 @@ function Profil() {
     async function getProfil() {
       try {
         const response = await utilisateurService.getUser();
-        console.log(response);
         setUtilisateur(response.data);
         setLoading(false);
       } catch (error) {
