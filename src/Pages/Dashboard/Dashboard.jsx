@@ -32,16 +32,46 @@ function Profil() {
         <p>Chargement en cours...</p>
       ) : (
         <div className={styles.main}>
-          <h1>Mon profil</h1>
-          <ul>
-            <li>{utilisateur.nom}</li>
-            <li>{utilisateur.prenom}</li>
-            <li>{utilisateur.genre}</li>
-            <li>{utilisateur.email}</li>
-            <li>{utilisateur.telephone}</li>
-            <li>{utilisateur.role}</li>
-            <li>{formaterDate(utilisateur.dateNaissance)}</li>
-          </ul>
+          <h1 className={styles.title}>Mon profil</h1>
+          <table>
+            <tbody>
+              <tr>
+                <th>Nom</th>
+                <td>{utilisateur.nom}</td>
+              </tr>
+              <tr>
+                <th>Prénom</th>
+                <td>{utilisateur.prenom}</td>
+              </tr>
+              <tr>
+                <th>Genre</th>
+                <td>{utilisateur.genre}</td>
+              </tr>
+              <tr>
+                <th>Email</th>
+                <td>{utilisateur.email}</td>
+              </tr>
+              <tr>
+                <th>Téléphone</th>
+                <td>{utilisateur.telephone}</td>
+              </tr>
+              <tr>
+                <th>Role</th>
+                <td>{utilisateur.role}</td>
+              </tr>
+              <tr>
+                <th>Date de naissance</th>
+                <td>{formaterDate(utilisateur.dateNaissance)}</td>
+              </tr>
+              <tr>
+                <th>Compte valide jusqu'au</th>
+                <td>
+                  {formaterDate(utilisateur.dateExpirationRefreshToken * 1000)}
+                  {/*  x1000 pour mettre en millisecondes */}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
     </div>

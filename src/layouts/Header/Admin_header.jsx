@@ -40,7 +40,7 @@ function Admin_header() {
               </NavLink>
             </NavItem>
             <NavItem className={styles.navItemMargin}>
-              <NavLink to={"/liste_utilisateurs"} className={styles.link}>
+              <NavLink to={"/"} className={styles.link}>
                 <div className={styles.iconWithText}>
                   <FaSuitcaseRolling size={20} />
                   <span>Les séjours</span>

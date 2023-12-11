@@ -1,4 +1,5 @@
 import styles from "./Liste_utilisateurs.module.scss";
+import "@fontsource/dancing-script";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { utilisateurService } from "../../services/utilisateur.service";
@@ -8,7 +9,6 @@ import calculerAge from "../../helpers/calculerAge";
 function Accueil() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const roleUser = useSelector((state) => state.auth.role);
 
   // Ajoutez les états de filtre ici
   const [nomFilter, setNomFilter] = useState("");
@@ -18,12 +18,14 @@ function Accueil() {
   const [emailFilter, setEmailFilter] = useState("");
   const [telephoneFilter, setTelephoneFilter] = useState("");
   const [ageFilter, setAgeFilter] = useState("");
+  const [expirationFilter, setExpirationFilter] = useState("");
 
   useEffect(() => {
     async function getUtilisateurs() {
       try {
         const response = await utilisateurService.getAllUsers();
         setListUtilisateurs(response.data);
+        console.log(response.data);
         setLoading(false);
       } catch (error) {
         console.error("Une erreur s'est produite :", error);
@@ -35,16 +37,26 @@ function Accueil() {
   }, []);
 
   // Filtrez la liste des utilisateurs avant de la mapper en lignes de tableau
-  const filteredUtilisateurs = listUtilisateurs.filter(
-    (utilisateur) =>
+  const filteredUtilisateurs = listUtilisateurs.filter((utilisateur) => {
+    const isValide =
+      expirationFilter === "Valide" &&
+      new Date(utilisateur.accountDateExpiration * 1000) > new Date();
+
+    const isExpire =
+      expirationFilter === "Expiré" &&
+      new Date(utilisateur.accountDateExpiration * 1000) <= new Date();
+
+    return (
       utilisateur.nom.toLowerCase().includes(nomFilter.toLowerCase()) &&
       utilisateur.prenom.toLowerCase().includes(prenomFilter.toLowerCase()) &&
       utilisateur.role.includes(roleFilter) &&
       utilisateur.genre.includes(genreFilter) &&
       utilisateur.email.toLowerCase().includes(emailFilter.toLowerCase()) &&
       utilisateur.telephone.toString().includes(telephoneFilter) &&
-      calculerAge(utilisateur.dateNaissance) >= ageFilter
-  );
+      calculerAge(utilisateur.dateNaissance) >= ageFilter &&
+      (expirationFilter === "" || isValide || isExpire)
+    );
+  });
 
   const utilisateursItems = filteredUtilisateurs.map((utilisateur, index) => (
     <tr key={index}>
@@ -56,17 +68,17 @@ function Accueil() {
       <td>{utilisateur.genre}</td>
       <td>{utilisateur.email}</td>
       <td>{utilisateur.telephone}</td>
+      <td>{formaterDate(utilisateur.accountDateExpiration * 1000)}</td>
     </tr>
   ));
 
-  console.log("salut " + roleUser);
   return (
     <div>
       {loading ? (
         <p>Chargement en cours...</p>
       ) : (
         <div className={styles.main}>
-          <h1 style={{ marginBottom: "1em" }}>Liste des Utilisateurs</h1>
+          <h1 className={styles.title}>Liste des Utilisateurs</h1>
           <table className="table">
             <thead>
               <tr>
@@ -77,6 +89,7 @@ function Accueil() {
                 <th>Genre</th>
                 <th>Email</th>
                 <th>Téléphone</th>
+                <th>Validité</th>
               </tr>
               <tr>
                 <th>
@@ -142,6 +155,16 @@ function Accueil() {
                     value={telephoneFilter}
                     onChange={(e) => setTelephoneFilter(e.target.value)}
                   />
+                </th>
+                <th>
+                  <select
+                    value={expirationFilter}
+                    onChange={(e) => setExpirationFilter(e.target.value)}
+                  >
+                    <option value="">Tous</option>
+                    <option value="Valide">Valides</option>
+                    <option value="Expiré">Expirés</option>
+                  </select>
                 </th>
               </tr>
             </thead>
