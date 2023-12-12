@@ -29,7 +29,7 @@ function Connexion() {
         .then((response) => {
           console.log(response.data);
           accountService.saveAccessToken(response.data.access_token);
-          navigate("/dashboard", { replace: true });
+          navigate("/profil", { replace: true });
         });
       console.log("Connexion réussie");
     } catch (error) {
@@ -37,7 +37,7 @@ function Connexion() {
     }
   };
 
-  if (accountService.isLogged()) return <Navigate to="/dashboard" />;
+  if (accountService.isLogged()) return <Navigate to="/profil" />;
 
   return (
     <div className={styles.main}>

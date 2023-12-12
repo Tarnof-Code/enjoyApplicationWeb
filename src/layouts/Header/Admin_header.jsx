@@ -3,24 +3,14 @@ import "@fontsource/dancing-script";
 import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { accountService } from "../../services/account.service";
-import {
-  Collapse,
-  Navbar,
-  NavbarToggler,
-  NavbarBrand,
-  Nav,
-  NavItem,
-  UncontrolledDropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
-  NavbarText,
-} from "reactstrap";
+import { useSelector } from "react-redux";
+import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
 import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling } from "react-icons/fa"; // Importez l'icône que vous souhaitez utiliser
 
 function Admin_header() {
   const [isOpen, setIsOpen] = useState(false);
   const toggle = () => setIsOpen(!isOpen);
+  const prenom = useSelector((state) => state.auth.prenom);
 
   return (
     <header className={styles.main}>
@@ -53,7 +43,7 @@ function Admin_header() {
               <NavLink className={styles.link}>
                 <div className={styles.iconWithText}>
                   <FaUser size={20} />
-                  <span>Mon compte</span>
+                  <span>Compte de {prenom}</span>
                 </div>
               </NavLink>
             </NavItem>

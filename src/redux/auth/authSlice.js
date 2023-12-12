@@ -7,13 +7,16 @@ const authSlice = createSlice({
     name: 'auth',
     initialState: {
         role: null,
+        prenom: null,
     },
     reducers: {
         setUser: (state, action) => {
             state.role = action.payload.role;
+            state.prenom = action.payload.prenom;
         },
         clearUser: (state) => {
             state.role = null;
+            state.prenom = null;
         },
     },
 });
@@ -21,6 +24,7 @@ const authSlice = createSlice({
 const persistConfig = {
     key: 'auth',
     storage,
+    whitelist: ['role', 'prenom'],
 };
 
 

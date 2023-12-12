@@ -40,16 +40,16 @@ function Accueil() {
   const filteredUtilisateurs = listUtilisateurs.filter((utilisateur) => {
     const isValide =
       expirationFilter === "Valide" &&
-      new Date(utilisateur.accountDateExpiration * 1000) > new Date();
+      new Date(utilisateur.dateExpirationCompte * 1000) > new Date();
 
     const isExpire =
       expirationFilter === "Expiré" &&
-      new Date(utilisateur.accountDateExpiration * 1000) <= new Date();
+      new Date(utilisateur.dateExpirationCompte * 1000) <= new Date();
 
     return (
       utilisateur.nom.toLowerCase().includes(nomFilter.toLowerCase()) &&
       utilisateur.prenom.toLowerCase().includes(prenomFilter.toLowerCase()) &&
-      utilisateur.role.includes(roleFilter) &&
+      (roleFilter === "" || utilisateur.role === roleFilter) &&
       utilisateur.genre.includes(genreFilter) &&
       utilisateur.email.toLowerCase().includes(emailFilter.toLowerCase()) &&
       utilisateur.telephone.toString().includes(telephoneFilter) &&
@@ -68,7 +68,7 @@ function Accueil() {
       <td>{utilisateur.genre}</td>
       <td>{utilisateur.email}</td>
       <td>{utilisateur.telephone}</td>
-      <td>{formaterDate(utilisateur.accountDateExpiration * 1000)}</td>
+      <td>{formaterDate(utilisateur.dateExpirationCompte)}</td>
     </tr>
   ));
 

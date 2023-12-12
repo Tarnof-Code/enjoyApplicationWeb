@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./error-page";
 import Liste_utilisateurs from "./Pages/Liste_utilisateurs/Liste_utilisateurs";
-import Dashboard from "./Pages/Dashboard/Dashboard";
+import Profil from "./Pages/Profil/Profil";
 
 function App() {
   const router = createBrowserRouter([
@@ -18,8 +18,8 @@ function App() {
           element: <Liste_utilisateurs />,
         },
         {
-          path: "/dashboard",
-          element: <Dashboard />,
+          path: "/profil",
+          element: <Profil />,
         },
       ],
     },

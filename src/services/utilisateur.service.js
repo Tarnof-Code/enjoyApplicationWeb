@@ -7,6 +7,11 @@ import { setUser } from '../redux/auth/authSlice'
 let getAllUsers = async () => {
     try {
         let response = await Axios.get('/utilisateurs/liste');
+        response.data.forEach(user => {
+            if (user.dateExpirationCompte) {
+                user.dateExpirationCompte = user.dateExpirationCompte * 1000;
+            }
+        });
         return response;
     } catch {
         throw new Error('Impossible de récupérer la liste des utilisateurs')
@@ -21,9 +26,11 @@ let getUser = async () => {
             withCredentials: true
         })
         if (response) {
-            store.dispatch(setUser({ role: response.data.role }));
+            response.data.dateExpirationCompte = response.data.dateExpirationCompte * 1000;
+            store.dispatch(setUser({ role: response.data.role, prenom: response.data.prenom }));
+            return response
         }
-        return response
+
     } catch {
         throw new Error("access_token est manquant ou erreur de réseau")
     }
