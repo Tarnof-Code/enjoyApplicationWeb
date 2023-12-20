@@ -2,6 +2,7 @@ import Axios from './caller.service'
 import { accountService } from './account.service'
 import store from "../redux/store"
 import { setUser } from '../redux/auth/authSlice'
+import { useSelector } from "react-redux";
 
 
 let getAllUsers = async () => {
@@ -27,7 +28,7 @@ let getUser = async () => {
         })
         if (response) {
             response.data.dateExpirationCompte = response.data.dateExpirationCompte * 1000;
-            store.dispatch(setUser({ role: response.data.role, prenom: response.data.prenom }));
+            store.dispatch(setUser({ role: response.data.role, prenom: response.data.prenom, genre: response.data.genre }));
             return response
         }
 
@@ -36,6 +37,59 @@ let getUser = async () => {
     }
 }
 
+let getRoleByGenre = (role, genre) => {
+    switch (genre) {
+        case "Feminin":
+            switch (role) {
+                case "ADMIN":
+                    role = "ADMINISTRATRICE";
+                    break;
+                case "DIRECTION":
+                    role = "DIRECTRICE";
+                    break;
+                case "ADJ_DIRECTION":
+                    role = "ADJOINTE";
+                    break;
+                case "ANIM":
+                    role = "ANIMATRICE";
+                    break;
+                case "ANIM_AS":
+                    role = "ANIMATRICE_AS";
+                    break;
+                default:
+                    break;
+            }
+            break;
+
+        case "Masculin":
+            switch (role) {
+                case "ADMIN":
+                    role = "ADMINISTRATEUR";
+                    break;
+                case "DIRECTION":
+                    role = "DIRECTEUR";
+                    break;
+                case "ADJ_DIRECTION":
+                    role = "ADJOINT";
+                    break;
+                case "ANIM":
+                    role = "ANIMATEUR";
+                    break;
+                case "ANIM_AS":
+                    role = "ANIMATEUR_AS";
+                    break;
+                default:
+                    break;
+            }
+            break;
+
+        default:
+            break;
+    }
+    return role;
+};
+
+
 export const utilisateurService = {
-    getAllUsers, getUser
+    getAllUsers, getUser, getRoleByGenre
 }

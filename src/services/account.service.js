@@ -1,6 +1,9 @@
 import Axios from './caller.service'
 import { jwtDecode } from 'jwt-js-decode';
 import Cookies from 'universal-cookie';
+import store from "../redux/store";
+import { clearUser } from "../redux/auth/authSlice";
+
 
 const cookies = new Cookies();
 
@@ -30,6 +33,7 @@ let saveAccessToken = (access_token) => {
  */
 let logout = () => {
     localStorage.removeItem('access_token')
+    store.dispatch(clearUser());
     window.location.href = "/";
 }
 

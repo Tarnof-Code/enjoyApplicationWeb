@@ -1,5 +1,4 @@
-import Admin_header from "./Header/Admin_header";
-import User_header from "./Header/User_header";
+import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
 import Connexion from "../Pages/Connexion/Connexion";
 import { Outlet } from "react-router-dom";
@@ -12,10 +11,9 @@ function Layout() {
 
   return (
     <>
-      {pathname !== "/" && role == "ADMIN" && <Admin_header />}
-      {pathname !== "/" && role !== "ADMIN" && <User_header />}
+      {pathname !== "/" && role !== null && <Header />}
       {pathname === "/" ? <Connexion /> : <Outlet />}
-      {pathname !== "/" && <Footer />}
+      {/* {pathname !== "/" && <Footer />} */}
     </>
   );
 }

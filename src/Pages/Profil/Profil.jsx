@@ -17,7 +17,6 @@ function Profil() {
     { display: "Genre", property: "genre" },
     { display: "Email", property: "email" },
     { display: "N° de téléphone", property: "telephone" },
-    { display: "Rôle", property: "role" },
     { display: "Date de naissance", property: "dateNaissance", isDate: true },
     {
       display: "Compte valide jusqu'au",
