@@ -22,8 +22,8 @@ let getAllUsers = async () => {
 let getUser = async () => {
     try {
         let token_infos = accountService.getTokenInfo();
-        const userEmail = token_infos.payload.sub;
-        const response = await Axios.get(`/utilisateurs/profil?email=${userEmail}`, {
+        const tokenId = token_infos.payload.sub;
+        const response = await Axios.get(`/utilisateurs/profil?tokenId=${tokenId}`, {
             withCredentials: true
         })
         if (response) {

@@ -8,7 +8,7 @@
   height: auto;
   .title {
     font-family: $police_titres;
-    font-size: 0.8rem;
+    font-size: 1rem;
     margin-top: 6rem;
     margin-left: 2rem;
     text-align: center;
@@ -21,8 +21,9 @@
         0 1px 2px 0 rgba(0, 0, 0, 0.06);
       margin-top: 3rem;
       .input {
-        background-color: rgb(254, 254, 218);
-        border: solid 1px rgb(230, 230, 230);
+        border: solid 2px #1976d2;
+        border-radius: 7px;
+        padding-left: 1em;
         width: 90%;
       }
       .infos_edit {

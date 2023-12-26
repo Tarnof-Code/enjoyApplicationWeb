@@ -97,6 +97,7 @@ function Profil() {
                         <Col xs={12} md={12} lg={5}>
                           <h6 className="mb-0">{mapping.display}</h6>
                         </Col>
+
                         <Col
                           xs={10}
                           md={10}
@@ -118,6 +119,20 @@ function Profil() {
                                 showYearDropdown
                                 scrollableYearDropdown
                               />
+                            ) : mapping.property === "genre" ? (
+                              <select
+                                className={`${styles.input}`}
+                                value={utilisateur[mapping.property]}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    mapping.property,
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                <option value="Féminin">Féminin</option>
+                                <option value="Masculin">Masculin</option>
+                              </select>
                             ) : (
                               <input
                                 className={`${styles.input}`}
