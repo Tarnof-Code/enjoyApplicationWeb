@@ -1,11 +1,13 @@
-.container {
+@import "../../variables";
+
+.main {
   display: flex;
   justify-content: center;
   padding-bottom: 14rem;
   background-color: #e2e8f0;
   height: auto;
   .title {
-    font-family: "Dancing Script";
+    font-family: $police_titres;
     font-size: 0.8rem;
     margin-top: 6rem;
     margin-left: 2rem;
@@ -18,10 +20,6 @@
       box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
         0 1px 2px 0 rgba(0, 0, 0, 0.06);
       margin-top: 3rem;
-      .button {
-        background: #f94a56;
-        border: none;
-      }
       .input {
         background-color: rgb(254, 254, 218);
         border: solid 1px rgb(230, 230, 230);
@@ -38,9 +36,17 @@
       .infos_value {
         color: #6c757d;
       }
-
       .separation_line {
         color: #6c757d;
+      }
+      .btn_box {
+        display: flex;
+        justify-content: center;
+        gap: 1em;
+      }
+      .btn_valider {
+        background: $vert_principal;
+        @include hover-btn($vert_principal, 5);
       }
       .photo_card {
         display: flex;

@@ -1,0 +1,12 @@
+@import "./variables";
+
+a {
+  text-decoration: inherit;
+}
+
+.btn {
+  background: $rouge_principal;
+  border: none;
+  min-width: 5em;
+  @include hover-btn($rouge_principal, 15);
+}

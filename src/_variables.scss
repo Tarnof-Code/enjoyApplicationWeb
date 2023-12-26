@@ -1,0 +1,15 @@
+$bleu_principal: #242e89;
+$rouge_principal: #f94a56;
+$vert_principal: #00b894;
+$police_titres: "Dancing Script";
+
+@mixin hover-btn($color, $pourcentage) {
+  background: $color;
+  &:hover {
+    background: assombrir($color, $pourcentage);
+  }
+}
+
+@function assombrir($couleur, $pourcentage) {
+  @return darken($couleur, $pourcentage);
+}

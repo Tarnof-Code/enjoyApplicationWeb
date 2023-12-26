@@ -1,3 +1,5 @@
+@import "../../variables";
+
 .main {
   // overflow: hidden;
   position: fixed;
@@ -7,7 +9,7 @@
 }
 
 .navbar {
-  background-color: #242e89;
+  background-color: $bleu_principal;
   opacity: 99%;
   color: white;
   padding: 0.1em 2em;
@@ -18,7 +20,7 @@
 }
 
 .brand {
-  font-family: "Dancing Script";
+  font-family: $police_titres;
   color: white;
   font-size: 2.5em;
   margin-right: 2em;
@@ -31,7 +33,7 @@
 .link {
   color: white;
   &:hover {
-    color: #f94a56;
+    color: $rouge_principal;
     cursor: pointer;
   }
   font-weight: 450;

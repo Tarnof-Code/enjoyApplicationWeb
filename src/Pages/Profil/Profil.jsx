@@ -20,8 +20,8 @@ function Profil() {
   const [utilisateur, setUtilisateur] = useState(null);
   const [initialUtilisateur, setInitialUtilisateur] = useState(null);
   const propertyMappings = [
-    { display: "Nom", property: "nom" },
     { display: "Prénom", property: "prenom" },
+    { display: "Nom", property: "nom" },
     { display: "Genre", property: "genre" },
     { display: "Email", property: "email" },
     { display: "N° de téléphone", property: "telephone" },
@@ -63,7 +63,7 @@ function Profil() {
   if (!accountService.isLogged()) return <Navigate to="/" />;
 
   return (
-    <Container fluid className={styles.container}>
+    <Container fluid className={styles.main}>
       {loading ? (
         <p>Chargement en cours...</p>
       ) : (
@@ -82,7 +82,7 @@ function Profil() {
                     alt=""
                     className={styles.profile_img}
                   ></img>
-                  <Button className={styles.button} target="__blank" href="">
+                  <Button className="button" target="__blank" href="">
                     Modifier
                   </Button>
                 </CardBody>
@@ -153,15 +153,20 @@ function Profil() {
                     </div>
                   ))}
                   <Row>
-                    <Col sm={12} className="text-center">
-                      <Button
-                        className={styles.button}
-                        target="__blank"
-                        onClick={handleCancel}
-                      >
-                        Annuler
-                      </Button>
-                    </Col>
+                    {editingField !== null && (
+                      <Col sm={12} className={styles.btn_box}>
+                        <Button target="__blank" onClick={handleCancel}>
+                          Annuler
+                        </Button>
+                        <Button
+                          className={styles.btn_valider}
+                          target="__blank"
+                          onClick={handleCancel}
+                        >
+                          Valider
+                        </Button>
+                      </Col>
+                    )}
                   </Row>
                 </CardBody>
               </Card>

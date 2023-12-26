@@ -1,10 +1,12 @@
+@import "../../variables";
+
 .main {
   margin: 7em 3em;
   font-size: small;
 }
 
 .title {
-  font-family: "Dancing Script";
+  font-family: $police_titres;
   font-size: 3em;
   margin-bottom: 0.3em;
 }
