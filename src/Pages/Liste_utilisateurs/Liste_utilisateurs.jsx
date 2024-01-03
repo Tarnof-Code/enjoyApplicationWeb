@@ -127,10 +127,10 @@ function Accueil() {
                       onChange={(e) => setRoleFilter(e.target.value)}
                     >
                       <option value="">Tous</option>
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="DIRECTEUR">DIRECTEUR</option>
-                      <option value="ANIMATEUR">ANIMATEUR</option>
-                      <option value="ANIMATEUR_AS">ANIMATEUR_AS</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="DIRECTION">Directeurs</option>
+                      <option value="ANIM">Animateurs</option>
+                      <option value="ANIM_AS">Anim_AS</option>
                     </select>
                   </th>
                   <th>
@@ -140,7 +140,7 @@ function Accueil() {
                     >
                       <option value="">Tous</option>
                       <option value="Masculin">Masculin</option>
-                      <option value="Feminin">Féminin</option>
+                      <option value="Féminin">Féminin</option>
                     </select>
                   </th>
                   <th>

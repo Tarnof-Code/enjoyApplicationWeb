@@ -37,6 +37,16 @@ let getUser = async () => {
     }
 }
 
+let updateUser = async (utilisateur) => {
+    let token_infos = accountService.getTokenInfo();
+    const tokenId = token_infos.payload.sub;
+    utilisateur.tokenId = tokenId;
+    const response = await Axios.post('/utilisateurs/modifierInfos', utilisateur, {
+        withCredentials: true
+    })
+    return response
+}
+
 let getRoleByGenre = (role, genre) => {
     switch (genre) {
         case "Feminin":
@@ -91,5 +101,5 @@ let getRoleByGenre = (role, genre) => {
 
 
 export const utilisateurService = {
-    getAllUsers, getUser, getRoleByGenre
+    getAllUsers, getUser, getRoleByGenre, updateUser
 }

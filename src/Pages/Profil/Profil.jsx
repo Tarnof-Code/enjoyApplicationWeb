@@ -32,6 +32,7 @@ function Profil() {
       isDate: true,
     },
   ];
+  const [editingField, setEditingField] = useState(null);
 
   useEffect(() => {
     async function getProfil() {
@@ -48,8 +49,6 @@ function Profil() {
     getProfil();
   }, []);
 
-  const [editingField, setEditingField] = useState(null);
-
   const handleInputChange = (property, value) => {
     const updatedUser = { ...utilisateur, [property]: value };
     setUtilisateur(updatedUser);
@@ -58,6 +57,17 @@ function Profil() {
   const handleCancel = () => {
     setUtilisateur(initialUtilisateur);
     setEditingField(null);
+  };
+
+  const handleValidate = async () => {
+    try {
+      const response = await utilisateurService.updateUser(utilisateur);
+      console.log("Utilisateur mis à jour :", response.data);
+      setEditingField(null);
+      setInitialUtilisateur(utilisateur);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'utilisateur :", error);
+    }
   };
 
   if (!accountService.isLogged()) return <Navigate to="/" />;
@@ -176,7 +186,7 @@ function Profil() {
                         <Button
                           className={styles.btn_valider}
                           target="__blank"
-                          onClick={handleCancel}
+                          onClick={handleValidate}
                         >
                           Valider
                         </Button>
