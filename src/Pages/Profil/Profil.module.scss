@@ -5,7 +5,7 @@
   justify-content: center;
   padding-bottom: 14rem;
   background-color: #e2e8f0;
-  height: auto;
+  height: 100vh;
   .title {
     font-family: $police_titres;
     font-size: 1rem;
@@ -23,7 +23,8 @@
       .input {
         border: solid 2px #1976d2;
         border-radius: 7px;
-        padding-left: 1em;
+        //   padding-left: 1em;
+        padding-inline: 1em;
         width: 90%;
       }
       .infos_edit {
@@ -32,13 +33,20 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        cursor: pointer;
+        &:hover {
+          color: $rouge_principal;
+          cursor: pointer;
+        }
       }
       .infos_value {
         color: #6c757d;
       }
       .separation_line {
         color: #6c757d;
+      }
+      .error_box {
+        display: flex;
+        justify-content: center;
       }
       .btn_box {
         display: flex;

@@ -33,6 +33,7 @@ function Profil() {
     },
   ];
   const [editingField, setEditingField] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     async function getProfil() {
@@ -57,6 +58,7 @@ function Profil() {
   const handleCancel = () => {
     setUtilisateur(initialUtilisateur);
     setEditingField(null);
+    setErrorMessage(null);
   };
 
   const handleValidate = async () => {
@@ -66,7 +68,13 @@ function Profil() {
       setEditingField(null);
       setInitialUtilisateur(utilisateur);
     } catch (error) {
-      console.error("Erreur lors de la mise à jour de l'utilisateur :", error);
+      if (error.response.data.status === 400) {
+        setErrorMessage(error.response.data.message);
+      }
+      console.error(
+        "Erreur lors de la mise à jour de l'utilisateur :",
+        error.response.data.message
+      );
     }
   };
 
@@ -177,6 +185,11 @@ function Profil() {
                       <hr className={styles.separation_line} />
                     </div>
                   ))}
+                  {errorMessage !== null && (
+                    <p className={`errorMessage ${styles.error_box}`}>
+                      {errorMessage}
+                    </p>
+                  )}
                   <Row>
                     {editingField !== null && (
                       <Col sm={12} className={styles.btn_box}>

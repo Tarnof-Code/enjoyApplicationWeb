@@ -8,5 +8,12 @@ a {
   background: $rouge_principal;
   border: none;
   min-width: 5em;
+  font-weight: 600;
   @include hover-btn($rouge_principal, 15);
+}
+
+.errorMessage {
+  color: red;
+  font-weight: bold;
+  margin-top: 1em;
 }

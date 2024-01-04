@@ -12,12 +12,20 @@ const cookies = new Cookies();
  * @param {object} credentials 
  * @returns {Promise}
  */
-let login = async (credentials) => {
-    const response = await Axios.post('/auth/connexion', credentials, {
-        withCredentials: true
-    })
-    return response
-}
+const login = async (credentials) => {
+    try {
+        const response = await Axios.post('/auth/connexion', credentials, {
+            withCredentials: true,
+            headers: {
+                'X-Skip-Token-Refresh': true, // En tête personnalisée pour éviter l'interceptor
+            },
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 
 /**
  * Sauvegarde du token dans le localStorage

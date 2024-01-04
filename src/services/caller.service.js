@@ -23,15 +23,18 @@ Axios.interceptors.request.use(request => {
 Axios.interceptors.response.use(response => {
     return response;
 }, async error => {
-    if (error.response.status === 401) {
+    const originalRequest = error.config;
+
+    if (error.response.status === 401 && !originalRequest.headers['X-Skip-Token-Refresh']) { //Header personnalisé pour ne pas refresh-token
         const refreshResponse = await accountService.refreshAccessToken();
-        console.log(refreshResponse)
+        console.log(refreshResponse);
         accountService.saveAccessToken(refreshResponse.data.access_token);
-        return Axios(error.config);
+        return Axios(originalRequest);
     } else {
         return Promise.reject(error);
     }
 });
+
 
 
 export default Axios

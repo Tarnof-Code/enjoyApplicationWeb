@@ -38,14 +38,23 @@ let getUser = async () => {
 }
 
 let updateUser = async (utilisateur) => {
-    let token_infos = accountService.getTokenInfo();
-    const tokenId = token_infos.payload.sub;
-    utilisateur.tokenId = tokenId;
-    const response = await Axios.post('/utilisateurs/modifierInfos', utilisateur, {
-        withCredentials: true
-    })
-    return response
-}
+    try {
+        let token_infos = accountService.getTokenInfo();
+        const tokenId = token_infos.payload.sub;
+        utilisateur.tokenId = tokenId;
+        const response = await Axios.post('/utilisateurs/modifierInfos', utilisateur, {
+            withCredentials: true,
+            headers: {
+                'X-Skip-Token-Refresh': true, // En tête personnalisée pour éviter l'interceptor
+            },
+        });
+        return response;
+    } catch (error) {
+        //  console.error("Une erreur s'est produite lors de la mise à jour de l'utilisateur :", error.response.data.message);
+        throw error; // Vous pouvez choisir de rejeter à nouveau l'erreur ou de la traiter différemment selon vos besoins.
+    }
+};
+
 
 let getRoleByGenre = (role, genre) => {
     switch (genre) {

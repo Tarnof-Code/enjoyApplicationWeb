@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, FormGroup, Label, Input, Button } from "reactstrap";
+import { Form, FormGroup, Input, Button } from "reactstrap";
 import { Navigate } from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
@@ -15,6 +15,8 @@ function Connexion() {
     motDePasse: "",
   });
 
+  const [errorMessage, setErrorMessage] = useState(null);
+
   const onChange = (e) => {
     setCredentials({
       ...credentials,
@@ -24,16 +26,17 @@ function Connexion() {
 
   const handleLogin = async () => {
     try {
-      const response = await accountService
-        .login(credentials)
-        .then((response) => {
-          console.log(response.data);
-          accountService.saveAccessToken(response.data.access_token);
-          navigate("/profil", { replace: true });
-        });
-      console.log("Connexion réussie");
+      const response = await accountService.login(credentials);
+      console.log(response.data);
+      accountService.saveAccessToken(response.data.access_token);
+      navigate("/profil", { replace: true });
     } catch (error) {
       console.error("Erreur lors de la connexion", error);
+      if (error.response && error.response.status === 401) {
+        setErrorMessage("Email ou mot de passe incorrect");
+      } else {
+        setErrorMessage("Une erreur s'est produite lors de la connexion");
+      }
     }
   };
 
@@ -41,30 +44,36 @@ function Connexion() {
 
   return (
     <div className={styles.main}>
-      <h1>Connexion</h1>
-      <Form>
-        <FormGroup>
-          <Label for="emailConnexion">Email</Label>
-          <Input
-            id="emailConnexion"
-            name="email"
-            placeholder="Renseignez votre email"
-            type="email"
-            onChange={onChange}
-          />
-        </FormGroup>
-        <FormGroup>
-          <Label for="passwordConnexion">Mot de passe</Label>
-          <Input
-            id="passwordConnexion"
-            name="motDePasse"
-            placeholder="Renseignez votre mot de passe"
-            type="password"
-            onChange={onChange}
-          />
-        </FormGroup>
-        <Button onClick={handleLogin}>Se connecter</Button>
-      </Form>
+      <div className={styles.titre}>
+        <p>Enjoy</p>
+      </div>
+      <div className={styles.login}>
+        <h4>Connexion</h4>
+        <Form className={styles.form}>
+          <FormGroup className={styles.form_group}>
+            <Input
+              id="emailConnexion"
+              name="email"
+              placeholder="Email"
+              type="email"
+              onChange={onChange}
+            />
+          </FormGroup>
+          <FormGroup className={styles.form_group}>
+            <Input
+              id="passwordConnexion"
+              name="motDePasse"
+              placeholder="Mot de passe"
+              type="password"
+              onChange={onChange}
+            />
+          </FormGroup>
+          <Button className={styles.bouton} onClick={handleLogin}>
+            Se connecter
+          </Button>
+        </Form>
+        <p className="errorMessage">{errorMessage}</p>
+      </div>
     </div>
   );
 }
