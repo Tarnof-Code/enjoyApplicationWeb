@@ -2,12 +2,14 @@ import styles from "./Liste_utilisateurs.module.scss";
 import "@fontsource/dancing-script";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { utilisateurService } from "../../services/utilisateur.service";
-import formaterDate from "../../helpers/formaterDate";
-import calculerAge from "../../helpers/calculerAge";
-import Acces_non_autorise from "../Erreurs/Acces_non_autorise";
+import { utilisateurService } from "../../../services/utilisateur.service";
+import formaterDate from "../../../helpers/formaterDate";
+import calculerAge from "../../../helpers/calculerAge";
+import Acces_non_autorise from "../../Erreurs/Acces_non_autorise";
+import { Button, Row, Col } from "reactstrap";
+import { Link } from "react-router-dom";
 
-function Accueil() {
+function Liste_utilisateurs() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
   const [loading, setLoading] = useState(true);
   let role = useSelector((state) => state.auth.role);
@@ -39,7 +41,6 @@ function Accueil() {
       getUtilisateurs();
     }, []);
 
-    // Filtrez la liste des utilisateurs avant de la mapper en lignes de tableau
     const filteredUtilisateurs = listUtilisateurs.filter((utilisateur) => {
       const isValide =
         expirationFilter === "Valide" &&
@@ -81,7 +82,16 @@ function Accueil() {
           <p>Chargement en cours...</p>
         ) : (
           <div className={styles.main}>
-            <h1 className={styles.title}>Liste des Utilisateurs</h1>
+            <Row className={styles.head}>
+              <Col lg={5}>
+                <h1 className={styles.title}>Liste des Utilisateurs</h1>
+              </Col>
+              <Col lg={2}>
+                <Button tag={Link} to="/ajout_utilisateur">
+                  Ajouter un utilisateur
+                </Button>
+              </Col>
+            </Row>
             <table className="table">
               <thead>
                 <tr>
@@ -128,8 +138,8 @@ function Accueil() {
                     >
                       <option value="">Tous</option>
                       <option value="ADMIN">Admin</option>
-                      <option value="DIRECTION">Directeurs</option>
-                      <option value="ANIM">Animateurs</option>
+                      <option value="DIRECTION">Direction</option>
+                      <option value="ANIM">Anim</option>
                       <option value="ANIM_AS">Anim_AS</option>
                     </select>
                   </th>
@@ -164,7 +174,7 @@ function Accueil() {
                       value={expirationFilter}
                       onChange={(e) => setExpirationFilter(e.target.value)}
                     >
-                      <option value="">Tous</option>
+                      <option value="">Toutes</option>
                       <option value="Valide">Valides</option>
                       <option value="Expiré">Expirés</option>
                     </select>
@@ -182,4 +192,4 @@ function Accueil() {
   return <Acces_non_autorise />;
 }
 
-export default Accueil;
+export default Liste_utilisateurs;

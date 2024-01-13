@@ -58,7 +58,7 @@ function Admin_header() {
           )}
           <Nav navbar>
             <NavItem className={styles.navItemMargin}>
-              <NavLink className={styles.link}>
+              <NavLink to={"/profil"} className={styles.link}>
                 <div className={styles.iconWithText}>
                   <FaUser size={20} />
                   <span>

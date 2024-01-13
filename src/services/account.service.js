@@ -26,6 +26,19 @@ const login = async (credentials) => {
     }
 };
 
+let addUser = async (userInfos) => {
+    try {
+        const response = await Axios.post('/auth/inscription', userInfos, {
+            withCredentials: true,
+            headers: {
+                'X-Skip-Token-Refresh': true, // En tête personnalisée pour éviter l'interceptor
+            },
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+}
 
 /**
  * Sauvegarde du token dans le localStorage
@@ -78,5 +91,5 @@ let refreshAccessToken = async () => {
 
 // Déclaration des serivces pour import
 export const accountService = {
-    login, saveAccessToken, logout, isLogged, getToken, getTokenInfo, refreshAccessToken
+    login, addUser, saveAccessToken, logout, isLogged, getToken, getTokenInfo, refreshAccessToken
 }

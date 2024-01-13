@@ -3,7 +3,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./Pages/Erreurs/error-page";
-import Liste_utilisateurs from "./Pages/Liste_utilisateurs/Liste_utilisateurs";
+import Liste_utilisateurs from "./Pages/_Admin/Liste_utilisateurs/Liste_utilisateurs";
+import Ajout_utilisateur from "./Pages/_Admin/Ajout_utilisateur/Ajout_utilisateur";
 import Profil from "./Pages/Profil/Profil";
 
 function App() {
@@ -20,6 +21,10 @@ function App() {
         {
           path: "/profil",
           element: <Profil />,
+        },
+        {
+          path: "/ajout_utilisateur",
+          element: <Ajout_utilisateur />,
         },
       ],
     },

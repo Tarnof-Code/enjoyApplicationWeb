@@ -1,0 +1,53 @@
+@import "../../../variables";
+
+.main {
+  background-color: #e2e8f0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 3em;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  .titre {
+    font-family: $police_titres;
+    font-size: 2rem;
+  }
+  .addUserForm {
+    display: inline-block;
+    margin-top: 1.5rem;
+    background: #ffffff;
+    max-width: 35em;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    padding: 3em;
+    .form {
+      flex-wrap: wrap;
+      .form_group {
+        gap: 1rem;
+        align-items: end;
+        display: flex;
+        margin-bottom: 1em !important;
+        .label {
+          min-width: 9rem;
+          font-weight: 600;
+        }
+      }
+      .boutonBox {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1em;
+        .bouton {
+          margin-top: 1em;
+        }
+        .btn_valider {
+          margin-top: 1em;
+          background: $vert_principal;
+          @include hover-btn($vert_principal, 5);
+        }
+      }
+    }
+  }
+}

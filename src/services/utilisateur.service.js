@@ -12,6 +12,10 @@ let getAllUsers = async () => {
             if (user.dateExpirationCompte) {
                 user.dateExpirationCompte = user.dateExpirationCompte * 1000;
             }
+            user.nom = user.nom.toUpperCase();
+        });
+        response.data.sort((a, b) => {
+            return a.nom.toLocaleLowerCase().localeCompare(b.nom.toLocaleLowerCase());
         });
         return response;
     } catch {

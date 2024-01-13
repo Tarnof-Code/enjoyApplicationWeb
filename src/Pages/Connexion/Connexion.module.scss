@@ -4,7 +4,7 @@
   // background: $bleu_principal;
   background: linear-gradient($bleu_principal, #5c55d8);
   // background: linear-gradient(135deg, #1b8af1, #b58ded);
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
   text-align: center;
   padding-top: 3em;
@@ -30,6 +30,7 @@
       }
       .bouton {
         margin-top: 2em;
+        margin-bottom: 1em;
       }
     }
   }
