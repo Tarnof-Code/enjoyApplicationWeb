@@ -55,7 +55,7 @@ let updateUser = async (utilisateur) => {
         return response;
     } catch (error) {
         //  console.error("Une erreur s'est produite lors de la mise à jour de l'utilisateur :", error.response.data.message);
-        throw error; // Vous pouvez choisir de rejeter à nouveau l'erreur ou de la traiter différemment selon vos besoins.
+        throw error;
     }
 };
 

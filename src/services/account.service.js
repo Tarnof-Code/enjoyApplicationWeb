@@ -3,7 +3,8 @@ import { jwtDecode } from 'jwt-js-decode';
 import Cookies from 'universal-cookie';
 import store from "../redux/store";
 import { clearUser } from "../redux/auth/authSlice";
-
+import CryptoJS from "crypto-js";
+import { secretKey } from "../../config.local.js"
 
 const cookies = new Cookies();
 
@@ -20,6 +21,7 @@ const login = async (credentials) => {
                 'X-Skip-Token-Refresh': true, // En tête personnalisée pour éviter l'interceptor
             },
         });
+        console.log(response)
         return response;
     } catch (error) {
         throw error;
@@ -45,7 +47,10 @@ let addUser = async (userInfos) => {
  * @param {string} access_token 
  */
 let saveAccessToken = (access_token) => {
-    localStorage.setItem('access_token', access_token)
+    let crypted_access_token = CryptoJS.AES.encrypt(access_token, secretKey).toString();
+    localStorage.setItem('access_token', crypted_access_token)
+    console.log(access_token)
+    console.log(crypted_access_token)
 }
 
 
@@ -72,7 +77,10 @@ let isLogged = () => {
  * @returns {string}
  */
 let getToken = () => {
-    return localStorage.getItem('access_token')
+    let crypted_access_token = localStorage.getItem('access_token');
+    let bytes = CryptoJS.AES.decrypt(crypted_access_token, secretKey);
+    let originalText = bytes.toString(CryptoJS.enc.Utf8);
+    return originalText;
 }
 
 /**
