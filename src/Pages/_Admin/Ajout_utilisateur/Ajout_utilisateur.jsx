@@ -30,6 +30,7 @@ function Ajout_utilisateur() {
     telephone: "",
     role: "",
     motDePasse: "",
+    dateExpiration: "",
   });
 
   const [errorMessage, setErrorMessage] = useState(null);
@@ -84,11 +85,22 @@ function Ajout_utilisateur() {
         userInfos.motDePasse === "" ||
         !regexService.validatePassword(userInfos.motDePasse)
       ) {
-        setErrorMessage("Veuillez entrer un mot de passe valide");
+        setErrorMessage(
+          "Le mot de passe doit contenir au moins une minuscule, une majuscule, et un caractère spécial, et comporter au moins 4 caractères"
+        );
+        return;
+      }
+      if (userInfos.dateExpiration === "") {
+        setErrorMessage("Veuillez entrer une date d'expiration pour le compte");
         return;
       }
 
+      const dateExpirationTimestamp =
+        new Date(userInfos.dateExpiration).getTime() / 1000;
+      userInfos.dateExpiration = dateExpirationTimestamp;
+
       const response = await accountService.addUser(userInfos);
+
       if (userInfos.genre === "Féminin") {
         setModalMessage(
           `${userInfos.prenom} ${userInfos.nom} a bien été ajoutée.`
@@ -207,17 +219,17 @@ function Ajout_utilisateur() {
               onChange={onChange}
             />
           </FormGroup>
-          {/* <FormGroup className={styles.form_group}>
+          <FormGroup className={styles.form_group}>
             <Col lg={4}>
               <Label className={styles.label}>Validité du compte</Label>
             </Col>
             <Input
-              id="dateNaissanceNewUser"
-              name="dateNaissance"
+              id="dateExpirationNewUser"
+              name="dateExpiration"
               type="date"
               onChange={onChange}
             />
-          </FormGroup> */}
+          </FormGroup>
           <div className={styles.boutonBox}>
             <Link to="/liste_utilisateurs">
               <Button className={styles.bouton}>Annuler</Button>
