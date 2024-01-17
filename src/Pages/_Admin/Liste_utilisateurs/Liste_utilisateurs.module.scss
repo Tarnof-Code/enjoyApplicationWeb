@@ -1,18 +1,28 @@
 @import "../../../variables";
 
 .main {
-  margin: 7em 3em;
+  margin: 2rem 3rem;
   font-size: small;
-}
-
-.title {
-  font-family: $police_titres;
-  font-size: 3em;
-  margin-bottom: 0.3em;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  background-color: #fff;
+  background-color: beige;
+  @media screen and (max-width: 768px) {
+    margin: 1rem 2rem;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    .title {
+      font-family: $police_titres;
+      font-size: 2rem;
+    }
+  }
+  .table_container {
+    max-height: 35rem;
+    overflow-y: auto;
+    thead tr {
+      position: sticky;
+      top: 0;
+      background-color: #f5f5f5;
+    }
+  }
 }

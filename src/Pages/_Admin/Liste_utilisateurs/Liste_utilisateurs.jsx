@@ -8,6 +8,8 @@ import calculerAge from "../../../helpers/calculerAge";
 import Acces_non_autorise from "../../Erreurs/Acces_non_autorise";
 import { Button, Row, Col } from "reactstrap";
 import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUserPlus } from "@fortawesome/free-solid-svg-icons";
 
 function Liste_utilisateurs() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
@@ -83,107 +85,109 @@ function Liste_utilisateurs() {
         ) : (
           <div className={styles.main}>
             <Row className={styles.head}>
-              <Col lg={5}>
+              <Col xs={8} lg={3}>
                 <h1 className={styles.title}>Liste des Utilisateurs</h1>
               </Col>
-              <Col lg={2}>
+              <Col xs={2} lg={2}>
                 <Button tag={Link} to="/ajout_utilisateur">
-                  Ajouter un utilisateur
+                  <FontAwesomeIcon icon={faUserPlus} />
                 </Button>
               </Col>
             </Row>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Prénom</th>
-                  <th colSpan="2">Age</th>
-                  <th>Rôle</th>
-                  <th>Genre</th>
-                  <th>Email</th>
-                  <th>Téléphone</th>
-                  <th>Validité</th>
-                </tr>
-                <tr>
-                  <th>
-                    <input
-                      placeholder="Rechercher un nom"
-                      type="text"
-                      value={nomFilter}
-                      onChange={(e) => setNomFilter(e.target.value)}
-                      autoComplete="off"
-                    />
-                  </th>
-                  <th>
-                    <input
-                      placeholder="Rechercher un prénom"
-                      type="text"
-                      value={prenomFilter}
-                      onChange={(e) => setPrenomFilter(e.target.value)}
-                    />
-                  </th>
-                  <th colSpan="2">
-                    <input
-                      placeholder="Age minimum"
-                      type="number"
-                      value={ageFilter}
-                      onChange={(e) => setAgeFilter(e.target.value)}
-                    />
-                  </th>
+            <div className={styles.table_container}>
+              <table className="table">
+                <thead className={styles.enTete}>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th colSpan="2">Age</th>
+                    <th>Rôle</th>
+                    <th>Genre</th>
+                    <th>Email</th>
+                    <th>Téléphone</th>
+                    <th>Validité</th>
+                  </tr>
+                  <tr>
+                    <th>
+                      <input
+                        placeholder="Rechercher un nom"
+                        type="text"
+                        value={nomFilter}
+                        onChange={(e) => setNomFilter(e.target.value)}
+                        autoComplete="off"
+                      />
+                    </th>
+                    <th>
+                      <input
+                        placeholder="Rechercher un prénom"
+                        type="text"
+                        value={prenomFilter}
+                        onChange={(e) => setPrenomFilter(e.target.value)}
+                      />
+                    </th>
+                    <th colSpan="2">
+                      <input
+                        placeholder="Age minimum"
+                        type="number"
+                        value={ageFilter}
+                        onChange={(e) => setAgeFilter(e.target.value)}
+                      />
+                    </th>
 
-                  <th>
-                    <select
-                      value={roleFilter}
-                      onChange={(e) => setRoleFilter(e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      <option value="ADMIN">Admin</option>
-                      <option value="DIRECTION">Direction</option>
-                      <option value="ANIM">Anim</option>
-                      <option value="ANIM_AS">Anim_AS</option>
-                    </select>
-                  </th>
-                  <th>
-                    <select
-                      value={genreFilter}
-                      onChange={(e) => setGenreFilter(e.target.value)}
-                    >
-                      <option value="">Tous</option>
-                      <option value="Masculin">Masculin</option>
-                      <option value="Féminin">Féminin</option>
-                    </select>
-                  </th>
-                  <th>
-                    <input
-                      placeholder="Rechercher un email"
-                      type="text"
-                      value={emailFilter}
-                      onChange={(e) => setEmailFilter(e.target.value)}
-                    />
-                  </th>
-                  <th>
-                    <input
-                      placeholder="Rechercher un numéro"
-                      type="text"
-                      value={telephoneFilter}
-                      onChange={(e) => setTelephoneFilter(e.target.value)}
-                    />
-                  </th>
-                  <th>
-                    <select
-                      value={expirationFilter}
-                      onChange={(e) => setExpirationFilter(e.target.value)}
-                    >
-                      <option value="">Toutes</option>
-                      <option value="Valide">Valides</option>
-                      <option value="Expiré">Expirés</option>
-                    </select>
-                  </th>
-                </tr>
-              </thead>
+                    <th>
+                      <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                      >
+                        <option value="">Tous</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="DIRECTION">Direction</option>
+                        <option value="ANIM">Anim</option>
+                        <option value="ANIM_AS">Anim_AS</option>
+                      </select>
+                    </th>
+                    <th>
+                      <select
+                        value={genreFilter}
+                        onChange={(e) => setGenreFilter(e.target.value)}
+                      >
+                        <option value="">Tous</option>
+                        <option value="Masculin">Masculin</option>
+                        <option value="Féminin">Féminin</option>
+                      </select>
+                    </th>
+                    <th>
+                      <input
+                        placeholder="Rechercher un email"
+                        type="text"
+                        value={emailFilter}
+                        onChange={(e) => setEmailFilter(e.target.value)}
+                      />
+                    </th>
+                    <th>
+                      <input
+                        placeholder="Rechercher un numéro"
+                        type="text"
+                        value={telephoneFilter}
+                        onChange={(e) => setTelephoneFilter(e.target.value)}
+                      />
+                    </th>
+                    <th>
+                      <select
+                        value={expirationFilter}
+                        onChange={(e) => setExpirationFilter(e.target.value)}
+                      >
+                        <option value="">Toutes</option>
+                        <option value="Valide">Valides</option>
+                        <option value="Expiré">Expirés</option>
+                      </select>
+                    </th>
+                  </tr>
+                </thead>
 
-              <tbody>{utilisateursItems}</tbody>
-            </table>
+                <tbody>{utilisateursItems}</tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
