@@ -2,8 +2,8 @@
 
 .main {
   margin: 2rem 3rem;
+  padding-top: 4rem;
   font-size: small;
-  background-color: beige;
   @media screen and (max-width: 768px) {
     margin: 1rem 2rem;
   }
@@ -17,7 +17,7 @@
     }
   }
   .table_container {
-    max-height: 35rem;
+    max-height: 37rem;
     overflow-y: auto;
     thead tr {
       position: sticky;

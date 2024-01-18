@@ -3,8 +3,12 @@
 a {
   text-decoration: inherit;
 }
-body {
-  padding-top: 4rem;
+// body {
+//   padding-top: 4rem;
+// }
+
+body.no-padding-top {
+  padding-top: 0;
 }
 
 .btn {
@@ -18,4 +22,20 @@ body {
 .errorMessage {
   color: red;
   font-weight: bold;
+}
+
+.icone_crayon_edit {
+  color: #6c757d;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  &:hover {
+    color: $rouge_principal;
+    cursor: pointer;
+  }
+}
+
+.btn_valider {
+  background: $vert_principal;
+  @include hover-btn($vert_principal, 5);
 }

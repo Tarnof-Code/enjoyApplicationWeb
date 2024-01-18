@@ -13,16 +13,16 @@ import {
   ModalBody,
   ModalFooter,
 } from "reactstrap";
-import styles from "./Ajout_utilisateur.module.scss";
-import { accountService } from "../../../services/account.service";
-import { regexService } from "../../../services/regex.service";
+import styles from "./Formulaire_ajout_modif_utilisateur.module.scss";
+import { accountService } from "../../services/account.service";
+import { regexService } from "../../services/regex.service";
 import { useNavigate, Link } from "react-router-dom";
 
-function Ajout_utilisateur() {
+function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }) {
   let navigate = useNavigate();
 
   const [userInfos, setUserInfos] = useState({
-    email: "",
+    email: "qdf",
     prenom: "",
     nom: "",
     genre: "",
@@ -120,9 +120,6 @@ function Ajout_utilisateur() {
   return (
     <div className={styles.main}>
       <Container className={styles.addUserForm}>
-        <Row className={styles.titre}>
-          <p>Ajouter un utilisateur</p>
-        </Row>
         <p className="errorMessage">{errorMessage}</p>
         <Form className={styles.form}>
           <FormGroup className={styles.form_group}>
@@ -232,13 +229,14 @@ function Ajout_utilisateur() {
           </FormGroup>
           <div className={styles.boutonBox}>
             <Link to="/liste_utilisateurs">
-              <Button className={styles.bouton}>Annuler</Button>
+              <Button onClick={handleCloseModal}>Annuler</Button>
             </Link>
-            <Button className={styles.btn_valider} onClick={ajouterUtilisateur}>
+            <Button className="btn_valider" onClick={ajouterUtilisateur}>
               Ajouter
             </Button>
           </div>
         </Form>
+
         <Modal isOpen={modalIsOpen} toggle={() => setModalIsOpen(!modalIsOpen)}>
           <ModalHeader toggle={() => setModalIsOpen(!modalIsOpen)}>
             Confirmation
@@ -248,10 +246,10 @@ function Ajout_utilisateur() {
           </ModalBody>
           <ModalFooter>
             <Button
-              color="primary"
               onClick={() => {
                 setModalIsOpen(!modalIsOpen);
-                navigate("/liste_utilisateurs", { replace: true });
+                handleCloseModal();
+                refreshList();
               }}
             >
               Fermer
@@ -263,4 +261,4 @@ function Ajout_utilisateur() {
   );
 }
 
-export default Ajout_utilisateur;
+export default Formulaire_ajout_modif_utilisateur;

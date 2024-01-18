@@ -1,0 +1,30 @@
+@import "../../variables";
+
+.main {
+  .addUserForm {
+    display: inline-block;
+    background: #ffffff;
+    max-width: 35em;
+    padding: 1em;
+    .form {
+      flex-wrap: wrap;
+      .form_group {
+        gap: 1rem;
+        align-items: end;
+        display: flex;
+        margin-bottom: 1em !important;
+        .label {
+          min-width: 9rem;
+          font-weight: 600;
+        }
+      }
+      .boutonBox {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1em;
+        padding-top: 1em;
+      }
+    }
+  }
+}

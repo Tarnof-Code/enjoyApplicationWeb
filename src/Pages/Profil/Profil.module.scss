@@ -1,6 +1,7 @@
 @import "../../variables";
 
 .main {
+  padding-top: 4rem;
   display: flex;
   justify-content: center;
   padding-bottom: 14rem;
@@ -28,17 +29,6 @@
         //   padding-left: 1em;
         padding-inline: 1em;
         width: 90%;
-      }
-      .infos_edit {
-        // border: solid 1px yellow;
-        color: #6c757d;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        &:hover {
-          color: $rouge_principal;
-          cursor: pointer;
-        }
       }
       .infos_value {
         color: #6c757d;

@@ -6,17 +6,26 @@ import { utilisateurService } from "../../../services/utilisateur.service";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerAge from "../../../helpers/calculerAge";
 import Acces_non_autorise from "../../Erreurs/Acces_non_autorise";
-import { Button, Row, Col } from "reactstrap";
+import {
+  Button,
+  Row,
+  Col,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "reactstrap";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faPencilAlt } from "@fortawesome/free-solid-svg-icons";
+import Formulaire_ajout_modif_utilisateur from "../../../components/Formulaire_ajout_modif_utilisateur/Formulaire_ajout_modif_utilisateur";
 
 function Liste_utilisateurs() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
   let role = useSelector((state) => state.auth.role);
 
-  // Ajoutez les états de filtre ici
   const [nomFilter, setNomFilter] = useState("");
   const [prenomFilter, setPrenomFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -25,6 +34,7 @@ function Liste_utilisateurs() {
   const [telephoneFilter, setTelephoneFilter] = useState("");
   const [ageFilter, setAgeFilter] = useState("");
   const [expirationFilter, setExpirationFilter] = useState("");
+  const [refreshTrigger, setRefreshTrigger] = useState(false);
 
   if (role === "ADMIN") {
     useEffect(() => {
@@ -41,7 +51,19 @@ function Liste_utilisateurs() {
       }
 
       getUtilisateurs();
-    }, []);
+    }, [refreshTrigger]);
+
+    const handleOpenModal = () => {
+      setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+      setShowModal(false);
+    };
+
+    const refreshList = () => {
+      setRefreshTrigger((prevValue) => !prevValue);
+    };
 
     const filteredUtilisateurs = listUtilisateurs.filter((utilisateur) => {
       const isValide =
@@ -66,6 +88,9 @@ function Liste_utilisateurs() {
 
     const utilisateursItems = filteredUtilisateurs.map((utilisateur, index) => (
       <tr key={index}>
+        <td>
+          <FontAwesomeIcon className="icone_crayon_edit" icon={faPencilAlt} />
+        </td>
         <td>{utilisateur.nom}</td>
         <td>{utilisateur.prenom}</td>
         <td>{calculerAge(utilisateur.dateNaissance)} ans</td>
@@ -89,7 +114,7 @@ function Liste_utilisateurs() {
                 <h1 className={styles.title}>Liste des Utilisateurs</h1>
               </Col>
               <Col xs={2} lg={2}>
-                <Button tag={Link} to="/ajout_utilisateur">
+                <Button onClick={handleOpenModal}>
                   <FontAwesomeIcon icon={faUserPlus} />
                 </Button>
               </Col>
@@ -98,6 +123,7 @@ function Liste_utilisateurs() {
               <table className="table">
                 <thead className={styles.enTete}>
                   <tr>
+                    <th></th>
                     <th>Nom</th>
                     <th>Prénom</th>
                     <th colSpan="2">Age</th>
@@ -108,6 +134,7 @@ function Liste_utilisateurs() {
                     <th>Validité</th>
                   </tr>
                   <tr>
+                    <th></th>
                     <th>
                       <input
                         placeholder="Rechercher un nom"
@@ -190,6 +217,18 @@ function Liste_utilisateurs() {
             </div>
           </div>
         )}
+
+        <Modal isOpen={showModal} toggle={handleCloseModal}>
+          <ModalHeader toggle={handleCloseModal}>
+            Ajouter un Utilisateur
+          </ModalHeader>
+          <ModalBody>
+            <Formulaire_ajout_modif_utilisateur
+              handleCloseModal={handleCloseModal}
+              refreshList={refreshList}
+            />
+          </ModalBody>
+        </Modal>
       </div>
     );
   }

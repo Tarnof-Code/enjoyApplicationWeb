@@ -175,7 +175,7 @@ function Profil() {
                           <Col
                             xs={2}
                             md={2}
-                            className={styles.infos_edit}
+                            className="icone_crayon_edit"
                             onClick={() => setEditingField(mapping.property)}
                           >
                             <FontAwesomeIcon icon={faPencilAlt} />
