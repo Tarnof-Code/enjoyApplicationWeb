@@ -19,8 +19,6 @@ import { regexService } from "../../services/regex.service";
 import { useNavigate, Link } from "react-router-dom";
 
 function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }) {
-  let navigate = useNavigate();
-
   const [userInfos, setUserInfos] = useState({
     email: "qdf",
     prenom: "",

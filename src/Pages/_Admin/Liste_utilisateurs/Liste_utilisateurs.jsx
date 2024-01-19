@@ -13,11 +13,16 @@ import {
   Modal,
   ModalHeader,
   ModalBody,
-  ModalFooter,
+  Input,
 } from "reactstrap";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faPencilAlt } from "@fortawesome/free-solid-svg-icons";
+import {
+  faUserPlus,
+  faPencilAlt,
+  faTimes,
+  faCheck,
+} from "@fortawesome/free-solid-svg-icons";
 import Formulaire_ajout_modif_utilisateur from "../../../components/Formulaire_ajout_modif_utilisateur/Formulaire_ajout_modif_utilisateur";
 
 function Liste_utilisateurs() {
@@ -34,7 +39,18 @@ function Liste_utilisateurs() {
   const [telephoneFilter, setTelephoneFilter] = useState("");
   const [ageFilter, setAgeFilter] = useState("");
   const [expirationFilter, setExpirationFilter] = useState("");
+
   const [refreshTrigger, setRefreshTrigger] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const handleInputChange = (e, index, fieldName) => {
+    const { value } = e.target;
+    const updatedUtilisateurs = [...listUtilisateurs];
+    updatedUtilisateurs[index][fieldName] = value;
+    setErrorMessage(null);
+    setListUtilisateurs(updatedUtilisateurs);
+  };
 
   if (role === "ADMIN") {
     useEffect(() => {
@@ -87,20 +103,154 @@ function Liste_utilisateurs() {
     });
 
     const utilisateursItems = filteredUtilisateurs.map((utilisateur, index) => (
-      <tr key={index}>
-        <td>
-          <FontAwesomeIcon className="icone_crayon_edit" icon={faPencilAlt} />
-        </td>
-        <td>{utilisateur.nom}</td>
-        <td>{utilisateur.prenom}</td>
-        <td>{calculerAge(utilisateur.dateNaissance)} ans</td>
-        <td>{formaterDate(utilisateur.dateNaissance)}</td>
-        <td>{utilisateur.role}</td>
-        <td>{utilisateur.genre}</td>
-        <td>{utilisateur.email}</td>
-        <td>{utilisateur.telephone}</td>
-        <td>{formaterDate(utilisateur.dateExpirationCompte)}</td>
-      </tr>
+      <>
+        {editingField !== null && editingField === index && (
+          <tr>
+            <th></th>
+            <th></th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th colSpan="2">Date de naissance</th>
+            <th>Rôle</th>
+            <th>Genre</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Validité</th>
+          </tr>
+        )}
+
+        <tr
+          className={
+            editingField !== null && editingField !== index
+              ? `${styles.flou}`
+              : ""
+          }
+          key={index}
+        >
+          {editingField === null ? (
+            <td className={styles.icones_box}>
+              <FontAwesomeIcon
+                className="icone_crayon_edit"
+                icon={faPencilAlt}
+                onClick={() => setEditingField(index)}
+              />
+            </td>
+          ) : editingField === index ? (
+            <>
+              <td>
+                <FontAwesomeIcon
+                  className="icone_crayon_edit"
+                  icon={faTimes}
+                  onClick={() => setEditingField(null)}
+                />
+              </td>
+              <td>
+                <FontAwesomeIcon className="icone_crayon_edit" icon={faCheck} />
+              </td>
+            </>
+          ) : (
+            <>
+              <td></td>
+              <td></td>
+            </>
+          )}
+
+          <td>
+            {editingField === index ? (
+              <input
+                value={utilisateur.nom}
+                type="text"
+                onChange={(e) => handleInputChange(e, index, "nom")}
+              />
+            ) : (
+              utilisateur.nom
+            )}
+          </td>
+          <td>
+            {editingField === index ? (
+              <input
+                value={utilisateur.prenom}
+                type="text"
+                onChange={(e) => handleInputChange(e, index, "prenom")}
+              />
+            ) : (
+              utilisateur.prenom
+            )}
+          </td>
+          <td>{calculerAge(utilisateur.dateNaissance)} ans</td>
+          <td>
+            {editingField === index ? (
+              <input
+                value={formaterDate(utilisateur.dateNaissance)}
+                type="date"
+                onChange={(e) => handleInputChange(e, index, "dateNaissance")}
+              />
+            ) : (
+              formaterDate(utilisateur.dateNaissance)
+            )}
+          </td>
+          <td>
+            {editingField === index ? (
+              <select onChange={(e) => handleInputChange(e, index, "role")}>
+                <option value={utilisateur.role}>Choisir un rôle</option>
+                <option value="DIRECTION">Direction</option>
+                <option value="ADJ_DIRECTION">Adjoint</option>
+                <option value="ANIM">Anim</option>
+                <option value="ANIM_AS">Anim_AS</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            ) : (
+              utilisateur.role
+            )}
+          </td>
+          <td>
+            {editingField === index ? (
+              <select onChange={(e) => handleInputChange(e, index, "genre")}>
+                <option value={utilisateur.genre}>Choisir un genre</option>
+                <option value="Masculin">Masculin</option>
+                <option value="Féminin">Féminin</option>
+              </select>
+            ) : (
+              utilisateur.genre
+            )}
+          </td>
+          <td>
+            {editingField === index ? (
+              <input
+                value={utilisateur.email}
+                type="email"
+                onChange={(e) => handleInputChange(e, index, "email")}
+              />
+            ) : (
+              utilisateur.email
+            )}
+          </td>
+          <td>
+            {editingField === index ? (
+              <input
+                value={utilisateur.telephone}
+                type="phone"
+                onChange={(e) => handleInputChange(e, index, "telephone")}
+              />
+            ) : (
+              utilisateur.email
+            )}
+          </td>
+          <td>
+            {editingField === index ? (
+              <input
+                value={formaterDate(utilisateur.dateExpirationCompte)}
+                type="date"
+                onChange={(e) =>
+                  handleInputChange(e, index, "dateExpirationCompte")
+                }
+              />
+            ) : (
+              formaterDate(utilisateur.dateExpirationCompte)
+            )}
+          </td>
+        </tr>
+      </>
     ));
 
     return (
@@ -121,8 +271,15 @@ function Liste_utilisateurs() {
             </Row>
             <div className={styles.table_container}>
               <table className="table">
-                <thead className={styles.enTete}>
+                <thead
+                  className={
+                    editingField !== null
+                      ? `${styles.flou}`
+                      : `${styles.enTete}`
+                  }
+                >
                   <tr>
+                    {editingField !== null && <th></th>}
                     <th></th>
                     <th>Nom</th>
                     <th>Prénom</th>
@@ -134,6 +291,7 @@ function Liste_utilisateurs() {
                     <th>Validité</th>
                   </tr>
                   <tr>
+                    {editingField !== null && <th></th>}
                     <th></th>
                     <th>
                       <input

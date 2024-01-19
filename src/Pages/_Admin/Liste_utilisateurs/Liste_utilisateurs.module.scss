@@ -25,4 +25,9 @@
       background-color: #f5f5f5;
     }
   }
+
+  .flou {
+    filter: blur(7px);
+    pointer-events: none;
+  }
 }
