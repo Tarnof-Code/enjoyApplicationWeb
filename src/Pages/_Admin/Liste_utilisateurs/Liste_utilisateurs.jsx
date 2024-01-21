@@ -1,9 +1,12 @@
+import React from "react";
 import styles from "./Liste_utilisateurs.module.scss";
 import "@fontsource/dancing-script";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { utilisateurService } from "../../../services/utilisateur.service";
 import formaterDate from "../../../helpers/formaterDate";
+import formatDateAnglais from "../../../helpers/formatDateAnglais";
+import dateToISO from "../../../helpers/dateToISO";
 import calculerAge from "../../../helpers/calculerAge";
 import Acces_non_autorise from "../../Erreurs/Acces_non_autorise";
 import {
@@ -27,6 +30,7 @@ import Formulaire_ajout_modif_utilisateur from "../../../components/Formulaire_a
 
 function Liste_utilisateurs() {
   const [listUtilisateurs, setListUtilisateurs] = useState([]);
+  const [utilisateurUpdated, setUtilisateurUpdated] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   let role = useSelector((state) => state.auth.role);
@@ -44,12 +48,44 @@ function Liste_utilisateurs() {
   const [editingField, setEditingField] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  const handleInputChange = (e, index, fieldName) => {
+  const handleInputChange = async (e, index, fieldName) => {
     const { value } = e.target;
     const updatedUtilisateurs = [...listUtilisateurs];
     updatedUtilisateurs[index][fieldName] = value;
+    setUtilisateurUpdated(updatedUtilisateurs[index]);
+    console.log(updatedUtilisateurs[index]);
     setErrorMessage(null);
     setListUtilisateurs(updatedUtilisateurs);
+  };
+
+  const cancelModif = () => {
+    setEditingField(null);
+    setUtilisateurUpdated(null);
+  };
+
+  const handleValidate = async () => {
+    try {
+      utilisateurUpdated.dateExpirationCompte = dateToISO(
+        utilisateurUpdated.dateExpirationCompte
+      );
+      const response = await utilisateurService.updateUser(utilisateurUpdated);
+      console.log("Utilisateur mis à jour :", response.data);
+      setEditingField(null);
+      setUtilisateurUpdated(null);
+      refreshList();
+    } catch (error) {
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.status === 400
+      ) {
+        setErrorMessage(error.response.data.message);
+        console.error(
+          "Erreur lors de la mise à jour de l'utilisateur :",
+          error.response.data.message
+        );
+      }
+    }
   };
 
   if (role === "ADMIN") {
@@ -103,7 +139,7 @@ function Liste_utilisateurs() {
     });
 
     const utilisateursItems = filteredUtilisateurs.map((utilisateur, index) => (
-      <>
+      <React.Fragment key={index}>
         {editingField !== null && editingField === index && (
           <tr>
             <th></th>
@@ -139,13 +175,19 @@ function Liste_utilisateurs() {
             <>
               <td>
                 <FontAwesomeIcon
-                  className="icone_crayon_edit"
+                  title="Annuler les modifications"
+                  className={styles.icone_annuler}
                   icon={faTimes}
-                  onClick={() => setEditingField(null)}
+                  onClick={() => cancelModif()}
                 />
               </td>
               <td>
-                <FontAwesomeIcon className="icone_crayon_edit" icon={faCheck} />
+                <FontAwesomeIcon
+                  title="Valider les modifications"
+                  className={styles.icone_valider}
+                  icon={faCheck}
+                  onClick={() => handleValidate()}
+                />
               </td>
             </>
           ) : (
@@ -181,7 +223,7 @@ function Liste_utilisateurs() {
           <td>
             {editingField === index ? (
               <input
-                value={formaterDate(utilisateur.dateNaissance)}
+                value={formatDateAnglais(utilisateur.dateNaissance)}
                 type="date"
                 onChange={(e) => handleInputChange(e, index, "dateNaissance")}
               />
@@ -192,12 +234,22 @@ function Liste_utilisateurs() {
           <td>
             {editingField === index ? (
               <select onChange={(e) => handleInputChange(e, index, "role")}>
-                <option value={utilisateur.role}>Choisir un rôle</option>
-                <option value="DIRECTION">Direction</option>
-                <option value="ADJ_DIRECTION">Adjoint</option>
-                <option value="ANIM">Anim</option>
-                <option value="ANIM_AS">Anim_AS</option>
-                <option value="ADMIN">Admin</option>
+                <option value={utilisateur.role}>{utilisateur.role}</option>
+                {utilisateur.role !== "DIRECTION" && (
+                  <option value="DIRECTION">Direction</option>
+                )}
+                {utilisateur.role !== "ADJ_DIRECTION" && (
+                  <option value="ADJ_DIRECTION">Adj_Direction</option>
+                )}
+                {utilisateur.role !== "ANIM" && (
+                  <option value="ANIM">Anim</option>
+                )}
+                {utilisateur.role !== "ANIM_AS" && (
+                  <option value="ANIM_AS">Anim_AS</option>
+                )}
+                {utilisateur.role !== "ADMIN" && (
+                  <option value="ADMIN">Admin</option>
+                )}
               </select>
             ) : (
               utilisateur.role
@@ -206,9 +258,13 @@ function Liste_utilisateurs() {
           <td>
             {editingField === index ? (
               <select onChange={(e) => handleInputChange(e, index, "genre")}>
-                <option value={utilisateur.genre}>Choisir un genre</option>
-                <option value="Masculin">Masculin</option>
-                <option value="Féminin">Féminin</option>
+                <option value={utilisateur.genre}>{utilisateur.genre}</option>
+                {utilisateur.genre !== "Masculin" && (
+                  <option value="Masculin">Masculin</option>
+                )}
+                {utilisateur.genre !== "Féminin" && (
+                  <option value="Féminin">Féminin</option>
+                )}
               </select>
             ) : (
               utilisateur.genre
@@ -233,13 +289,13 @@ function Liste_utilisateurs() {
                 onChange={(e) => handleInputChange(e, index, "telephone")}
               />
             ) : (
-              utilisateur.email
+              utilisateur.telephone
             )}
           </td>
           <td>
             {editingField === index ? (
               <input
-                value={formaterDate(utilisateur.dateExpirationCompte)}
+                value={formatDateAnglais(utilisateur.dateExpirationCompte)}
                 type="date"
                 onChange={(e) =>
                   handleInputChange(e, index, "dateExpirationCompte")
@@ -250,7 +306,7 @@ function Liste_utilisateurs() {
             )}
           </td>
         </tr>
-      </>
+      </React.Fragment>
     ));
 
     return (
@@ -327,6 +383,7 @@ function Liste_utilisateurs() {
                         <option value="">Tous</option>
                         <option value="ADMIN">Admin</option>
                         <option value="DIRECTION">Direction</option>
+                        <option value="ADJ_DIRECTION">Adj_Direction</option>
                         <option value="ANIM">Anim</option>
                         <option value="ANIM_AS">Anim_AS</option>
                       </select>

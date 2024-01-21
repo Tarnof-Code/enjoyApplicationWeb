@@ -24,10 +24,23 @@
       top: 0;
       background-color: #f5f5f5;
     }
-  }
-
-  .flou {
-    filter: blur(7px);
-    pointer-events: none;
+    .flou {
+      filter: blur(8px);
+      pointer-events: none;
+    }
+    .icone_valider {
+      color: green;
+      font-size: 1.5rem;
+      &:hover {
+        cursor: pointer;
+      }
+    }
+    .icone_annuler {
+      color: red;
+      font-size: 1.5rem;
+      &:hover {
+        cursor: pointer;
+      }
+    }
   }
 }

@@ -43,10 +43,10 @@ let getUser = async () => {
 
 let updateUser = async (utilisateur) => {
     try {
-        let token_infos = accountService.getTokenInfo();
-        const tokenId = token_infos.payload.sub;
-        utilisateur.tokenId = tokenId;
-        const response = await Axios.post('/utilisateurs/modifierInfos', utilisateur, {
+        // let token_infos = accountService.getTokenInfo();
+        // const tokenId = token_infos.payload.sub;
+        // utilisateur.tokenId = tokenId;
+        const response = await Axios.put('/utilisateurs/modifierInfos', utilisateur, {
             withCredentials: true,
             headers: {
                 'X-Skip-Token-Refresh': true, // En tête personnalisée pour éviter l'interceptor

@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, CardBody, Button } from "reactstrap";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import formaterDate from "../../helpers/formaterDate";
+import dateToISO from "../../helpers/dateToISO";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { Navigate } from "react-router-dom";
@@ -63,6 +64,9 @@ function Profil() {
 
   const handleValidate = async () => {
     try {
+      utilisateur.dateExpirationCompte = dateToISO(
+        utilisateur.dateExpirationCompte
+      );
       const response = await utilisateurService.updateUser(utilisateur);
       console.log("Utilisateur mis à jour :", response.data);
       setEditingField(null);
