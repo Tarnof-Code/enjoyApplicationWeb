@@ -54,6 +54,7 @@ function Profil() {
   const handleInputChange = (property, value) => {
     const updatedUser = { ...utilisateur, [property]: value };
     setUtilisateur(updatedUser);
+    setErrorMessage(null);
   };
 
   const handleCancel = () => {
@@ -73,12 +74,21 @@ function Profil() {
       setInitialUtilisateur(utilisateur);
     } catch (error) {
       if (error.response.data.status === 400) {
-        setErrorMessage(error.response.data.message);
+        let messageTransmis = error.response.data.message;
+        setErrorMessage(messageTransmis);
+        console.error(
+          "Erreur lors de la mise à jour de l'utilisateur :",
+          messageTransmis
+        );
+      } else {
+        let messageTransmis = Object.values(error.response.data)[0];
+        setErrorMessage(messageTransmis);
+        console.log(messageTransmis);
+        console.error(
+          "Erreur lors de la mise à jour de l'utilisateur :",
+          messageTransmis
+        );
       }
-      console.error(
-        "Erreur lors de la mise à jour de l'utilisateur :",
-        error.response.data.message
-      );
     }
   };
 
