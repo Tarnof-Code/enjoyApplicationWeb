@@ -3,7 +3,7 @@ import styles from "./Footer.module.scss";
 function Footer() {
   return (
     <footer className={styles.main}>
-      <h1>Je suis le footer</h1>
+      <h1>{import.meta.env.VITE_APP_NAME || "Enjoy"} - Footer</h1>
     </footer>
   );
 }

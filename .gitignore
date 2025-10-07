@@ -25,3 +25,11 @@ dist-ssr
 
 # Local configuration
 config.local.js
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Ignore Bash crash dumps
+*.stackdump

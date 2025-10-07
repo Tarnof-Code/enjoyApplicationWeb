@@ -20,7 +20,7 @@ function Admin_header() {
     <header className={styles.main}>
       <Navbar expand="md" dark className={styles.navbar}>
         <NavLink to={"/"} className={`${styles.brand} ${styles.link}`}>
-          Enjoy
+          {import.meta.env.VITE_APP_NAME || "Enjoy"}
         </NavLink>
         <NavbarToggler onClick={toggle} />
         <Collapse isOpen={isOpen} navbar>

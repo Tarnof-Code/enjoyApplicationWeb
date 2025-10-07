@@ -3,7 +3,8 @@ import { jwtDecode } from "jwt-js-decode";
 import store from "../redux/store";
 import { clearUser } from "../redux/auth/authSlice";
 import CryptoJS from "crypto-js";
-import { secretKey } from "../../config.local.js";
+
+const secretKey = import.meta.env.VITE_SECRET_KEY;
 
 /**
  * Connexion vers l'API
