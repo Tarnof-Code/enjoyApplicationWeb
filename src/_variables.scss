@@ -1,3 +1,5 @@
+@use "sass:color";
+
 $bleu_principal: #242e89;
 $rouge_principal: #f94a56;
 $vert_principal: #00b894;
@@ -11,5 +13,5 @@ $police_titres: "Dancing Script";
 }
 
 @function assombrir($couleur, $pourcentage) {
-  @return darken($couleur, $pourcentage);
+  @return color.adjust($couleur, $lightness: -$pourcentage * 1%);
 }

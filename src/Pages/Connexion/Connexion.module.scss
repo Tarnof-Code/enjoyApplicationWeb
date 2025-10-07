@@ -1,4 +1,4 @@
-@import "../../variables";
+@use "../../variables" as *;
 
 .main {
   background: linear-gradient($bleu_principal, #5c55d8);
