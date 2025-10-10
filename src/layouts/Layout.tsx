@@ -1,12 +1,12 @@
 import Header from "./Header/Header";
-import Footer from "./Footer/Footer";
 import Connexion from "../Pages/Connexion/Connexion";
 import { Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { RootState } from "../redux/store";
 
-function Layout() {
+const Layout: React.FC = () => {
   const { pathname } = useLocation();
-  const role = useSelector((state) => state.auth.role);
+  const role = useSelector((state: RootState) => state.auth.role);
 
   return (
     <>
@@ -15,6 +15,6 @@ function Layout() {
       {/* {pathname !== "/" && <Footer />} */}
     </>
   );
-}
+};
 
 export default Layout;

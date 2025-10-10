@@ -1,4 +1,4 @@
-export default function calculerAge(date) {
+export default function calculerAge(date: string | Date): number {
     var aujourdHui = new Date();
     var dateNaissance = new Date(date)
     var anneeAujourdHui = aujourdHui.getFullYear();

@@ -11,15 +11,26 @@ import { Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
-import fr from "date-fns/locale/fr";
+import { fr } from "date-fns/locale/fr";
 
 registerLocale("fr", fr);
 setDefaultLocale("fr");
 
-function Profil() {
-  const [loading, setLoading] = useState(true);
-  const [utilisateur, setUtilisateur] = useState(null);
-  const [initialUtilisateur, setInitialUtilisateur] = useState(null);
+interface Utilisateur {
+  prenom?: string;
+  nom?: string;
+  genre?: string;
+  email?: string;
+  telephone?: string;
+  dateNaissance?: Date;
+  dateExpirationCompte?: Date;
+  [key: string]: any;
+}
+
+const Profil: React.FC = () => {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
+  const [initialUtilisateur, setInitialUtilisateur] = useState<Utilisateur | null>(null);
   const propertyMappings = [
     { display: "Prénom", property: "prenom" },
     { display: "Nom", property: "nom" },
@@ -33,15 +44,15 @@ function Profil() {
       isDate: true,
     },
   ];
-  const [editingField, setEditingField] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function getProfil() {
       try {
         const response = await utilisateurService.getUser();
-        setUtilisateur(response.data);
-        setInitialUtilisateur(response.data);
+        setUtilisateur(response?.data);
+        setInitialUtilisateur(response?.data);
         setLoading(false);
       } catch (error) {
         console.error("Une erreur s'est produite :", error);
@@ -51,7 +62,7 @@ function Profil() {
     getProfil();
   }, []);
 
-  const handleInputChange = (property, value) => {
+  const handleInputChange = (property: string, value: any) => {
     const updatedUser = { ...utilisateur, [property]: value };
     setUtilisateur(updatedUser);
     setErrorMessage(null);
@@ -65,31 +76,32 @@ function Profil() {
 
   const handleValidate = async () => {
     try {
-      utilisateur.dateExpirationCompte = dateToISO(
-        utilisateur.dateExpirationCompte
-      );
-      const response = await utilisateurService.updateUser(utilisateur);
-      console.log("Utilisateur mis à jour :", response.data);
-      setEditingField(null);
-      setInitialUtilisateur(utilisateur);
-    } catch (error) {
-      if (error.response.data.status === 400) {
-        let messageTransmis = error.response.data.message;
-        setErrorMessage(messageTransmis);
-        console.error(
-          "Erreur lors de la mise à jour de l'utilisateur :",
-          messageTransmis
-        );
-      } else {
-        let messageTransmis = Object.values(error.response.data)[0];
-        setErrorMessage(messageTransmis);
-        console.log(messageTransmis);
-        console.error(
-          "Erreur lors de la mise à jour de l'utilisateur :",
-          messageTransmis
-        );
+      if (utilisateur) {
+        const dateExpiration = utilisateur.dateExpirationCompte || new Date();
+        utilisateur.dateExpirationCompte = new Date(dateToISO(dateExpiration));
+        const response = await utilisateurService.updateUser(utilisateur);
+        console.log("Utilisateur mis à jour :", response.data);
+        setEditingField(null);
+        setInitialUtilisateur(utilisateur);
       }
-    }
+      } catch (error: any) {
+        if (error.response?.data?.status === 400) {
+          let messageTransmis = error.response.data.message;
+          setErrorMessage(messageTransmis);
+          console.error(
+            "Erreur lors de la mise à jour de l'utilisateur :",
+            messageTransmis
+          );
+        } else {
+          let messageTransmis = Object.values(error.response?.data || {})[0];
+          setErrorMessage(String(messageTransmis));
+          console.log(messageTransmis);
+          console.error(
+            "Erreur lors de la mise à jour de l'utilisateur :",
+            messageTransmis
+          );
+        }
+      }
   };
 
   if (!accountService.isLogged()) return <Navigate to="/" />;
@@ -137,12 +149,12 @@ function Profil() {
                           className={styles.infos_value}
                         >
                           {mapping.property === "dateExpirationCompte" ? (
-                            formaterDate(utilisateur[mapping.property])
+                            utilisateur && utilisateur[mapping.property] && formaterDate(utilisateur[mapping.property] as string | Date)
                           ) : editingField === mapping.property ? (
                             mapping.isDate ? (
                               <DatePicker
                                 className={`${styles.input}`}
-                                selected={utilisateur[mapping.property]}
+                                selected={utilisateur?.[mapping.property]}
                                 onChange={(date) =>
                                   handleInputChange(mapping.property, date)
                                 }
@@ -154,7 +166,7 @@ function Profil() {
                             ) : mapping.property === "genre" ? (
                               <select
                                 className={`${styles.input}`}
-                                value={utilisateur[mapping.property]}
+                                value={utilisateur?.[mapping.property] || ''}
                                 onChange={(e) =>
                                   handleInputChange(
                                     mapping.property,
@@ -169,7 +181,7 @@ function Profil() {
                               <input
                                 className={`${styles.input}`}
                                 type="text"
-                                value={utilisateur[mapping.property]}
+                                value={utilisateur?.[mapping.property] || ''}
                                 onChange={(e) =>
                                   handleInputChange(
                                     mapping.property,
@@ -179,9 +191,9 @@ function Profil() {
                               />
                             )
                           ) : mapping.isDate ? (
-                            formaterDate(utilisateur[mapping.property])
+                            utilisateur && utilisateur[mapping.property] && formaterDate(utilisateur[mapping.property] as string | Date)
                           ) : (
-                            utilisateur[mapping.property]
+                            utilisateur?.[mapping.property]
                           )}
                         </Col>
 
@@ -228,6 +240,6 @@ function Profil() {
       )}
     </Container>
   );
-}
+};
 
 export default Profil;

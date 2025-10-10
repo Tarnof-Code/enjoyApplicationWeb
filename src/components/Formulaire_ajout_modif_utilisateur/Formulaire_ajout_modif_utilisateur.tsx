@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Container,
-  Row,
   Col,
   Form,
   FormGroup,
@@ -16,11 +15,11 @@ import {
 import styles from "./Formulaire_ajout_modif_utilisateur.module.scss";
 import { accountService } from "../../services/account.service";
 import { regexService } from "../../services/regex.service";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }) {
+function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }: { handleCloseModal: () => void, refreshList: () => void }) {
   const [userInfos, setUserInfos] = useState({
-    email: "qdf",
+    email: "",
     prenom: "",
     nom: "",
     genre: "",
@@ -28,14 +27,14 @@ function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }) {
     telephone: "",
     role: "",
     motDePasse: "",
-    dateExpiration: "",
+    dateExpiration: "" as string | number,
   });
 
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
-  const onChange = (e) => {
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUserInfos({
       ...userInfos,
       [e.target.name]: e.target.value,
@@ -97,7 +96,10 @@ function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }) {
         new Date(userInfos.dateExpiration).getTime() / 1000;
       userInfos.dateExpiration = dateExpirationTimestamp;
 
-      const response = await accountService.addUser(userInfos);
+      await accountService.addUser({
+        ...userInfos,
+        password: userInfos.motDePasse
+      });
 
       if (userInfos.genre === "Féminin") {
         setModalMessage(
@@ -199,7 +201,7 @@ function Formulaire_ajout_modif_utilisateur({ handleCloseModal, refreshList }) {
             <Input
               id="telephoneNewUser"
               name="telephone"
-              type="phone"
+              type="tel"
               onChange={onChange}
             />
           </FormGroup>

@@ -4,14 +4,29 @@ import store from "../redux/store";
 import { clearUser } from "../redux/auth/authSlice";
 import CryptoJS from "crypto-js";
 
-const secretKey = import.meta.env.VITE_SECRET_KEY;
+const secretKey = import.meta.env.VITE_SECRET_KEY as string;
+
+interface Credentials {
+  email: string;
+  password: string;
+}
+
+interface UserInfos {
+  prenom: string;
+  nom: string;
+  email: string;
+  password: string;
+  genre: string;
+  telephone: string;
+  dateNaissance: string;
+}
 
 /**
  * Connexion vers l'API
  * @param {object} credentials
  * @returns {Promise}
  */
-const login = async (credentials) => {
+const login = async (credentials: Credentials) => {
   const response = await Axios.post("/auth/connexion", credentials, {
     withCredentials: true,
     headers: {
@@ -22,7 +37,7 @@ const login = async (credentials) => {
   return response;
 };
 
-let addUser = async (userInfos) => {
+let addUser = async (userInfos: UserInfos) => {
   const response = await Axios.post("/auth/inscription", userInfos, {
     withCredentials: true,
     headers: {
@@ -36,7 +51,7 @@ let addUser = async (userInfos) => {
  * Sauvegarde du token dans le localStorage
  * @param {string} access_token
  */
-let saveAccessToken = (access_token) => {
+let saveAccessToken = (access_token: string) => {
   let crypted_access_token = CryptoJS.AES.encrypt(
     access_token,
     secretKey
@@ -70,6 +85,9 @@ let isLogged = () => {
  */
 let getToken = () => {
   let crypted_access_token = localStorage.getItem("access_token");
+  if (!crypted_access_token) {
+    return null;
+  }
   let bytes = CryptoJS.AES.decrypt(crypted_access_token, secretKey);
   let originalText = bytes.toString(CryptoJS.enc.Utf8);
   return originalText;
@@ -80,7 +98,11 @@ let getToken = () => {
  * @returns {object}
  */
 let getTokenInfo = () => {
-  return jwtDecode(getToken());
+  const token = getToken();
+  if (!token) {
+    return null;
+  }
+  return jwtDecode(token);
 };
 
 let refreshAccessToken = async () => {

@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Form, FormGroup, Input, Button } from "reactstrap";
 import { Navigate } from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
 import { useNavigate } from "react-router-dom";
-import store from "../../redux/store";
-import { setUser } from "../../redux/auth/authSlice";
+import { AxiosError } from "axios";
 
 function Connexion() {
   let navigate = useNavigate();
@@ -15,9 +14,9 @@ function Connexion() {
     motDePasse: "",
   });
 
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const onChange = (e) => {
+  const onChange = (e: any) => {
     setCredentials({
       ...credentials,
       [e.target.name]: e.target.value,
@@ -26,13 +25,16 @@ function Connexion() {
 
   const handleLogin = async () => {
     try {
-      const response = await accountService.login(credentials);
+      const response = await accountService.login({
+        ...credentials,
+        password: credentials.motDePasse
+      });
       console.log(response.data);
       accountService.saveAccessToken(response.data.access_token);
       navigate("/profil", { replace: true });
     } catch (error) {
       console.error("Erreur lors de la connexion", error);
-      if (error.response && error.response.status === 401) {
+      if (error instanceof AxiosError && error.response?.status === 401) {
         setErrorMessage("Email ou mot de passe incorrect");
       } else {
         setErrorMessage("Une erreur s'est produite lors de la connexion");

@@ -1,20 +1,21 @@
 import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
 import React, { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { accountService } from "../../services/account.service";
 import { useSelector } from "react-redux";
+import { RootState } from "../../redux/store";
 import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
 import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling } from "react-icons/fa"; // Importez l'icône que vous souhaitez utiliser
 import { utilisateurService } from "../../services/utilisateur.service";
 
-function Admin_header() {
+const Admin_header: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const toggle = () => setIsOpen(!isOpen);
-  const prenom = useSelector((state) => state.auth.prenom);
-  let role = useSelector((state) => state.auth.role);
-  let genre = useSelector((state) => state.auth.genre);
-  let roleByGenre = utilisateurService.getRoleByGenre(role, genre);
+  const prenom = useSelector((state: RootState) => state.auth.prenom);
+  let role = useSelector((state: RootState) => state.auth.role);
+  let genre = useSelector((state: RootState) => state.auth.genre);
+  let roleByGenre = utilisateurService.getRoleByGenre(role || "", genre || "");
 
   return (
     <header className={styles.main}>
@@ -67,7 +68,7 @@ function Admin_header() {
                 </div>
               </NavLink>
             </NavItem>
-            <NavLink onClick={accountService.logout} className={styles.link}>
+            <NavLink to={"/"} onClick={accountService.logout} className={styles.link}>
               <div className={styles.iconWithText}>
                 <FaPowerOff size={20} />
                 <span>Se déconnecter</span>

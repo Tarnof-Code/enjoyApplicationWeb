@@ -16,9 +16,7 @@ import {
   Modal,
   ModalHeader,
   ModalBody,
-  Input,
 } from "reactstrap";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUserPlus,
@@ -28,12 +26,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Formulaire_ajout_modif_utilisateur from "../../../components/Formulaire_ajout_modif_utilisateur/Formulaire_ajout_modif_utilisateur";
 
-function Liste_utilisateurs() {
-  const [listUtilisateurs, setListUtilisateurs] = useState([]);
-  const [utilisateurUpdated, setUtilisateurUpdated] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  let role = useSelector((state) => state.auth.role);
+const Liste_utilisateurs: React.FC = () => {
+  const [listUtilisateurs, setListUtilisateurs] = useState<any[]>([]);
+  const [utilisateurUpdated, setUtilisateurUpdated] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showModal, setShowModal] = useState<boolean>(false);
+  let role = useSelector((state: any) => state.auth.role);
 
   const [nomFilter, setNomFilter] = useState("");
   const [prenomFilter, setPrenomFilter] = useState("");
@@ -41,14 +39,18 @@ function Liste_utilisateurs() {
   const [genreFilter, setGenreFilter] = useState("");
   const [emailFilter, setEmailFilter] = useState("");
   const [telephoneFilter, setTelephoneFilter] = useState("");
-  const [ageFilter, setAgeFilter] = useState("");
+  const [ageFilter, setAgeFilter] = useState<string>("");
   const [expirationFilter, setExpirationFilter] = useState("");
 
-  const [refreshTrigger, setRefreshTrigger] = useState(false);
-  const [editingField, setEditingField] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState<boolean>(false);
+  const [editingField, setEditingField] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleInputChange = async (e, index, fieldName) => {
+  const refreshList = () => {
+    setRefreshTrigger((prevValue) => !prevValue);
+  };
+
+  const handleInputChange = async (e: any, index: number, fieldName: string) => {
     const { value } = e.target;
     const updatedUtilisateurs = [...listUtilisateurs];
     updatedUtilisateurs[index][fieldName] = value;
@@ -73,7 +75,7 @@ function Liste_utilisateurs() {
       setEditingField(null);
       setUtilisateurUpdated(null);
       refreshList();
-    } catch (error) {
+    } catch (error: any) {
       if (
         error.response &&
         error.response.data &&
@@ -113,9 +115,6 @@ function Liste_utilisateurs() {
       setShowModal(false);
     };
 
-    const refreshList = () => {
-      setRefreshTrigger((prevValue) => !prevValue);
-    };
 
     const filteredUtilisateurs = listUtilisateurs.filter((utilisateur) => {
       const isValide =
@@ -133,7 +132,7 @@ function Liste_utilisateurs() {
         utilisateur.genre.includes(genreFilter) &&
         utilisateur.email.toLowerCase().includes(emailFilter.toLowerCase()) &&
         utilisateur.telephone.toString().includes(telephoneFilter) &&
-        calculerAge(utilisateur.dateNaissance) >= ageFilter &&
+        (ageFilter === "" || calculerAge(utilisateur.dateNaissance) >= parseInt(ageFilter)) &&
         (expirationFilter === "" || isValide || isExpire)
       );
     });
@@ -146,7 +145,7 @@ function Liste_utilisateurs() {
             <th></th>
             <th>Nom</th>
             <th>Prénom</th>
-            <th colSpan="2">Date de naissance</th>
+            <th colSpan={2}>Date de naissance</th>
             <th>Rôle</th>
             <th>Genre</th>
             <th>Email</th>
@@ -285,7 +284,7 @@ function Liste_utilisateurs() {
             {editingField === index ? (
               <input
                 value={utilisateur.telephone}
-                type="phone"
+                type="tel"
                 onChange={(e) => handleInputChange(e, index, "telephone")}
               />
             ) : (
@@ -315,6 +314,7 @@ function Liste_utilisateurs() {
           <p>Chargement en cours...</p>
         ) : (
           <div className={styles.main}>
+            {errorMessage && <p className="errorMessage">{errorMessage}</p>}
             <Row className={styles.head}>
               <Col xs={8} lg={3}>
                 <h1 className={styles.title}>Liste des Utilisateurs</h1>
@@ -339,7 +339,7 @@ function Liste_utilisateurs() {
                     <th></th>
                     <th>Nom</th>
                     <th>Prénom</th>
-                    <th colSpan="2">Age</th>
+                    <th colSpan={2}>Age</th>
                     <th>Rôle</th>
                     <th>Genre</th>
                     <th>Email</th>
@@ -366,7 +366,7 @@ function Liste_utilisateurs() {
                         onChange={(e) => setPrenomFilter(e.target.value)}
                       />
                     </th>
-                    <th colSpan="2">
+                    <th colSpan={2}>
                       <input
                         placeholder="Age minimum"
                         type="number"
@@ -448,6 +448,6 @@ function Liste_utilisateurs() {
     );
   }
   return <Acces_non_autorise />;
-}
+};
 
 export default Liste_utilisateurs;

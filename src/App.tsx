@@ -6,7 +6,7 @@ import ErrorPage from "./Pages/Erreurs/error-page";
 import Liste_utilisateurs from "./Pages/_Admin/Liste_utilisateurs/Liste_utilisateurs";
 import Profil from "./Pages/Profil/Profil";
 
-function App() {
+const App: React.FC = () => {
   const router = createBrowserRouter([
     {
       path: "/",
@@ -30,6 +30,6 @@ function App() {
       <RouterProvider router={router} />
     </>
   );
-}
+};
 
 export default App;

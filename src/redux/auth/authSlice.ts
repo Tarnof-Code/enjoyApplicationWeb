@@ -1,17 +1,31 @@
-// authSlice.js
-import { createSlice } from '@reduxjs/toolkit';
+// authSlice.ts
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
+interface AuthState {
+    role: string | null;
+    prenom: string | null;
+    genre: string | null;
+}
+
+interface UserPayload {
+    role: string;
+    prenom: string;
+    genre: string;
+}
+
+const initialState: AuthState = {
+    role: null,
+    prenom: null,
+    genre: null,
+};
+
 const authSlice = createSlice({
     name: 'auth',
-    initialState: {
-        role: null,
-        prenom: null,
-        genre: null,
-    },
+    initialState,
     reducers: {
-        setUser: (state, action) => {
+        setUser: (state, action: PayloadAction<UserPayload>) => {
             state.role = action.payload.role;
             state.prenom = action.payload.prenom;
             state.genre = action.payload.genre;
@@ -32,4 +46,5 @@ const persistConfig = {
 
 
 export const { setUser, clearUser } = authSlice.actions;
-export default authSlice.reducer;
+export default persistReducer(persistConfig, authSlice.reducer);
+export type { AuthState, UserPayload };
