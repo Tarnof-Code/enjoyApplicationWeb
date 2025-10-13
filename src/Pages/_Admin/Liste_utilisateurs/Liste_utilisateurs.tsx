@@ -1,7 +1,7 @@
 import React from "react";
 import styles from "./Liste_utilisateurs.module.scss";
 import "@fontsource/dancing-script";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, useReducer } from "react";
 import { useSelector } from "react-redux";
 import { utilisateurService } from "../../../services/utilisateur.service";
 import formaterDate from "../../../helpers/formaterDate";
@@ -26,6 +26,46 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Formulaire_ajout_modif_utilisateur from "../../../components/Formulaire_ajout_modif_utilisateur/Formulaire_ajout_modif_utilisateur";
 
+interface FiltersState {
+  nomFilter: string;
+  prenomFilter: string;
+  roleFilter: string;
+  genreFilter: string;
+  emailFilter: string;
+  telephoneFilter: string;
+  ageFilter: string;
+  expirationFilter: string;
+}
+
+interface FilterAction {
+  type: 'SET_FILTER' | 'RESET_FILTERS';
+  field?: keyof FiltersState;
+  value?: string;
+}
+
+const filtersReducer = (state: FiltersState, action: FilterAction): FiltersState => {
+  switch (action.type) {
+    case 'SET_FILTER':
+      if (action.field && action.value !== undefined) {
+        return { ...state, [action.field]: action.value };
+      }
+      return state;
+    case 'RESET_FILTERS':
+      return {
+        nomFilter: "",
+        prenomFilter: "",
+        roleFilter: "",
+        genreFilter: "",
+        emailFilter: "",
+        telephoneFilter: "",
+        ageFilter: "",
+        expirationFilter: ""
+      };
+    default:
+      return state;
+  }
+};
+
 const Liste_utilisateurs: React.FC = () => {
   const [listUtilisateurs, setListUtilisateurs] = useState<any[]>([]);
   const [utilisateurUpdated, setUtilisateurUpdated] = useState<any>(null);
@@ -33,24 +73,27 @@ const Liste_utilisateurs: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
   let role = useSelector((state: any) => state.auth.role);
 
-  const [nomFilter, setNomFilter] = useState("");
-  const [prenomFilter, setPrenomFilter] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [genreFilter, setGenreFilter] = useState("");
-  const [emailFilter, setEmailFilter] = useState("");
-  const [telephoneFilter, setTelephoneFilter] = useState("");
-  const [ageFilter, setAgeFilter] = useState<string>("");
-  const [expirationFilter, setExpirationFilter] = useState("");
+  const [filters, dispatchFilter] = useReducer(filtersReducer, {
+    nomFilter: "",
+    prenomFilter: "",
+    roleFilter: "",
+    genreFilter: "",
+    emailFilter: "",
+    telephoneFilter: "",
+    ageFilter: "",
+    expirationFilter: ""
+  });
 
   const [refreshTrigger, setRefreshTrigger] = useState<boolean>(false);
   const [editingField, setEditingField] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [originalUser, setOriginalUser] = useState<any>(null); // Sauvegarde de l'utilisateur original
 
-  const refreshList = () => {
+  const refreshList = useCallback(() => {
     setRefreshTrigger((prevValue) => !prevValue);
-  };
+  }, []);
 
-  const handleInputChange = async (e: any, index: number, fieldName: string) => {
+  const handleInputChange = useCallback(async (e: any, index: number, fieldName: string) => {
     const { value } = e.target;
     const updatedUtilisateurs = [...listUtilisateurs];
     updatedUtilisateurs[index][fieldName] = value;
@@ -58,14 +101,26 @@ const Liste_utilisateurs: React.FC = () => {
     console.log(updatedUtilisateurs[index]);
     setErrorMessage(null);
     setListUtilisateurs(updatedUtilisateurs);
-  };
+  }, [listUtilisateurs]);
 
-  const cancelModif = () => {
+  const startEditing = useCallback((index: number) => {
+    setOriginalUser({ ...listUtilisateurs[index] });
+    setEditingField(index);
+  }, [listUtilisateurs]);
+
+  const cancelModif = useCallback(() => {
+    if (originalUser && editingField !== null) {
+      const updatedUtilisateurs = [...listUtilisateurs];
+      updatedUtilisateurs[editingField] = { ...originalUser };
+      setListUtilisateurs(updatedUtilisateurs);
+    }
+    
     setEditingField(null);
     setUtilisateurUpdated(null);
-  };
+    setOriginalUser(null);
+  }, [originalUser, editingField, listUtilisateurs]);
 
-  const handleValidate = async () => {
+  const handleValidate = useCallback(async () => {
     try {
       utilisateurUpdated.dateExpirationCompte = dateToISO(
         utilisateurUpdated.dateExpirationCompte
@@ -74,6 +129,7 @@ const Liste_utilisateurs: React.FC = () => {
       console.log("Utilisateur mis à jour :", response.data);
       setEditingField(null);
       setUtilisateurUpdated(null);
+      setOriginalUser(null);
       refreshList();
     } catch (error: any) {
       if (
@@ -88,7 +144,7 @@ const Liste_utilisateurs: React.FC = () => {
         );
       }
     }
-  };
+  }, [utilisateurUpdated, refreshList]);
 
   if (role === "ADMIN") {
     useEffect(() => {
@@ -107,35 +163,37 @@ const Liste_utilisateurs: React.FC = () => {
       getUtilisateurs();
     }, [refreshTrigger]);
 
-    const handleOpenModal = () => {
+    const handleOpenModal = useCallback(() => {
       setShowModal(true);
-    };
+    }, []);
 
-    const handleCloseModal = () => {
+    const handleCloseModal = useCallback(() => {
       setShowModal(false);
-    };
+    }, []);
 
 
-    const filteredUtilisateurs = listUtilisateurs.filter((utilisateur) => {
-      const isValide =
-        expirationFilter === "Valide" &&
-        new Date(utilisateur.dateExpirationCompte * 1000) > new Date();
+    const filteredUtilisateurs = useMemo(() => {
+      return listUtilisateurs.filter((utilisateur) => {
+        const isValide =
+          filters.expirationFilter === "Valide" &&
+          new Date(utilisateur.dateExpirationCompte * 1000) > new Date();
 
-      const isExpire =
-        expirationFilter === "Expiré" &&
-        new Date(utilisateur.dateExpirationCompte * 1000) <= new Date();
+        const isExpire =
+          filters.expirationFilter === "Expiré" &&
+          new Date(utilisateur.dateExpirationCompte * 1000) <= new Date();
 
-      return (
-        utilisateur.nom.toLowerCase().includes(nomFilter.toLowerCase()) &&
-        utilisateur.prenom.toLowerCase().includes(prenomFilter.toLowerCase()) &&
-        (roleFilter === "" || utilisateur.role === roleFilter) &&
-        utilisateur.genre.includes(genreFilter) &&
-        utilisateur.email.toLowerCase().includes(emailFilter.toLowerCase()) &&
-        utilisateur.telephone.toString().includes(telephoneFilter) &&
-        (ageFilter === "" || calculerAge(utilisateur.dateNaissance) >= parseInt(ageFilter)) &&
-        (expirationFilter === "" || isValide || isExpire)
-      );
-    });
+        return (
+          utilisateur.nom.toLowerCase().includes(filters.nomFilter.toLowerCase()) &&
+          utilisateur.prenom.toLowerCase().includes(filters.prenomFilter.toLowerCase()) &&
+          (filters.roleFilter === "" || utilisateur.role === filters.roleFilter) &&
+          utilisateur.genre.includes(filters.genreFilter) &&
+          utilisateur.email.toLowerCase().includes(filters.emailFilter.toLowerCase()) &&
+          utilisateur.telephone.toString().includes(filters.telephoneFilter) &&
+          (filters.ageFilter === "" || calculerAge(utilisateur.dateNaissance) >= parseInt(filters.ageFilter)) &&
+          (filters.expirationFilter === "" || isValide || isExpire)
+        );
+      });
+    }, [listUtilisateurs, filters]);
 
     const utilisateursItems = filteredUtilisateurs.map((utilisateur, index) => (
       <React.Fragment key={index}>
@@ -167,7 +225,7 @@ const Liste_utilisateurs: React.FC = () => {
               <FontAwesomeIcon
                 className="icone_crayon_edit"
                 icon={faPencilAlt}
-                onClick={() => setEditingField(index)}
+                onClick={() => startEditing(index)}
               />
             </td>
           ) : editingField === index ? (
@@ -353,8 +411,8 @@ const Liste_utilisateurs: React.FC = () => {
                       <input
                         placeholder="Rechercher un nom"
                         type="text"
-                        value={nomFilter}
-                        onChange={(e) => setNomFilter(e.target.value)}
+                        value={filters.nomFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'nomFilter', value: e.target.value })}
                         autoComplete="off"
                       />
                     </th>
@@ -362,23 +420,23 @@ const Liste_utilisateurs: React.FC = () => {
                       <input
                         placeholder="Rechercher un prénom"
                         type="text"
-                        value={prenomFilter}
-                        onChange={(e) => setPrenomFilter(e.target.value)}
+                        value={filters.prenomFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'prenomFilter', value: e.target.value })}
                       />
                     </th>
                     <th colSpan={2}>
                       <input
                         placeholder="Age minimum"
                         type="number"
-                        value={ageFilter}
-                        onChange={(e) => setAgeFilter(e.target.value)}
+                        value={filters.ageFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'ageFilter', value: e.target.value })}
                       />
                     </th>
 
                     <th>
                       <select
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
+                        value={filters.roleFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'roleFilter', value: e.target.value })}
                       >
                         <option value="">Tous</option>
                         <option value="ADMIN">Admin</option>
@@ -390,8 +448,8 @@ const Liste_utilisateurs: React.FC = () => {
                     </th>
                     <th>
                       <select
-                        value={genreFilter}
-                        onChange={(e) => setGenreFilter(e.target.value)}
+                        value={filters.genreFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'genreFilter', value: e.target.value })}
                       >
                         <option value="">Tous</option>
                         <option value="Masculin">Masculin</option>
@@ -402,22 +460,22 @@ const Liste_utilisateurs: React.FC = () => {
                       <input
                         placeholder="Rechercher un email"
                         type="text"
-                        value={emailFilter}
-                        onChange={(e) => setEmailFilter(e.target.value)}
+                        value={filters.emailFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'emailFilter', value: e.target.value })}
                       />
                     </th>
                     <th>
                       <input
                         placeholder="Rechercher un numéro"
                         type="text"
-                        value={telephoneFilter}
-                        onChange={(e) => setTelephoneFilter(e.target.value)}
+                        value={filters.telephoneFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'telephoneFilter', value: e.target.value })}
                       />
                     </th>
                     <th>
                       <select
-                        value={expirationFilter}
-                        onChange={(e) => setExpirationFilter(e.target.value)}
+                        value={filters.expirationFilter}
+                        onChange={(e) => dispatchFilter({ type: 'SET_FILTER', field: 'expirationFilter', value: e.target.value })}
                       >
                         <option value="">Toutes</option>
                         <option value="Valide">Valides</option>

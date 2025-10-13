@@ -1,5 +1,5 @@
 import styles from "./Profil.module.scss";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Container, Row, Col, Card, CardBody, Button } from "reactstrap";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -39,7 +39,7 @@ const Profil: React.FC = () => {
     { display: "N° de téléphone", property: "telephone" },
     { display: "Date de naissance", property: "dateNaissance", isDate: true },
     {
-      display: "Compte valide jusqu'au",
+      display: "Valide jusqu'au",
       property: "dateExpirationCompte",
       isDate: true,
     },
@@ -62,19 +62,19 @@ const Profil: React.FC = () => {
     getProfil();
   }, []);
 
-  const handleInputChange = (property: string, value: any) => {
+  const handleInputChange = useCallback((property: string, value: any) => {
     const updatedUser = { ...utilisateur, [property]: value };
     setUtilisateur(updatedUser);
     setErrorMessage(null);
-  };
+  }, [utilisateur]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setUtilisateur(initialUtilisateur);
     setEditingField(null);
     setErrorMessage(null);
-  };
+  }, [initialUtilisateur]);
 
-  const handleValidate = async () => {
+  const handleValidate = useCallback(async () => {
     try {
       if (utilisateur) {
         const dateExpiration = utilisateur.dateExpirationCompte || new Date();
@@ -84,7 +84,7 @@ const Profil: React.FC = () => {
         setEditingField(null);
         setInitialUtilisateur(utilisateur);
       }
-      } catch (error: any) {
+    } catch (error: any) {
         if (error.response?.data?.status === 400) {
           let messageTransmis = error.response.data.message;
           setErrorMessage(messageTransmis);
@@ -101,8 +101,8 @@ const Profil: React.FC = () => {
             messageTransmis
           );
         }
-      }
-  };
+    }
+  }, [utilisateur]);
 
   if (!accountService.isLogged()) return <Navigate to="/" />;
 
@@ -132,20 +132,19 @@ const Profil: React.FC = () => {
                 </CardBody>
               </Card>
             </Col>
-            <Col lg={7}>
+            <Col lg={5}>
               <Card className={styles.card}>
                 <CardBody>
                   {propertyMappings.map((mapping) => (
                     <div key={mapping.display}>
                       <Row>
-                        <Col xs={12} md={12} lg={5}>
+                        <Col xs={12} md={12} lg={4}>
                           <h6 className="mb-0">{mapping.display}</h6>
                         </Col>
-
                         <Col
                           xs={10}
                           md={10}
-                          lg={5}
+                          lg={7}
                           className={styles.infos_value}
                         >
                           {mapping.property === "dateExpirationCompte" ? (
@@ -199,8 +198,8 @@ const Profil: React.FC = () => {
 
                         {mapping.property !== "dateExpirationCompte" && (
                           <Col
-                            xs={2}
-                            md={2}
+                            xs={1}
+                            md={1}
                             className="icone_crayon_edit"
                             onClick={() => setEditingField(mapping.property)}
                           >

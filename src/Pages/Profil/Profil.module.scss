@@ -5,20 +5,15 @@
   display: flex;
   justify-content: center;
   padding-bottom: 14rem;
-  background-color: #e2e8f0;
   min-height: 100vh;
-  // border: solid 3px blue;
   .title {
     font-family: $police_titres;
     font-size: 2rem;
     margin-top: 3rem;
-    //margin-left: 2rem;
     text-align: center;
-    //  border: solid 3px red;
   }
   .infos_box {
     justify-content: center;
-    //border: solid 1px red;
     .card {
       box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
         0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -26,7 +21,6 @@
       .input {
         border: solid 2px #1976d2;
         border-radius: 7px;
-        //   padding-left: 1em;
         padding-inline: 1em;
         width: 90%;
       }
