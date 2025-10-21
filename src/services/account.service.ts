@@ -33,7 +33,6 @@ const login = async (credentials: Credentials) => {
       "X-Skip-Token-Refresh": true, // En tête personnalisée pour éviter l'interceptor
     },
   });
-  console.log(response);
   return response;
 };
 

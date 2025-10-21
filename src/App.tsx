@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./Pages/Erreurs/error-page";
-import Liste_utilisateurs from "./Pages/_Admin/Liste_utilisateurs/Liste_utilisateurs";
+import Liste_utilisateurs_refactored from "./Pages/_Admin/Liste_utilisateurs/Liste_utilisateurs.tsx";
 import Profil from "./Pages/Profil/Profil";
 
 const App: React.FC = () => {
@@ -12,10 +12,10 @@ const App: React.FC = () => {
       path: "/",
       element: <Layout />,
       errorElement: <ErrorPage />,
-      children: [
+      children: [ 
         {
           path: "/liste_utilisateurs",
-          element: <Liste_utilisateurs />,
+          element: <Liste_utilisateurs_refactored />,
         },
         {
           path: "/profil",

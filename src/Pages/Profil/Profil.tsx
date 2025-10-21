@@ -109,7 +109,7 @@ const Profil: React.FC = () => {
   return (
     <Container fluid className={styles.main}>
       {loading ? (
-        <p>Chargement en cours...</p>
+        <p className="loading-message">Chargement en cours...</p>
       ) : (
         <Container>
           <Row className={styles.title}>
@@ -126,7 +126,7 @@ const Profil: React.FC = () => {
                     alt=""
                     className={styles.profile_img}
                   ></img>
-                  <Button className="button" target="__blank" href="">
+                  <Button className="button" target="__blank" href="#" onClick={(e) => e.preventDefault()}>
                     Modifier
                   </Button>
                 </CardBody>

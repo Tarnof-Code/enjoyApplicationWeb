@@ -1,0 +1,52 @@
+// Styles pour le composant Form générique
+@use "../../variables" as *;
+
+.main {
+  .formContainer {
+    display: inline-block;
+    background: #ffffff;
+    max-width: 35em;
+  }
+}
+
+.title {
+  color: #333;
+  margin-bottom: 30px;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.form {
+  flex-wrap: wrap;
+  .form_group {
+    gap: 1rem;
+    align-items: end;
+    display: flex;
+    margin-bottom: 1em !important;
+    .label {
+      min-width: 9rem;
+      font-weight: 600;
+      
+      .required {
+        color: #dc3545;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+.errorMessage {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+.buttonContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1em;
+  padding-top: 1em;
+}

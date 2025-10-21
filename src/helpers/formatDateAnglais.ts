@@ -1,5 +1,10 @@
-export default function formatDateAnglais(date: string | Date): string {
+export default function formatDateAnglais(date: string | Date | number): string {
     const newDate = new Date(date);
-    const formattedDate = newDate.toISOString().split('T')[0];
-    return formattedDate;
+    
+    // Utiliser les méthodes locales pour éviter les problèmes de fuseau horaire
+    const year = newDate.getFullYear();
+    const month = String(newDate.getMonth() + 1).padStart(2, '0');
+    const day = String(newDate.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
 };

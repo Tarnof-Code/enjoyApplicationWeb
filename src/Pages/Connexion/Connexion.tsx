@@ -29,7 +29,6 @@ function Connexion() {
         ...credentials,
         password: credentials.motDePasse
       });
-      console.log(response.data);
       accountService.saveAccessToken(response.data.access_token);
       navigate("/profil", { replace: true });
     } catch (error) {
