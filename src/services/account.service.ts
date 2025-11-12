@@ -21,11 +21,6 @@ interface UserInfos {
   dateNaissance: string;
 }
 
-/**
- * Connexion vers l'API
- * @param {object} credentials
- * @returns {Promise}
- */
 const login = async (credentials: Credentials) => {
   const response = await Axios.post("/auth/connexion", credentials, {
     withCredentials: true,
@@ -46,42 +41,25 @@ let addUser = async (userInfos: UserInfos) => {
   return response;
 };
 
-/**
- * Sauvegarde du token dans le localStorage
- * @param {string} access_token
- */
 let saveAccessToken = (access_token: string) => {
   let crypted_access_token = CryptoJS.AES.encrypt(
     access_token,
     secretKey
   ).toString();
   localStorage.setItem("access_token", crypted_access_token);
-  console.log(access_token);
-  console.log(crypted_access_token);
 };
 
-/**
- * Suppression du token du localStorage
- */
 let logout = () => {
   localStorage.removeItem("access_token");
   store.dispatch(clearUser());
   window.location.href = "/";
 };
 
-/**
- * Etat de la présence d'un token en localStorage
- * @returns {boolean}
- */
 let isLogged = () => {
   let access_token = localStorage.getItem("access_token");
   return !!access_token;
 };
 
-/**
- * Récupération brut du token en localStorage
- * @returns {string}
- */
 let getToken = () => {
   let crypted_access_token = localStorage.getItem("access_token");
   if (!crypted_access_token) {
@@ -92,10 +70,6 @@ let getToken = () => {
   return originalText;
 };
 
-/**
- * Récupération du payload du tkoen
- * @returns {object}
- */
 let getTokenInfo = () => {
   const token = getToken();
   if (!token) {
@@ -110,7 +84,6 @@ let refreshAccessToken = async () => {
   return response;
 };
 
-// Déclaration des serivces pour import
 export const accountService = {
   login,
   addUser,

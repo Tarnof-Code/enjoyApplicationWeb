@@ -1,7 +1,7 @@
 @use "../../_variables" as *;
 
 .table_container {
-  max-height: 40rem;
+  max-height: 73vh;
   overflow-y: auto;
   thead tr {
     position: sticky;
@@ -34,6 +34,58 @@
 }
 
 .icones_box {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 50px;
+}
+
+.filterContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  
+  input, select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.clearFilterButton {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  &:focus {
+    outline: 2px solid #dc3545;
+    outline-offset: 2px;
+  }
+}
+
+.btnAnnuler {
+  background-color: #6c757d !important;
+  color: #fff !important;
+  border: none !important;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: #000 !important;
+    color: #fff !important;
+  }
 }

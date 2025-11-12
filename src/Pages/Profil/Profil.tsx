@@ -79,8 +79,7 @@ const Profil: React.FC = () => {
       if (utilisateur) {
         const dateExpiration = utilisateur.dateExpirationCompte || new Date();
         utilisateur.dateExpirationCompte = new Date(dateToISO(dateExpiration));
-        const response = await utilisateurService.updateUser(utilisateur);
-        console.log("Utilisateur mis à jour :", response.data);
+        await utilisateurService.updateUser(utilisateur);
         setEditingField(null);
         setInitialUtilisateur(utilisateur);
       }
@@ -95,7 +94,6 @@ const Profil: React.FC = () => {
         } else {
           let messageTransmis = Object.values(error.response?.data || {})[0];
           setErrorMessage(String(messageTransmis));
-          console.log(messageTransmis);
           console.error(
             "Erreur lors de la mise à jour de l'utilisateur :",
             messageTransmis

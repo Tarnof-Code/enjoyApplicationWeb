@@ -5,9 +5,8 @@ import formaterDate from "../../../helpers/formaterDate";
 import calculerAge from "../../../helpers/calculerAge";
 import Acces_non_autorise from "../../Erreurs/Acces_non_autorise";
 import Liste, { ColumnConfig } from "../../../components/Liste/Liste";
-import User_form from "../../../components/User_form/User_form";
+import User_form from "../../../components/Forms/User_form";
 
-// Interface pour un utilisateur
 interface Utilisateur {
   nom: string;
   prenom: string;
@@ -17,48 +16,42 @@ interface Utilisateur {
   email: string;
   telephone: string;
   dateExpirationCompte: number;
+  tokenId?: string;
 }
 
-const Liste_utilisateurs_refactored: React.FC = () => {
+const Liste_utilisateurs: React.FC = () => {
   const [listUtilisateurs, setListUtilisateurs] = useState<Utilisateur[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [showEditModal, setShowEditModal] = useState<boolean>(false);
-  const [editingUser, setEditingUser] = useState<Utilisateur | null>(null);
+  const [modalState, setModalState] = useState<{
+    show: boolean;
+    editingUser: Utilisateur | null;
+  }>({ show: false, editingUser: null });
   const [refreshTrigger, setRefreshTrigger] = useState<boolean>(false);
   
   const role = useSelector((state: any) => state.auth.role);
 
-  // Configuration des colonnes
+  const createColumn = (
+    key: string, 
+    label: string, 
+    type: ColumnConfig['type'] = 'text',
+    options?: Partial<ColumnConfig>
+  ): ColumnConfig => ({
+    key,
+    label,
+    type,
+    filterable: true,
+    filterType: type === 'select' ? 'select' : 'text',
+    ...options
+  });
+
   const columns: ColumnConfig[] = [
-    {
-      key: 'nom',
-      label: 'Nom',
-      type: 'text',
-      filterable: true,
-      filterType: 'text'
-    },
-    {
-      key: 'prenom',
-      label: 'Prénom',
-      type: 'text',
-      filterable: true,
-      filterType: 'text'
-    },
-    {
-      key: 'age',
-      label: 'Age',
-      type: 'custom',
-      filterable: true,
+    createColumn('nom', 'Nom'),
+    createColumn('prenom', 'Prénom'),
+    createColumn('age', 'Age', 'custom', {
       filterType: 'number',
       render: (_, item) => `${calculerAge(item.dateNaissance)} ans`
-    },
-    {
-      key: 'role',
-      label: 'Rôle',
-      type: 'select',
-      filterable: true,
-      filterType: 'select',
+    }),
+    createColumn('role', 'Rôle', 'select', {
       filterOptions: [
         { value: '', label: 'Tous' },
         { value: 'ADMIN', label: 'Admin' },
@@ -67,38 +60,17 @@ const Liste_utilisateurs_refactored: React.FC = () => {
         { value: 'ANIM', label: 'Anim' },
         { value: 'ANIM_AS', label: 'Anim_AS' }
       ]
-    },
-    {
-      key: 'genre',
-      label: 'Genre',
-      type: 'select',
-      filterable: true,
-      filterType: 'select',
+    }),
+    createColumn('genre', 'Genre', 'select', {
       filterOptions: [
         { value: '', label: 'Tous' },
         { value: 'Masculin', label: 'Masculin' },
         { value: 'Féminin', label: 'Féminin' }
       ]
-    },
-    {
-      key: 'email',
-      label: 'Email',
-      type: 'email',
-      filterable: true,
-      filterType: 'text'
-    },
-    {
-      key: 'telephone',
-      label: 'Téléphone',
-      type: 'tel',
-      filterable: true,
-      filterType: 'text'
-    },
-    {
-      key: 'dateExpirationCompte',
-      label: 'Validité',
-      type: 'date',
-      filterable: true,
+    }),
+    createColumn('email', 'Email', 'email'),
+    createColumn('telephone', 'Téléphone', 'tel'),
+    createColumn('dateExpirationCompte', 'Validité', 'date', {
       filterType: 'select',
       filterOptions: [
         { value: '', label: 'Toutes' },
@@ -106,10 +78,9 @@ const Liste_utilisateurs_refactored: React.FC = () => {
         { value: 'Expiré', label: 'Expirés' }
       ],
       render: (value) => formaterDate(value)
-    }
+    })
   ];
 
-  // Chargement des données
   useEffect(() => {
     async function getUtilisateurs() {
       try {
@@ -127,31 +98,31 @@ const Liste_utilisateurs_refactored: React.FC = () => {
     }
   }, [refreshTrigger, role]);
 
-  // Gestion de l'ajout
-  const handleOpenModal = useCallback(() => {
-    setShowModal(true);
+  const openModal = useCallback((user?: Utilisateur) => {
+    setModalState({ show: true, editingUser: user || null });
   }, []);
 
-  const handleCloseModal = useCallback(() => {
-    setShowModal(false);
+  const closeModal = useCallback(() => {
+    setModalState({ show: false, editingUser: null });
   }, []);
 
-  const handleOpenEditModal = useCallback((user: Utilisateur) => {
-    setEditingUser(user);
-    setShowEditModal(true);
-  }, []);
-
-  const handleCloseEditModal = useCallback(() => {
-    setShowEditModal(false);
-    setEditingUser(null);
-  }, []);
-
-  // Fonction de rafraîchissement
   const refreshList = useCallback(() => {
     setRefreshTrigger(prev => !prev);
   }, []);
 
-
+  const handleDelete = useCallback(async (user: Utilisateur, _index: number) => {
+    try {
+      const identifier = user.tokenId;
+      if (!identifier) {
+        throw new Error("Impossible de trouver l'identifiant de l'utilisateur");
+      }
+      await utilisateurService.deleteUser(String(identifier));
+      // La liste sera rafraîchie automatiquement via refreshList appelé dans Liste.tsx
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'utilisateur:", error);
+      throw error; // Propager l'erreur pour que la modale reste ouverte
+    }
+  }, []);
 
   if (role !== "ADMIN") {
     return <Acces_non_autorise />;
@@ -164,19 +135,21 @@ const Liste_utilisateurs_refactored: React.FC = () => {
       loading={loading}
       title="Liste des Utilisateurs"
       addButtonText="Ajouter un Utilisateur"
-      onAdd={handleOpenModal}
+      onAdd={() => openModal()}
       refreshList={refreshList}
-      showModal={showModal}
-      onCloseModal={handleCloseModal}
+      showModal={modalState.show && !modalState.editingUser}
+      onCloseModal={closeModal}
       formComponent={User_form}
       canEdit={true}
       canAdd={true}
-      showEditModal={showEditModal}
-      onCloseEditModal={handleCloseEditModal}
-      editingItem={editingUser}
-      onOpenEditModal={handleOpenEditModal}
+      canDelete={true}
+      onDelete={handleDelete}
+      showEditModal={modalState.show && !!modalState.editingUser}
+      onCloseEditModal={closeModal}
+      editingItem={modalState.editingUser}
+      onOpenEditModal={(user) => openModal(user)}
     />
   );
 };
 
-export default Liste_utilisateurs_refactored;
+export default Liste_utilisateurs;

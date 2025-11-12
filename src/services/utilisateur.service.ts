@@ -61,6 +61,40 @@ let updateUser = async (utilisateur: any) => {
   return response;
 };
 
+
+let getDirecteurs = async () => {
+  try {
+    let response = await Axios.get("/utilisateurs/liste/DIRECTION");
+    const directeurs = response.data;
+    
+    directeurs.forEach((user: any) => {
+      if (user.dateExpirationCompte) {
+        user.dateExpirationCompte = user.dateExpirationCompte * 1000;
+      }
+      user.nom = user.nom.toUpperCase();
+    });
+
+    directeurs.sort((a: any, b: any) => {
+      return a.nom.toLocaleLowerCase().localeCompare(b.nom.toLocaleLowerCase());
+    });
+    
+    return { data: directeurs };
+  } catch {
+    throw new Error("Impossible de récupérer la liste des directeurs");
+  }
+};
+
+let deleteUser = async (tokenId: string) => {
+  try {
+    const response = await Axios.delete(`/utilisateurs/${tokenId}`, {
+      withCredentials: true,
+    });
+    return response;
+  } catch {
+    throw new Error("Impossible de supprimer l'utilisateur");
+  }
+};
+
 let getRoleByGenre = (role: string, genre: string): string => {
   switch (genre) {
     case "Feminin":
@@ -116,6 +150,8 @@ let getRoleByGenre = (role: string, genre: string): string => {
 export const utilisateurService = {
   getAllUsers,
   getUser,
+  getDirecteurs,
   getRoleByGenre,
   updateUser,
+  deleteUser,
 };

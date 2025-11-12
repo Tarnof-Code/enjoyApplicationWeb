@@ -18,13 +18,15 @@ import styles from "./Form.module.scss";
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password';
+  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'custom';
   required?: boolean;
   options?: { value: string; label: string }[];
-  validation?: (value: any) => string | null;
+  validation?: (value: any, allValues?: Record<string, any>) => string | null;
   placeholder?: string;
   disabled?: boolean;
   colSpan?: number; // Pour les champs qui prennent plus d'espace
+  customComponent?: React.ComponentType<any>; // Pour les composants personnalisés
+  autoComplete?: string; // Indice pour l'autocomplétion navigateur
 }
 
 // Interface pour les props du composant Form
@@ -37,7 +39,7 @@ export interface FormProps {
   cancelText?: string;
   title?: string;
   onCloseModal?: () => void;
-  successMessage?: string;
+  successMessage?: string | ((formData: any) => string);
   errorMessage?: string | null;
   loading?: boolean;
 }
@@ -91,11 +93,32 @@ function Form({
     // Validation en temps réel
     const field = fields.find(f => f.name === fieldName);
     if (field?.validation) {
-      const error = field.validation(value);
+      const nextAllValues = {
+        ...formData,
+        [fieldName]: value,
+      };
+      const error = field.validation(value, nextAllValues);
       setValidationErrors(prev => ({
         ...prev,
         [fieldName]: error || ""
       }));
+    }
+
+    // Si on modifie la date de début, revalider la date de fin pour afficher l'erreur au bon endroit
+    if (fieldName === 'dateDebut') {
+      const dateFinField = fields.find(f => f.name === 'dateFin');
+      if (dateFinField?.validation) {
+        const dateFinValue = (formData['dateFin'] || "");
+        const nextAllValues = {
+          ...formData,
+          [fieldName]: value,
+        };
+        const finError = dateFinField.validation(dateFinValue, nextAllValues) || "";
+        setValidationErrors(prev => ({
+          ...prev,
+          dateFin: finError,
+        }));
+      }
     }
   };
 
@@ -115,7 +138,7 @@ function Form({
       
       // Validation personnalisée
       if (field.validation && value) {
-        const error = field.validation(value);
+        const error = field.validation(value, formData);
         if (error) {
           errors[field.name] = error;
           isValid = false;
@@ -136,9 +159,11 @@ function Form({
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-      
       if (successMessage) {
-        setModalMessage(successMessage);
+        const message = typeof successMessage === 'function' 
+          ? successMessage(formData) 
+          : successMessage;
+        setModalMessage(message);
         setModalIsOpen(true);
       }
     } catch (error) {
@@ -163,7 +188,24 @@ function Form({
       className: hasError ? styles.errorInput : "",
       placeholder: field.placeholder,
       disabled: field.disabled || loading,
+      autoComplete: field.autoComplete,
     };
+
+    // Si c'est un composant personnalisé, le rendre directement
+    if (field.type === 'custom' && field.customComponent) {
+      const CustomComponent = field.customComponent;
+      return (
+        <CustomComponent
+          key={field.name}
+          value={value}
+          onChange={(newValue: string) => handleFieldChange(field.name, newValue)}
+          error={error}
+          disabled={field.disabled || loading}
+          label={field.label}
+          required={field.required}
+        />
+      );
+    }
 
     return (
       <FormGroup key={field.name} className={styles.form_group}>
@@ -185,7 +227,7 @@ function Form({
             </Input>
           ) : (
             <Input
-              type={field.type === 'password' ? 'password' : field.type}
+              type={field.type === 'password' ? 'password' : field.type === 'custom' ? 'text' : field.type}
               {...inputProps}
             />
           )}
@@ -208,9 +250,8 @@ function Form({
           <p className="errorMessage">{errorMessage}</p>
         )}
 
-        <ReactstrapForm className={styles.form}>
-          {fields.map(renderField)}
-          
+        <ReactstrapForm className={styles.form} autoComplete="off">
+          {fields.map(renderField)}        
           <div className={styles.buttonContainer}>
             <Button 
               onClick={onCancel}

@@ -4,6 +4,8 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import { useEffect } from "react";
+import { accountService } from "../services/account.service";
+import { utilisateurService } from "../services/utilisateur.service";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
@@ -17,6 +19,14 @@ const Layout: React.FC = () => {
       document.body.classList.remove('no-padding-top');
     }
   }, [pathname, role]);
+
+  useEffect(() => {
+    if (accountService.isLogged() && role === null) {
+      utilisateurService.getUser().catch(() => {
+        accountService.logout();
+      });
+    }
+  }, [role]);
 
   return (
     <>

@@ -13,6 +13,6 @@ const validatePassword = (password: string): boolean => {
     return passwordRegex.test(password)
 };
 
-export const regexService = {
+export const regexValidation = {
     validateEmail, validatePhone, validatePassword
 }

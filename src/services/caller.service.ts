@@ -24,11 +24,9 @@ Axios.interceptors.response.use(response => {
     return response;
 }, async error => {
     const originalRequest = error.config;
-
-    if (error.response.status === 401 && !originalRequest.headers['X-Skip-Token-Refresh']) {
+    if (error.response?.status === 401 && !originalRequest.headers['X-Skip-Token-Refresh']) {
         try {
             const refreshResponse = await accountService.refreshAccessToken();
-            console.log(refreshResponse);
             accountService.saveAccessToken(refreshResponse.data.access_token);
             return Axios(originalRequest);
         } catch (refreshError) {

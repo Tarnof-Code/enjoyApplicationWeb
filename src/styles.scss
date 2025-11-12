@@ -35,6 +35,17 @@ body.no-padding-top {
   }
 }
 
+.icone_trash_delete {
+  color: #6c757d;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  &:hover {
+    color: $rouge_principal;
+    cursor: pointer;
+  }
+}
+
 .btn_valider {
   background: $vert_principal;
   @include hover-btn($vert_principal, 5);
@@ -52,10 +63,10 @@ body.no-padding-top {
 }
 
 .page-main {
-  margin: 2rem 2rem;
+  padding: 2rem 2rem;
   font-size: small;
   @media screen and (max-width: 768px) {
-    margin: 1rem 2rem;
+    padding: 1rem 2rem;
   }
 }
 

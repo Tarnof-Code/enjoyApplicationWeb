@@ -33,3 +33,6 @@ config.local.js
 
 # Ignore Bash crash dumps
 *.stackdump
+
+# Cursor rules
+.cursorrules
