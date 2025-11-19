@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import Liste, { ColumnConfig } from '../../../components/Liste/Liste';
+import Liste, { ColumnConfig } from '../../components/Liste/Liste';
 import { useSelector } from 'react-redux';
-import { sejourService } from '../../../services/sejour.service';
-import Acces_non_autorise from '../../Erreurs/Acces_non_autorise';
-import Sejour_form from '../../../components/Forms/Sejour_form';
-import formaterDate from '../../../helpers/formaterDate';
+import { sejourService } from '../../services/sejour.service';
+import Acces_non_autorise from '../Erreurs/Acces_non_autorise';
+import Sejour_form from '../../components/Forms/Sejour_form';
+import formaterDate from '../../helpers/formaterDate';
 
 const calculerDureeSejour = (dateDebut: string, dateFin: string): number => {
   const debut = new Date(dateDebut);

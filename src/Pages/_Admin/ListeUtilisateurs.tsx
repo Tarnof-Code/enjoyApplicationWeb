@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { utilisateurService } from "../../../services/utilisateur.service";
-import formaterDate from "../../../helpers/formaterDate";
-import calculerAge from "../../../helpers/calculerAge";
-import Acces_non_autorise from "../../Erreurs/Acces_non_autorise";
-import Liste, { ColumnConfig } from "../../../components/Liste/Liste";
-import User_form from "../../../components/Forms/User_form";
+import { utilisateurService } from "../../services/utilisateur.service";
+import formaterDate from "../../helpers/formaterDate";
+import calculerAge from "../../helpers/calculerAge";
+import Acces_non_autorise from "../Erreurs/Acces_non_autorise";
+import Liste, { ColumnConfig } from "../../components/Liste/Liste";
+import User_form from "../../components/Forms/User_form";
 
 interface Utilisateur {
   nom: string;

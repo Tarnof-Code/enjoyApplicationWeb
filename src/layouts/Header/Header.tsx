@@ -28,7 +28,7 @@ const Admin_header: React.FC = () => {
           {role === "ADMIN" && (
             <Nav className="me-auto" navbar>
               <NavItem className={styles.navItemMargin}>
-                <NavLink to={"/liste_utilisateurs"} className={styles.link}>
+                <NavLink to={"/utilisateurs"} className={styles.link}>
                   <div className={styles.iconWithText}>
                     <FaUsers size={20} />
                     <span>Les utilisateurs</span>
@@ -36,7 +36,7 @@ const Admin_header: React.FC = () => {
                 </NavLink>
               </NavItem>
               <NavItem className={styles.navItemMargin}>
-                <NavLink to={"/liste_sejours"} className={styles.link}>
+                <NavLink to={"/sejours"} className={styles.link}>
                   <div className={styles.iconWithText}>
                     <FaSuitcaseRolling size={20} />
                     <span>Les séjours</span>
@@ -48,7 +48,7 @@ const Admin_header: React.FC = () => {
           {role !== "ADMIN" && (
             <Nav className="me-auto" navbar>
               <NavItem className={styles.navItemMargin}>
-                <NavLink to={"/liste_sejours"} className={styles.link}>
+                <NavLink to={"/sejours"} className={styles.link}>
                   <div className={styles.iconWithText}>
                     <FaSuitcaseRolling size={20} />
                     <span>Mes séjours</span>
