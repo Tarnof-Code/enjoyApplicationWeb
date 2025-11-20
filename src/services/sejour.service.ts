@@ -11,7 +11,7 @@ interface SejourInfos {
 
 let getAllSejours = async () => {
   try {
-    const response = await Axios.get("/sejours/liste");
+    const response = await Axios.get("/sejours");
     return response.data;
   } catch (error) {
     console.error("Une erreur s'est produite :", error);
@@ -21,7 +21,7 @@ let getAllSejours = async () => {
 
 let addSejour = async (sejourData: SejourInfos) => {
   try {
-    const response = await Axios.post("/sejours/creer", sejourData, {
+    const response = await Axios.post("/sejours", sejourData, {
       withCredentials: true,
     });
     return response.data;
@@ -33,7 +33,7 @@ let addSejour = async (sejourData: SejourInfos) => {
 
 let updateSejour = async (id: number, sejourData: SejourInfos) => {
   try {
-    const response = await Axios.put(`/sejours/modifier/${id}`, sejourData);
+    const response = await Axios.put(`/sejours/${id}`, sejourData);
     return response.data;
   } catch (error) {
     console.error("Une erreur s'est produite lors de la modification :", error);

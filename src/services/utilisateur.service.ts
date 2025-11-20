@@ -5,7 +5,7 @@ import { setUser } from "../redux/auth/authSlice";
 
 let getAllUsers = async () => {
   try {
-    let response = await Axios.get("/utilisateurs/liste");
+    let response = await Axios.get("/utilisateurs");
     response.data.forEach((user: any) => {
       if (user.dateExpirationCompte) {
         user.dateExpirationCompte = user.dateExpirationCompte * 1000;
@@ -52,7 +52,7 @@ let updateUser = async (utilisateur: any) => {
   // let token_infos = accountService.getTokenInfo();
   // const tokenId = token_infos.payload.sub;
   // utilisateur.tokenId = tokenId;
-  const response = await Axios.put("/utilisateurs/modifierInfos", utilisateur, {
+  const response = await Axios.put("/utilisateurs", utilisateur, {
     withCredentials: true,
     headers: {
       "X-Skip-Token-Refresh": true, // En tête personnalisée pour éviter l'interceptor
@@ -64,9 +64,9 @@ let updateUser = async (utilisateur: any) => {
 
 let getDirecteurs = async () => {
   try {
-    let response = await Axios.get("/utilisateurs/liste/DIRECTION");
+    let response = await Axios.get("/utilisateurs/DIRECTION");
     const directeurs = response.data;
-    
+
     directeurs.forEach((user: any) => {
       if (user.dateExpirationCompte) {
         user.dateExpirationCompte = user.dateExpirationCompte * 1000;
@@ -77,7 +77,7 @@ let getDirecteurs = async () => {
     directeurs.sort((a: any, b: any) => {
       return a.nom.toLocaleLowerCase().localeCompare(b.nom.toLocaleLowerCase());
     });
-    
+
     return { data: directeurs };
   } catch {
     throw new Error("Impossible de récupérer la liste des directeurs");
