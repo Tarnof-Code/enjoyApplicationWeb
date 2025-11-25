@@ -1,6 +1,6 @@
 import styles from "./Profil.module.scss";
-import { useEffect, useState, useCallback } from "react";
-import { Container, Row, Col, Card, CardBody, Button } from "reactstrap";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Card, CardBody } from "reactstrap";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import formaterDate from "../../helpers/formaterDate";
@@ -9,7 +9,18 @@ import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
+import { 
+  faPencilAlt, 
+  faUser, 
+  faEnvelope, 
+  faPhone, 
+  faCalendarAlt, 
+  faVenusMars, 
+  faClock,
+  faCamera,
+  faCheck,
+  faTimes
+} from "@fortawesome/free-solid-svg-icons";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import { fr } from "date-fns/locale/fr";
 
@@ -31,19 +42,27 @@ const Profil: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
   const [initialUtilisateur, setInitialUtilisateur] = useState<Utilisateur | null>(null);
+  const utilisateurRef = useRef<Utilisateur | null>(null);
+  
+  useEffect(() => {
+    utilisateurRef.current = utilisateur;
+  }, [utilisateur]);
+  
   const propertyMappings = [
-    { display: "Prénom", property: "prenom" },
-    { display: "Nom", property: "nom" },
-    { display: "Genre", property: "genre" },
-    { display: "Email", property: "email" },
-    { display: "N° de téléphone", property: "telephone" },
-    { display: "Date de naissance", property: "dateNaissance", isDate: true },
+    { display: "Prénom", property: "prenom", icon: faUser },
+    { display: "Nom", property: "nom", icon: faUser },
+    { display: "Genre", property: "genre", icon: faVenusMars },
+    { display: "Email", property: "email", icon: faEnvelope },
+    { display: "N° de téléphone", property: "telephone", icon: faPhone },
+    { display: "Date de naissance", property: "dateNaissance", isDate: true, icon: faCalendarAlt },
     {
       display: "Valide jusqu'au",
       property: "dateExpirationCompte",
       isDate: true,
+      icon: faClock,
     },
   ];
+  
   const [editingField, setEditingField] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -63,179 +82,176 @@ const Profil: React.FC = () => {
   }, []);
 
   const handleInputChange = useCallback((property: string, value: any) => {
-    const updatedUser = { ...utilisateur, [property]: value };
-    setUtilisateur(updatedUser);
+    setUtilisateur(prevUtilisateur => ({ 
+      ...prevUtilisateur, 
+      [property]: value 
+    }));
     setErrorMessage(null);
-  }, [utilisateur]);
+  }, []);
 
   const handleCancel = useCallback(() => {
-    setUtilisateur(initialUtilisateur);
+    setUtilisateur(() => initialUtilisateur);
     setEditingField(null);
     setErrorMessage(null);
   }, [initialUtilisateur]);
 
   const handleValidate = useCallback(async () => {
+    const currentUtilisateur = utilisateurRef.current;
+    if (!currentUtilisateur) return;
+    
     try {
-      if (utilisateur) {
-        const dateExpiration = utilisateur.dateExpirationCompte || new Date();
-        utilisateur.dateExpirationCompte = new Date(dateToISO(dateExpiration));
-        await utilisateurService.updateUser(utilisateur);
-        setEditingField(null);
-        setInitialUtilisateur(utilisateur);
-      }
+      const dateExpiration = currentUtilisateur.dateExpirationCompte || new Date();
+      const utilisateurToUpdate = {
+        ...currentUtilisateur,
+        dateExpirationCompte: new Date(dateToISO(dateExpiration))
+      };
+      await utilisateurService.updateUser(utilisateurToUpdate);
+      setEditingField(null);
+      setInitialUtilisateur(utilisateurToUpdate);
     } catch (error: any) {
-        if (error.response?.data?.status === 400) {
-          let messageTransmis = error.response.data.message;
-          setErrorMessage(messageTransmis);
-          console.error(
-            "Erreur lors de la mise à jour de l'utilisateur :",
-            messageTransmis
-          );
-        } else {
-          let messageTransmis = Object.values(error.response?.data || {})[0];
-          setErrorMessage(String(messageTransmis));
-          console.error(
-            "Erreur lors de la mise à jour de l'utilisateur :",
-            messageTransmis
-          );
-        }
+      if (error.response?.data?.status === 400) {
+        let messageTransmis = error.response.data.message;
+        setErrorMessage(messageTransmis);
+        console.error(
+          "Erreur lors de la mise à jour de l'utilisateur :",
+          messageTransmis
+        );
+      } else {
+        let messageTransmis = Object.values(error.response?.data || {})[0];
+        setErrorMessage(String(messageTransmis));
+        console.error(
+          "Erreur lors de la mise à jour de l'utilisateur :",
+          messageTransmis
+        );
+      }
     }
-  }, [utilisateur]);
+  }, []);
 
   if (!accountService.isLogged()) return <Navigate to="/" />;
 
   return (
-    <Container fluid className={styles.main}>
+    <div className={`page-main ${styles.pageMainProfile}`}>
       {loading ? (
-        <p className="loading-message">Chargement en cours...</p>
+        <div className={styles.loadingOverlay}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Chargement...</span>
+          </div>
+        </div>
       ) : (
-        <Container>
-          <Row className={styles.title}>
-            <Col>
-              <h1>Mon profil</h1>
-            </Col>
-          </Row>
-          <Row className={styles.infos_box}>
-            <Col sm={10} md={7} lg={3}>
-              <Card className={styles.card}>
-                <CardBody className={styles.photo_card}>
-                  <img
-                    src="https://bootdey.com/img/Content/avatar/avatar1.png"
-                    alt=""
-                    className={styles.profile_img}
-                  ></img>
-                  <Button className="button" target="__blank" href="#" onClick={(e) => e.preventDefault()}>
-                    Modifier
-                  </Button>
-                </CardBody>
-              </Card>
-            </Col>
-            <Col lg={5}>
-              <Card className={styles.card}>
-                <CardBody>
-                  {propertyMappings.map((mapping) => (
-                    <div key={mapping.display}>
-                      <Row>
-                        <Col xs={12} md={12} lg={4}>
-                          <h6 className="mb-0">{mapping.display}</h6>
-                        </Col>
-                        <Col
-                          xs={10}
-                          md={10}
-                          lg={7}
-                          className={styles.infos_value}
-                        >
-                          {mapping.property === "dateExpirationCompte" ? (
-                            utilisateur && utilisateur[mapping.property] && formaterDate(utilisateur[mapping.property] as string | Date)
-                          ) : editingField === mapping.property ? (
-                            mapping.isDate ? (
-                              <DatePicker
-                                className={`${styles.input}`}
-                                selected={utilisateur?.[mapping.property]}
-                                onChange={(date) =>
-                                  handleInputChange(mapping.property, date)
-                                }
-                                locale="fr"
-                                dateFormat="dd/MM/yyyy"
-                                showYearDropdown
-                                scrollableYearDropdown
-                              />
-                            ) : mapping.property === "genre" ? (
-                              <select
-                                className={`${styles.input}`}
-                                value={utilisateur?.[mapping.property] || ''}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    mapping.property,
-                                    e.target.value
-                                  )
-                                }
-                              >
-                                <option value="Féminin">Féminin</option>
-                                <option value="Masculin">Masculin</option>
-                              </select>
-                            ) : (
-                              <input
-                                className={`${styles.input}`}
-                                type="text"
-                                value={utilisateur?.[mapping.property] || ''}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    mapping.property,
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            )
-                          ) : mapping.isDate ? (
-                            utilisateur && utilisateur[mapping.property] && formaterDate(utilisateur[mapping.property] as string | Date)
-                          ) : (
-                            utilisateur?.[mapping.property]
+        <>
+          <div className={styles.profileContent}>
+            <Card className={styles.detailsCard}>
+              <CardBody>
+                <div className={styles.profileHeader}>
+                  <div className={styles.avatarWrapper}>
+                    <img
+                      src="https://bootdey.com/img/Content/avatar/avatar1.png"
+                      alt="Avatar"
+                      className={styles.avatar}
+                    />
+                    <button className={styles.editAvatarBtn} title="Modifier la photo">
+                      <FontAwesomeIcon icon={faCamera} />
+                    </button>
+                  </div>
+                  <div className={styles.profileIdentity}>
+                    <h2>{utilisateur?.prenom} {utilisateur?.nom}</h2>
+                    <span className={styles.roleBadge}>{utilisateur?.role}</span>
+                  </div>
+                </div>            
+                <div className={styles.infoList}>
+                    {propertyMappings.map((mapping) => {
+                      const isEditing = editingField === mapping.property;
+                      const isReadOnly = mapping.property === "dateExpirationCompte";
+                      
+                      return (
+                        <div key={mapping.display} className={`${styles.infoItem} ${isEditing ? styles.editing : ''}`}>
+                          <div className={styles.iconCol}>
+                            <div className={styles.iconBubble}>
+                              <FontAwesomeIcon icon={mapping.icon} />
+                            </div>
+                          </div>
+                          
+                          <div className={styles.contentCol}>
+                            <span className={styles.label}>{mapping.display}</span>
+                            
+                            <div className={styles.valueContainer}>
+                              {isEditing ? (
+                                mapping.isDate ? (
+                                  <DatePicker
+                                    className="form-control"
+                                    selected={utilisateur?.[mapping.property]}
+                                    onChange={(date) => handleInputChange(mapping.property, date)}
+                                    locale="fr"
+                                    dateFormat="dd/MM/yyyy"
+                                    showYearDropdown
+                                    scrollableYearDropdown
+                                  />
+                                ) : mapping.property === "genre" ? (
+                                  <select
+                                    className="form-select"
+                                    value={utilisateur?.[mapping.property] || ''}
+                                    onChange={(e) => handleInputChange(mapping.property, e.target.value)}
+                                  >
+                                    <option value="Féminin">Féminin</option>
+                                    <option value="Masculin">Masculin</option>
+                                  </select>
+                                ) : (
+                                  <input
+                                    className="form-control"
+                                    type="text"
+                                    value={utilisateur?.[mapping.property] || ''}
+                                    onChange={(e) => handleInputChange(mapping.property, e.target.value)}
+                                    autoFocus
+                                  />
+                                )
+                              ) : (
+                                <span className={styles.value}>
+                                  {mapping.isDate 
+                                    ? (utilisateur && utilisateur[mapping.property] && formaterDate(utilisateur[mapping.property] as string | Date))
+                                    : (utilisateur?.[mapping.property] || <span className="text-muted fst-italic">Non renseigné</span>)
+                                  }
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {!isReadOnly && (
+                            <div className={styles.actionCol}>
+                              {isEditing ? (
+                                <div className={styles.editActions}>
+                                  <button className={styles.btnSave} onClick={handleValidate} title="Valider">
+                                    <FontAwesomeIcon icon={faCheck} />
+                                  </button>
+                                  <button className={styles.btnCancel} onClick={handleCancel} title="Annuler">
+                                    <FontAwesomeIcon icon={faTimes} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button 
+                                  className={styles.btnEdit} 
+                                  onClick={() => setEditingField(mapping.property)}
+                                  title="Modifier"
+                                >
+                                  <FontAwesomeIcon icon={faPencilAlt} />
+                                </button>
+                              )}
+                            </div>
                           )}
-                        </Col>
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                        {mapping.property !== "dateExpirationCompte" && (
-                          <Col
-                            xs={1}
-                            md={1}
-                            className="icone_crayon_edit"
-                            onClick={() => setEditingField(mapping.property)}
-                          >
-                            <FontAwesomeIcon icon={faPencilAlt} />
-                          </Col>
-                        )}
-                      </Row>
-                      <hr className={styles.separation_line} />
-                    </div>
-                  ))}
-                  {errorMessage !== null && (
-                    <p className={`errorMessage ${styles.error_box}`}>
-                      {errorMessage}
-                    </p>
-                  )}
-                  <Row>
-                    {editingField !== null && (
-                      <Col sm={12} className={styles.btn_box}>
-                        <Button target="__blank" onClick={handleCancel}>
-                          Annuler
-                        </Button>
-                        <Button
-                          className={styles.btn_valider}
-                          target="__blank"
-                          onClick={handleValidate}
-                        >
-                          Valider
-                        </Button>
-                      </Col>
-                    )}
-                  </Row>
-                </CardBody>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
+                {errorMessage && (
+                  <div className="alert alert-danger mt-4">
+                    {errorMessage}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          </div>
+        </>
       )}
-    </Container>
+    </div>
   );
 };
 
