@@ -6,6 +6,9 @@ import ErrorPage from "./Pages/Erreurs/error-page";
 import Profil from "./Pages/Profil/Profil";
 import ListeSejours from "./Pages/_Admin/ListeSejours.tsx";
 import ListeUtilisateurs from "./Pages/_Admin/ListeUtilisateurs.tsx";
+import ProtectedRoute from "./components/ProtectedRoute";
+import SejoursDirecteur from "./Pages/_Directeur/SejoursDirecteur.tsx";
+import DetailsSejour from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
 
 const App: React.FC = () => {
   const router = createBrowserRouter([
@@ -13,14 +16,30 @@ const App: React.FC = () => {
       path: "/",
       element: <Layout />,
       errorElement: <ErrorPage />,
-      children: [ 
+      children: [
         {
           path: "/utilisateurs",
-          element: <ListeUtilisateurs />,
+          element: (
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ListeUtilisateurs />
+            </ProtectedRoute>
+          ),
         },
         {
           path: "/sejours",
-          element: <ListeSejours />,
+          element: (
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ListeSejours />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "/directeur/sejours",
+          element: (
+            <ProtectedRoute allowedRoles={['DIRECTION']}>
+              <SejoursDirecteur />
+            </ProtectedRoute>
+          ),
         },
         {
           path: "/profil",

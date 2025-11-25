@@ -45,10 +45,10 @@ const Admin_header: React.FC = () => {
               </NavItem>
             </Nav>
           )}
-          {role !== "ADMIN" && (
+          {role === "DIRECTION" && (
             <Nav className="me-auto" navbar>
               <NavItem className={styles.navItemMargin}>
-                <NavLink to={"/sejours"} className={styles.link}>
+                <NavLink to={"/directeur/sejours"} className={styles.link}>
                   <div className={styles.iconWithText}>
                     <FaSuitcaseRolling size={20} />
                     <span>Mes séjours</span>

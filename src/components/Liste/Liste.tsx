@@ -13,6 +13,7 @@ import {
   faPencilAlt,
   faTimes,
   faTrashAlt,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import styles from "./Liste.module.scss";
 import calculerAge from "../../helpers/calculerAge";
@@ -66,12 +67,14 @@ export interface ListeProps<T = any> {
   canEdit?: boolean;
   canDelete?: boolean;
   canAdd?: boolean;
+  canView?: boolean;
   
   // État pour le formulaire de modification
   showEditModal?: boolean;
   onCloseEditModal?: () => void;
   editingItem?: T | null;
   onOpenEditModal?: (item: T) => void;
+  onView?: (item: T) => void;
   
 }
 
@@ -150,7 +153,9 @@ const Liste = <T extends Record<string, any>>({
   canEdit = true,
   canAdd = true,
   canDelete = true,
+  canView = false,
   onDelete,
+  onView,
   showEditModal = false,
   onCloseEditModal,
   editingItem = null,
@@ -300,26 +305,35 @@ const Liste = <T extends Record<string, any>>({
     // Trouver l'index réel dans data pour onDelete
     const realIndex = data.findIndex(d => d === item);
     const indexToUse = realIndex >= 0 ? realIndex : filteredIndex;
-    
     return (
       <tr key={filteredIndex}>
-        <td className={styles.icones_box}>
-          {canEdit && (
-            <FontAwesomeIcon
-              className="icone_crayon_edit"
-              icon={faPencilAlt}
-              onClick={() => startEditing(item)}
-              style={{ cursor: 'pointer' }}
-            />
-          )}
-          {canDelete && onDelete && (
-            <FontAwesomeIcon
-              className="icone_trash_delete"
-              icon={faTrashAlt}
-              onClick={() => startDeleting(item, indexToUse)}
-              style={{ cursor: 'pointer' }}
-            />
-          )}
+        <td className={styles.actions_cell}>
+          <div className={styles.icones_box}>
+            {canView && (
+              <FontAwesomeIcon
+                className="icone_oeil_view"
+                icon={faEye}
+                onClick={() => onView && onView(item)}
+                style={{ cursor: 'pointer' }}
+              />
+            )}
+            {canEdit && (
+              <FontAwesomeIcon
+                className="icone_crayon_edit"
+                icon={faPencilAlt}
+                onClick={() => startEditing(item)}
+                style={{ cursor: 'pointer' }}
+              />
+            )}
+            {canDelete && onDelete && (
+              <FontAwesomeIcon
+                className="icone_trash_delete"
+                icon={faTrashAlt}
+                onClick={() => startDeleting(item, indexToUse)}
+                style={{ cursor: 'pointer' }}
+              />
+            )}
+          </div>
         </td>
 
         {columns.map(column => (

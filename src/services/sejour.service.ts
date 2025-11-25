@@ -1,3 +1,4 @@
+import { accountService } from "./account.service";
 import Axios from "./caller.service";
 
 interface SejourInfos {
@@ -12,6 +13,21 @@ interface SejourInfos {
 let getAllSejours = async () => {
   try {
     const response = await Axios.get("/sejours");
+    return response.data;
+  } catch (error) {
+    console.error("Une erreur s'est produite :", error);
+    throw error;
+  }
+};
+
+let getAllSejoursByDirecteur = async () => {
+  try {
+    const tokenInfo = accountService.getTokenInfo();
+    const directeurTokenId = tokenInfo?.payload?.sub;
+    if (!directeurTokenId) {
+      throw new Error("Impossible de récupérer le token ID du directeur");
+    }
+    const response = await Axios.get("/sejours/directeur/" + directeurTokenId);
     return response.data;
   } catch (error) {
     console.error("Une erreur s'est produite :", error);
@@ -53,6 +69,7 @@ let deleteSejour = async (sejourId: number) => {
 
 export const sejourService = {
   getAllSejours,
+  getAllSejoursByDirecteur,
   addSejour,
   updateSejour,
   deleteSejour,

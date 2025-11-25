@@ -5,14 +5,7 @@ import { sejourService } from '../../services/sejour.service';
 import Acces_non_autorise from '../Erreurs/Acces_non_autorise';
 import Sejour_form from '../../components/Forms/Sejour_form';
 import formaterDate from '../../helpers/formaterDate';
-
-const calculerDureeSejour = (dateDebut: string, dateFin: string): number => {
-  const debut = new Date(dateDebut);
-  const fin = new Date(dateFin);
-  const diffTime = Math.abs(fin.getTime() - debut.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-};
+import calculerDureeEnJours from '../../helpers/calculerDureeEnJours';
 
 interface Sejour {
   id: number;
@@ -29,7 +22,7 @@ interface Sejour {
 }
 
 
-const Liste_sejours: React.FC = () => {
+const ListeSejours: React.FC = () => {
   const [listSejours, setListSejours] = useState<Sejour[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [modalState, setModalState] = useState<{
@@ -41,8 +34,8 @@ const Liste_sejours: React.FC = () => {
   const role = useSelector((state: any) => state.auth.role);
 
   const createColumn = (
-    key: string, 
-    label: string, 
+    key: string,
+    label: string,
     type: ColumnConfig['type'] = 'text',
     options?: Partial<ColumnConfig>
   ): ColumnConfig => ({
@@ -68,14 +61,14 @@ const Liste_sejours: React.FC = () => {
         return value ? `${value.prenom} ${value.nom}` : 'Non assigné';
       }
     },
-    createColumn('dateDebut', 'Date de début', 'date',{
+    createColumn('dateDebut', 'Date de début', 'date', {
       filterable: true,
       filterType: 'date',
       render: (value: Date) => {
         return formaterDate(value);
       }
     }),
-    createColumn('dateFin', 'Date de fin', 'date',{
+    createColumn('dateFin', 'Date de fin', 'date', {
       filterable: true,
       filterType: 'date',
       render: (value: Date) => {
@@ -89,7 +82,7 @@ const Liste_sejours: React.FC = () => {
       filterable: true,
       filterType: 'number',
       render: (_value: any, item: Sejour) => {
-        return calculerDureeSejour(item.dateDebut, item.dateFin) + " jours";
+        return calculerDureeEnJours(item.dateDebut, item.dateFin) + " jours";
       }
     },
   ];
@@ -160,6 +153,6 @@ const Liste_sejours: React.FC = () => {
   );
 };
 
-  
 
-export default Liste_sejours;
+
+export default ListeSejours;

@@ -24,18 +24,9 @@ body.no-padding-top {
   font-weight: bold;
 }
 
-.icone_crayon_edit {
-  color: #6c757d;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  &:hover {
-    color: $rouge_principal;
-    cursor: pointer;
-  }
-}
-
-.icone_trash_delete {
+.icone_crayon_edit,
+.icone_trash_delete,
+.icone_oeil_view {
   color: #6c757d;
   display: flex;
   justify-content: center;
