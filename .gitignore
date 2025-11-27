@@ -36,3 +36,6 @@ config.local.js
 
 # Cursor rules
 .cursorrules
+
+# AI Memory Bank
+AI_MEMORY.md
