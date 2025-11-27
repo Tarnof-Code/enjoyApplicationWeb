@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { accountService } from '../services/account.service';
 
 interface ProtectedRouteProps {
     allowedRoles: string[];
@@ -9,7 +10,11 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
     const role = useSelector((state: any) => state.auth.role);
+    
     if (!role) {
+        if (accountService.isLogged()) {
+            return null;
+        }
         return <Navigate to="/" replace />;
     }
 

@@ -56,7 +56,7 @@ const Profil: React.FC = () => {
     { display: "N° de téléphone", property: "telephone", icon: faPhone },
     { display: "Date de naissance", property: "dateNaissance", isDate: true, icon: faCalendarAlt },
     {
-      display: "Valide jusqu'au",
+      display: "Compte valide jusqu'au",
       property: "dateExpirationCompte",
       isDate: true,
       icon: faClock,

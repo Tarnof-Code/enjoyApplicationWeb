@@ -4,10 +4,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./Pages/Erreurs/error-page";
 import Profil from "./Pages/Profil/Profil";
-import ListeSejours from "./Pages/_Admin/ListeSejours.tsx";
-import ListeUtilisateurs from "./Pages/_Admin/ListeUtilisateurs.tsx";
+import ListeSejours from "./Pages/_Admin/ListeSejours/ListeSejours.tsx";
+import ListeUtilisateurs from "./Pages/_Admin/ListeUtilisateurs/ListeUtilisateurs.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
-import SejoursDirecteur from "./Pages/_Directeur/SejoursDirecteur.tsx";
+import SejoursDirecteur from "./Pages/_Directeur/SejoursDirecteur/SejoursDirecteur.tsx";
 import DetailsSejour from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
 
 const App: React.FC = () => {
@@ -38,6 +38,14 @@ const App: React.FC = () => {
           element: (
             <ProtectedRoute allowedRoles={['DIRECTION']}>
               <SejoursDirecteur />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "/directeur/sejours/:id",
+          element: (
+            <ProtectedRoute allowedRoles={['DIRECTION']}>
+              <DetailsSejour />
             </ProtectedRoute>
           ),
         },

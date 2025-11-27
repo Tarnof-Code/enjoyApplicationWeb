@@ -1,9 +1,9 @@
-import Liste, { ColumnConfig } from "../../components/Liste/Liste";
-import { sejourService } from "../../services/sejour.service";
+import Liste, { ColumnConfig } from "../../../components/Liste/Liste";
+import { sejourService } from "../../../services/sejour.service";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import formaterDate from "../../helpers/formaterDate";
+import formaterDate from "../../../helpers/formaterDate";
 
 interface Sejour {
     id: number;
@@ -91,4 +91,3 @@ const SejoursDirecteur: React.FC = () => {
 
 
 export default SejoursDirecteur;
-
