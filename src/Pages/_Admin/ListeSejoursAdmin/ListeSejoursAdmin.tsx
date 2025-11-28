@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Liste, { ColumnConfig } from '../../../components/Liste/Liste';
-import { useSelector } from 'react-redux';
 import { sejourService } from '../../../services/sejour.service';
-import Acces_non_autorise from '../../../Pages/Erreurs/Acces_non_autorise';
 import Sejour_form from '../../../components/Forms/Sejour_form';
 import formaterDate from '../../../helpers/formaterDate';
 import calculerDureeEnJours from '../../../helpers/calculerDureeEnJours';
+import { useLoaderData, useNavigate } from 'react-router-dom';
 
 interface Sejour {
   id: number;
@@ -21,17 +20,25 @@ interface Sejour {
   dateFin: string;
 }
 
+export async function sejoursAdminLoader() {
+  try {
+    const response = await sejourService.getAllSejours();
+    return response;
+  } catch (error) {
+    console.error("Erreur chargement sejours admin", error);
+    return [];
+  }
+}
 
-const ListeSejours: React.FC = () => {
-  const [listSejours, setListSejours] = useState<Sejour[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+const ListeSejoursAdmin: React.FC = () => {
+
+  const sejours = useLoaderData() as Sejour[];
+  const navigate = useNavigate();
+
   const [modalState, setModalState] = useState<{
     show: boolean;
     editingSejour: Sejour | null;
   }>({ show: false, editingSejour: null });
-  const [refreshTrigger, setRefreshTrigger] = useState<boolean>(false);
-
-  const role = useSelector((state: any) => state.auth.role);
 
   const createColumn = (
     key: string,
@@ -87,54 +94,33 @@ const ListeSejours: React.FC = () => {
     },
   ];
 
-  useEffect(() => {
-    async function getSejours() {
-      try {
-        const response = await sejourService.getAllSejours();
-        setListSejours(response);
-        setLoading(false);
-      } catch (error) {
-        console.error("Une erreur s'est produite :", error);
-        setLoading(false);
-      }
-    }
-
-    if (role === "ADMIN") {
-      getSejours();
-    }
-  }, [refreshTrigger, role]);
-
-  const openModal = useCallback((sejour?: Sejour) => {
+  const openModal = (sejour?: Sejour) => {
     setModalState({ show: true, editingSejour: sejour || null });
-  }, []);
+  };
 
-  const closeModal = useCallback(() => {
+  const closeModal = () => {
     setModalState({ show: false, editingSejour: null });
-  }, []);
+  };
 
-  const refreshList = useCallback(() => {
-    setRefreshTrigger(prev => !prev);
-  }, []);
+  const refreshList = () => {
+    navigate(".", { replace: true });
+  };
 
-  const handleDelete = useCallback(async (sejour: Sejour, _index: number) => {
+  const handleDelete = async (sejour: Sejour, _index: number) => {
     try {
       await sejourService.deleteSejour(sejour.id);
     } catch (error) {
       console.error("Erreur lors de la suppression du séjour:", error);
       throw error;
     }
-  }, []);
-
-  if (role !== "ADMIN") {
-    return <Acces_non_autorise />;
-  }
+  };
 
   return (
     <Liste
       columns={columns}
-      data={listSejours}
-      loading={loading}
-      title="Liste des Séjours"
+      data={sejours}
+      loading={false}
+      title="Tous les séjours"
       addButtonText="Ajouter un Séjour"
       onAdd={() => openModal()}
       refreshList={refreshList}
@@ -153,6 +139,5 @@ const ListeSejours: React.FC = () => {
   );
 };
 
+export default ListeSejoursAdmin;
 
-
-export default ListeSejours;

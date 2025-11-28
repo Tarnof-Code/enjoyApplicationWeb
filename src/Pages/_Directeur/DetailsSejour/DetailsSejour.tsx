@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { LoaderFunctionArgs, useLoaderData, useNavigate } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
@@ -14,16 +14,22 @@ interface Sejour {
     dateFin: string;
 }
 
+export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
+    if (!params.id) throw new Error("ID du séjour manquant");
+    try {
+        const response = await sejourService.getSejourById(params.id);
+        return response;
+    } catch (error) {
+        console.error("Erreur chargement séjour", error);
+        return error;
+    }
+}
+
 const DetailsSejour: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
-    const location = useLocation();
-    const sejourFromState = location.state?.sejour as Sejour | undefined;
-    
-    const [sejour, setSejour] = useState<Sejour | null>(sejourFromState || null);
-    const [loading, setLoading] = useState(!sejourFromState);
-    const [error, setError] = useState<string | null>(null);
+
+    const sejour = useLoaderData() as Sejour;
     const [openAccordions, setOpenAccordions] = useState<string[]>(['1']);
+    const navigate = useNavigate();
 
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => 
@@ -52,56 +58,17 @@ const DetailsSejour: React.FC = () => {
         );
     };
 
-    useEffect(() => {
-        if (sejourFromState) {
-            return;
-        }
-        const fetchSejour = async () => {
-            try {
-                if (!id) {
-                    setError("ID du séjour manquant");
-                    setLoading(false);
-                    return;
-                }
-                
-                const sejours = await sejourService.getAllSejoursByDirecteur();
-                const sejourTrouve = sejours.find((s: Sejour) => s.id === parseInt(id));
-                
-                if (sejourTrouve) {
-                    setSejour(sejourTrouve);
-                } else {
-                    setError("Séjour non trouvé");
-                }
-                setLoading(false);
-            } catch (err) {
-                console.error("Erreur lors du chargement du séjour:", err);
-                setError("Erreur lors du chargement du séjour");
-                setLoading(false);
-            }
-        };
-
-        fetchSejour();
-    }, [id, sejourFromState]);
-
     const handleRetour = () => {
         navigate("/directeur/sejours");
     };
 
-    if (loading) {
+    if(!sejour) {
         return (
-            <div className={styles.pageContainer}>
-                <p>Chargement...</p>
-            </div>
-        );
-    }
-
-    if (error || !sejour) {
-        return (
-            <div className={styles.pageContainer}>
-                <p className={styles.error}>{error || "Séjour non trouvé"}</p>
+            <div className={styles.pageContainer}>              
                 <button onClick={handleRetour} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
+                <p className={styles.error}>Séjour introuvable</p>
             </div>
         );
     }

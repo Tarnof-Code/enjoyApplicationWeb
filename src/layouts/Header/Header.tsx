@@ -1,7 +1,7 @@
 import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { accountService } from "../../services/account.service";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
@@ -10,8 +10,16 @@ import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling } from "react-icons/fa";
 import { utilisateurService } from "../../services/utilisateur.service";
 
 const Admin_header: React.FC = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const toggle = () => setIsOpen(!isOpen);
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    accountService.logout();
+    navigate("/");
+  };
+
   const prenom = useSelector((state: RootState) => state.auth.prenom);
   let role = useSelector((state: RootState) => state.auth.role);
   let genre = useSelector((state: RootState) => state.auth.genre);
@@ -68,7 +76,7 @@ const Admin_header: React.FC = () => {
                 </div>
               </NavLink>
             </NavItem>
-            <NavLink to={"/"} onClick={accountService.logout} className={styles.link}>
+            <NavLink to={"/"} onClick={handleLogout} className={styles.link}>
               <div className={styles.iconWithText}>
                 <FaPowerOff size={20} />
                 <span>Se déconnecter</span>

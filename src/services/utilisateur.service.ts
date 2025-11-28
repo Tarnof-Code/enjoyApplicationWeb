@@ -49,9 +49,6 @@ let getUser = async () => {
 };
 
 let updateUser = async (utilisateur: any) => {
-  // let token_infos = accountService.getTokenInfo();
-  // const tokenId = token_infos.payload.sub;
-  // utilisateur.tokenId = tokenId;
   const response = await Axios.put("/utilisateurs", utilisateur, {
     withCredentials: true,
     headers: {

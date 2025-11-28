@@ -1,45 +1,39 @@
-import { useState } from "react";
-import { Form, FormGroup, Input, Button } from "reactstrap";
-import { Navigate } from "react-router-dom";
+import { FormGroup, Input, Button } from "reactstrap";
+import { Form as RouterForm, redirect, useActionData, useNavigation, Navigate, ActionFunctionArgs } from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
-import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
 
-function Connexion() {
-  let navigate = useNavigate();
+export async function loginAction({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const email = formData.get("email") as string;
+  const motDePasse = formData.get("motDePasse") as string;
 
-  const [credentials, setCredentials] = useState({
-    email: "",
-    motDePasse: "",
-  });
+  if (!email || !motDePasse) {
+    return "Veuillez remplir tous les champs";
+  }
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const onChange = (e: any) => {
-    setCredentials({
-      ...credentials,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleLogin = async () => {
-    try {
-      const response = await accountService.login({
-        ...credentials,
-        password: credentials.motDePasse
-      });
-      accountService.saveAccessToken(response.data.access_token);
-      navigate("/profil", { replace: true });
-    } catch (error) {
-      console.error("Erreur lors de la connexion", error);
-      if (error instanceof AxiosError && error.response?.status === 401) {
-        setErrorMessage("Email ou mot de passe incorrect");
-      } else {
-        setErrorMessage("Une erreur s'est produite lors de la connexion");
-      }
+  try {
+    const response = await accountService.login({
+      email,
+      motDePasse: motDePasse
+    } as any);
+    accountService.saveAccessToken(response.data.access_token);
+    return redirect("/profil");
+  } catch (error) {
+    console.error("Erreur lors de la connexion", error);
+    if (error instanceof AxiosError && error.response?.status === 401) {
+      return "Email ou mot de passe incorrect";
+    } else {
+      return "Une erreur s'est produite lors de la connexion";
     }
-  };
+  }
+}
+
+function Connexion() {
+  const errorMessage = useActionData() as string;
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
 
   if (accountService.isLogged()) return <Navigate to="/profil" />;
 
@@ -50,14 +44,15 @@ function Connexion() {
       </div>
       <div className={styles.login}>
         <h4>Connexion</h4>
-        <Form className={styles.form}>
+        {/* On utilise RouterForm au lieu de Form de reactstrap pour englober le tout */}
+        <RouterForm method="post" className={styles.form}>
           <FormGroup className={styles.form_group}>
             <Input
               id="emailConnexion"
               name="email"
               placeholder="Email"
               type="email"
-              onChange={onChange}
+              required
             />
           </FormGroup>
           <FormGroup className={styles.form_group}>
@@ -66,14 +61,18 @@ function Connexion() {
               name="motDePasse"
               placeholder="Mot de passe"
               type="password"
-              onChange={onChange}
+              required
             />
           </FormGroup>
-          <Button className={styles.bouton} onClick={handleLogin}>
-            Se connecter
+          <Button 
+            className={styles.bouton} 
+            type="submit" // Important : type="submit" déclenche l'action
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Connexion en cours..." : "Se connecter"}
           </Button>
-        </Form>
-        <p className="errorMessage">{errorMessage}</p>
+        </RouterForm>
+        {errorMessage && <p className="errorMessage" style={{ color: 'red', marginTop: '10px' }}>{errorMessage}</p>}
       </div>
     </div>
   );

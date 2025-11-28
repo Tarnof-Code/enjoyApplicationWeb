@@ -1,6 +1,5 @@
 import Header from "./Header/Header";
-import Connexion from "../Pages/Connexion/Connexion";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import { useEffect } from "react";
@@ -9,10 +8,10 @@ import { utilisateurService } from "../services/utilisateur.service";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const role = useSelector((state: RootState) => state.auth.role);
 
   useEffect(() => {
-    // Ajouter ou retirer la classe selon si on a un header ou non
     if (pathname === "/" || role === null) {
       document.body.classList.add('no-padding-top');
     } else {
@@ -24,14 +23,15 @@ const Layout: React.FC = () => {
     if (accountService.isLogged() && role === null) {
       utilisateurService.getUser().catch(() => {
         accountService.logout();
+        navigate("/");
       });
     }
-  }, [role]);
+  }, [role, navigate]);
 
   return (
     <>
       {pathname !== "/" && role !== null && <Header />}
-      {pathname === "/" ? <Connexion /> : <Outlet />}
+      <Outlet />
       {/* {pathname !== "/" && <Footer />} */}
     </>
   );

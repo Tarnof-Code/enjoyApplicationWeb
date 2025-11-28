@@ -1,8 +1,7 @@
 import Liste, { ColumnConfig } from "../../../components/Liste/Liste";
 import { sejourService } from "../../../services/sejour.service";
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useCallback } from "react";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import formaterDate from "../../../helpers/formaterDate";
 
 interface Sejour {
@@ -14,10 +13,19 @@ interface Sejour {
     dateFin: string;
 }
 
-const SejoursDirecteur: React.FC = () => {
-    const role = useSelector((state: any) => state.auth.role);
-    const [listeSejours, setListSejours] = useState<Sejour[]>([]);
-    const [loading, setLoading] = useState(true);
+export async function listeSejoursDirecteurLoader() {
+    try {
+        const response = await sejourService.getAllSejoursByDirecteur();
+        return response;
+    } catch (error) {
+        console.error("Erreur chargement liste sejours directeur", error);
+        return [];
+    }
+}
+
+const ListeSejoursDirecteur: React.FC = () => {
+
+    const sejours = useLoaderData() as Sejour[];
     const navigate = useNavigate();
 
     const createColumn = (
@@ -54,21 +62,9 @@ const SejoursDirecteur: React.FC = () => {
         }),
     ];
     
-    useEffect(() => {
-        async function getSejoursDirecteur() {
-            try {
-                const response = await sejourService.getAllSejoursByDirecteur();
-                setListSejours(response);
-                setLoading(false);
-            } catch (error) {
-                console.error("Une erreur s'est produite :", error);
-                setLoading(false);
-            }
-        }
-        if (role === "DIRECTION") {
-            getSejoursDirecteur();
-        }
-    }, []);
+    const refreshList = useCallback(() => {
+        navigate(".", { replace: true });
+    }, [navigate]);
 
     const handleView = (sejour: Sejour) => {
         navigate(`/directeur/sejours/${sejour.id}`, { state: { sejour } });
@@ -77,10 +73,11 @@ const SejoursDirecteur: React.FC = () => {
     return (
         <Liste
             columns={columns}
-            data={listeSejours}
-            loading={loading}
+            data={sejours}
+            loading={false}
             title="Mes Séjours"
             canEdit={false}
+            refreshList={refreshList}
             canDelete={false}
             canAdd={false}
             canView={true}
@@ -89,5 +86,5 @@ const SejoursDirecteur: React.FC = () => {
     )
 }
 
+export default ListeSejoursDirecteur;
 
-export default SejoursDirecteur;

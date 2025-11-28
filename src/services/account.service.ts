@@ -52,7 +52,6 @@ let saveAccessToken = (access_token: string) => {
 let logout = () => {
   localStorage.removeItem("access_token");
   store.dispatch(clearUser());
-  window.location.href = "/";
 };
 
 let isLogged = () => {

@@ -20,6 +20,16 @@ let getAllSejours = async () => {
   }
 };
 
+let getSejourById = async (id: string) => {
+  try {
+    const response = await Axios.get(`/sejours/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Une erreur s'est produite :", error);
+    throw error;
+  }
+};
+
 let getAllSejoursByDirecteur = async () => {
   try {
     const tokenInfo = accountService.getTokenInfo();
@@ -69,6 +79,7 @@ let deleteSejour = async (sejourId: number) => {
 
 export const sejourService = {
   getAllSejours,
+  getSejourById,
   getAllSejoursByDirecteur,
   addSejour,
   updateSejour,

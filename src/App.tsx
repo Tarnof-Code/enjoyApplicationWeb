@@ -1,14 +1,16 @@
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, redirect } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./Pages/Erreurs/error-page";
-import Profil from "./Pages/Profil/Profil";
-import ListeSejours from "./Pages/_Admin/ListeSejours/ListeSejours.tsx";
-import ListeUtilisateurs from "./Pages/_Admin/ListeUtilisateurs/ListeUtilisateurs.tsx";
+import Profil, { profilLoader } from "./Pages/Profil/Profil";
+import Connexion, { loginAction } from "./Pages/Connexion/Connexion";
+import { accountService } from "./services/account.service";
+import ListeSejoursAdmin, { sejoursAdminLoader } from "./Pages/_Admin/ListeSejoursAdmin/ListeSejoursAdmin.tsx";
+import ListeUtilisateurs, { utilisateursLoader } from "./Pages/_Admin/ListeUtilisateurs/ListeUtilisateurs.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
-import SejoursDirecteur from "./Pages/_Directeur/SejoursDirecteur/SejoursDirecteur.tsx";
-import DetailsSejour from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
+import ListeSejoursDirecteur, { listeSejoursDirecteurLoader } from "./Pages/_Directeur/ListeSejoursDirecteur/ListeSejoursDirecteur.tsx";
+import DetailsSejour, { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
 
 const App: React.FC = () => {
   const router = createBrowserRouter([
@@ -18,7 +20,19 @@ const App: React.FC = () => {
       errorElement: <ErrorPage />,
       children: [
         {
+          index: true,
+          loader: async () => {
+            if (accountService.isLogged()) {
+              return redirect("/profil");
+            }
+            return null;
+          },
+          action: loginAction,
+          element: <Connexion />,
+        },
+        {
           path: "/utilisateurs",
+          loader: utilisateursLoader,
           element: (
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <ListeUtilisateurs />
@@ -27,22 +41,25 @@ const App: React.FC = () => {
         },
         {
           path: "/sejours",
+          loader: sejoursAdminLoader,
           element: (
             <ProtectedRoute allowedRoles={['ADMIN']}>
-              <ListeSejours />
+              <ListeSejoursAdmin />
             </ProtectedRoute>
           ),
         },
         {
           path: "/directeur/sejours",
+          loader: listeSejoursDirecteurLoader,
           element: (
             <ProtectedRoute allowedRoles={['DIRECTION']}>
-              <SejoursDirecteur />
+              <ListeSejoursDirecteur />
             </ProtectedRoute>
           ),
         },
         {
           path: "/directeur/sejours/:id",
+          loader: detailsSejourLoader,
           element: (
             <ProtectedRoute allowedRoles={['DIRECTION']}>
               <DetailsSejour />
@@ -51,6 +68,7 @@ const App: React.FC = () => {
         },
         {
           path: "/profil",
+          loader: profilLoader,
           element: <Profil />,
         },
       ],

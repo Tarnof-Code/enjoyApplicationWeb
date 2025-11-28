@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useDeferredValue } from "react";
 import { Input, FormGroup, Label, Col } from "reactstrap";
 import { utilisateurService } from "../../services/utilisateur.service";
 import styles from "./DirecteurSelector.module.scss";
@@ -29,10 +29,9 @@ function DirecteurSelector({
   const [directeurs, setDirecteurs] = useState<Directeur[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDirecteur, setSelectedDirecteur] = useState<Directeur | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedDirecteur = directeurs.find(d => d.tokenId.toString() === value) || null;
 
   const loadDirecteurs = async () => {
     try {
@@ -46,49 +45,41 @@ function DirecteurSelector({
     }
   };
 
-  // Charger la liste des directeurs au montage du composant
   useEffect(() => {
     loadDirecteurs();
   }, []);
 
-  // Calculer les directeurs filtrés avec useMemo
-  const filteredDirecteurs = useMemo(() => {
-    if (searchTerm.trim() === "") {
-      return directeurs;
-    }
-    return directeurs.filter(directeur => 
-      `${directeur.prenom} ${directeur.nom}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [searchTerm, directeurs]);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  
+  const filteredDirecteurs = deferredSearchTerm.trim() === "" 
+    ? directeurs 
+    : directeurs.filter(directeur => 
+        `${directeur.prenom} ${directeur.nom}`.toLowerCase().includes(deferredSearchTerm.toLowerCase())
+      );
 
-  // Mettre à jour le terme de recherche quand la valeur change
+ 
   useEffect(() => {
-    if (value && directeurs.length > 0) {
-      const directeur = directeurs.find(d => d.tokenId.toString() === value);
-      if (directeur) {
-        setSelectedDirecteur(directeur);
-        setSearchTerm(`${directeur.prenom} ${directeur.nom}`);
+    if (selectedDirecteur) {
+      const fullName = `${selectedDirecteur.prenom} ${selectedDirecteur.nom}`;
+      if (searchTerm !== fullName) {
+          setSearchTerm(fullName);
       }
-    } else if (!value) {
-      setSelectedDirecteur(null);
+    } else if (!value && searchTerm !== "") {
       setSearchTerm("");
     }
-  }, [value, directeurs]);
+  }, [value, selectedDirecteur]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchTerm = e.target.value;
     setSearchTerm(newSearchTerm);
     setIsOpen(true);
     
-    // Si l'utilisateur efface le texte, réinitialiser la sélection
     if (newSearchTerm === "") {
-      setSelectedDirecteur(null);
       onChange("");
     }
   };
 
   const handleDirecteurSelect = (directeur: Directeur) => {
-    setSelectedDirecteur(directeur);
     setSearchTerm(`${directeur.prenom} ${directeur.nom}`);
     setIsOpen(false);
     onChange(directeur.tokenId.toString());
@@ -99,22 +90,18 @@ function DirecteurSelector({
   };
 
   const handleInputBlur = () => {
-    // Petit délai pour permettre la sélection d'un élément dans la liste
     setTimeout(() => {
-      if (!selectedDirecteur) {
-        setIsOpen(false);
-      }
+      setIsOpen(false);
     }, 150);
   };
 
   const handleClear = () => {
-    setSelectedDirecteur(null);
     setSearchTerm("");
     onChange("");
   };
 
   return (
-    <div className={styles.directeurSelector} ref={dropdownRef}>
+    <div className={styles.directeurSelector}>
       <FormGroup className={styles.form_group}>
         <Col lg={4}>
           <Label className={styles.label}>
@@ -150,9 +137,9 @@ function DirecteurSelector({
                 {loading ? (
                   <div className={styles.loading}>Chargement...</div>
                 ) : filteredDirecteurs.length > 0 ? (
-                  filteredDirecteurs.map((directeur, index) => (
+                  filteredDirecteurs.map((directeur) => (
                     <div
-                      key={`directeur-${directeur.tokenId}-${index}`}
+                      key={directeur.tokenId}
                       className={`${styles.dropdownItem} ${
                         selectedDirecteur?.tokenId === directeur.tokenId ? styles.selected : ""
                       }`}

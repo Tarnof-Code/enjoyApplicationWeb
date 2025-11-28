@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Form, { FormField } from "../Forms/Form";
 import DirecteurSelector from "../DirecteurSelector/DirecteurSelector";
 import { sejourService } from "../../services/sejour.service";
@@ -15,7 +15,7 @@ interface SejourFormProps {
 function Sejour_form({ handleCloseModal, refreshList, data, isEditMode = false }: SejourFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const initialData = useMemo(() => {
+  const initialData = (() => {
     if (data && isEditMode) {
       return {
         nom: data.nom || "",
@@ -34,7 +34,7 @@ function Sejour_form({ handleCloseModal, refreshList, data, isEditMode = false }
       dateDebut: "",
       dateFin: "",
     };
-  }, [data, isEditMode]);
+  })();
 
   const handleCloseModalAndRefresh = () => {
     handleCloseModal();

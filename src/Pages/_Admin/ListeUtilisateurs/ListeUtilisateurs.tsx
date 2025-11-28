@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import { utilisateurService } from "../../../services/utilisateur.service";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerAge from "../../../helpers/calculerAge";
@@ -19,14 +20,25 @@ interface Utilisateur {
   tokenId?: string;
 }
 
-const Liste_utilisateurs: React.FC = () => {
-  const [listUtilisateurs, setListUtilisateurs] = useState<Utilisateur[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+export async function utilisateursLoader() {
+  try {
+    const response = await utilisateurService.getAllUsers();
+    return response.data;
+  } catch (error) {
+    console.error("Erreur chargement utilisateurs", error);
+    return [];
+  }
+}
+
+const ListeUtilisateurs: React.FC = () => {
+
+  const users = useLoaderData() as Utilisateur[];
+  const navigate = useNavigate();
+  
   const [modalState, setModalState] = useState<{
     show: boolean;
     editingUser: Utilisateur | null;
   }>({ show: false, editingUser: null });
-  const [refreshTrigger, setRefreshTrigger] = useState<boolean>(false);
   
   const role = useSelector((state: any) => state.auth.role);
 
@@ -56,7 +68,7 @@ const Liste_utilisateurs: React.FC = () => {
         { value: '', label: 'Tous' },
         { value: 'ADMIN', label: 'Admin' },
         { value: 'DIRECTION', label: 'Direction' },
-        { value: 'ADJ_DIRECTION', label: 'Adj_Direction' },
+        { value: 'ADJ_DIRECTION', label: 'Adjoint' },
         { value: 'ANIM', label: 'Anim' },
         { value: 'ANIM_AS', label: 'Anim_AS' }
       ]
@@ -81,48 +93,30 @@ const Liste_utilisateurs: React.FC = () => {
     })
   ];
 
-  useEffect(() => {
-    async function getUtilisateurs() {
-      try {
-        const response = await utilisateurService.getAllUsers();
-        setListUtilisateurs(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Une erreur s'est produite :", error);
-        setLoading(false);
-      }
-    }
-
-    if (role === "ADMIN") {
-      getUtilisateurs();
-    }
-  }, [refreshTrigger, role]);
-
-  const openModal = useCallback((user?: Utilisateur) => {
+  // Optimisation React 19 : Suppression de useCallback
+  const openModal = (user?: Utilisateur) => {
     setModalState({ show: true, editingUser: user || null });
-  }, []);
+  };
 
-  const closeModal = useCallback(() => {
+  const closeModal = () => {
     setModalState({ show: false, editingUser: null });
-  }, []);
+  };
 
-  const refreshList = useCallback(() => {
-    setRefreshTrigger(prev => !prev);
-  }, []);
+  const refreshList = () => {
+    navigate(".", { replace: true });
+  };
 
-  const handleDelete = useCallback(async (user: Utilisateur, _index: number) => {
+  const handleDelete = async (user: Utilisateur, _index: number) => {
     try {
       const identifier = user.tokenId;
-      if (!identifier) {
-        throw new Error("Impossible de trouver l'identifiant de l'utilisateur");
-      }
+      if (!identifier) throw new Error("Impossible de trouver l'identifiant");
+      
       await utilisateurService.deleteUser(String(identifier));
-      // La liste sera rafraîchie automatiquement via refreshList appelé dans Liste.tsx
+      refreshList();
     } catch (error) {
-      console.error("Erreur lors de la suppression de l'utilisateur:", error);
-      throw error; // Propager l'erreur pour que la modale reste ouverte
+      console.error("Erreur lors de la suppression:", error);
     }
-  }, []);
+  };
 
   if (role !== "ADMIN") {
     return <Acces_non_autorise />;
@@ -131,8 +125,8 @@ const Liste_utilisateurs: React.FC = () => {
   return (
     <Liste
       columns={columns}
-      data={listUtilisateurs}
-      loading={loading}
+      data={users} 
+      loading={false} 
       title="Liste des Utilisateurs"
       addButtonText="Ajouter un Utilisateur"
       onAdd={() => openModal()}
@@ -152,4 +146,4 @@ const Liste_utilisateurs: React.FC = () => {
   );
 };
 
-export default Liste_utilisateurs;
+export default ListeUtilisateurs;
