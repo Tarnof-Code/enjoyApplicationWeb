@@ -21,9 +21,13 @@ const Layout: React.FC = () => {
 
   useEffect(() => {
     if (accountService.isLogged() && role === null) {
-      utilisateurService.getUser().catch(() => {
-        accountService.logout();
-        navigate("/");
+      utilisateurService.getUser().catch((error: any) => {
+        if(error.response?.status === 401) {
+          accountService.logout();
+          navigate("/");
+        } else {
+          throw error;
+        }
       });
     }
   }, [role, navigate]);

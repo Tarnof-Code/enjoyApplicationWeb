@@ -1,21 +1,31 @@
-import { useState } from "react";
-import Form, { FormField } from "../Forms/Form";
+import { useState, useMemo } from "react";
+import Form, { FormField } from "./Form";
 import DirecteurSelector from "../DirecteurSelector/DirecteurSelector";
-import { sejourService } from "../../services/sejour.service";
+import { sejourService, SejourInfos } from "../../services/sejour.service";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
+
+interface SejourFormData {
+  id?: number;
+  nom?: string;
+  description?: string;
+  lieuDuSejour?: string;
+  directeur?: {
+    tokenId?: string | number;
+  };
+  dateDebut?: string | number;
+  dateFin?: string | number;
+}
 
 interface SejourFormProps {
   handleCloseModal: () => void;
-  refreshList: () => void;
-  data?: any; 
+  data?: SejourFormData; 
   isEditMode?: boolean; 
 }
 
-
-function Sejour_form({ handleCloseModal, refreshList, data, isEditMode = false }: SejourFormProps) {
+function SejourForm({ handleCloseModal, data, isEditMode = false }: SejourFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const initialData = (() => {
+  const initialData = useMemo(() => {
     if (data && isEditMode) {
       return {
         nom: data.nom || "",
@@ -34,36 +44,27 @@ function Sejour_form({ handleCloseModal, refreshList, data, isEditMode = false }
       dateDebut: "",
       dateFin: "",
     };
-  })();
+  }, [data, isEditMode]);
 
-  const handleCloseModalAndRefresh = () => {
-    handleCloseModal();
-    refreshList();
-  };
-
-  const getSuccessMessage = (formData: any): string => {
+  const getSuccessMessage = (formData: SejourInfos): string => {
     return isEditMode
       ? `Le séjour "${formData.nom}" a bien été modifié.`
       : `Le séjour "${formData.nom}" a bien été ajouté.`;
   };
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: SejourInfos) => {
     try {
-      setErrorMessage(null);
-      
-      if (isEditMode && data) {
+      setErrorMessage(null);   
+      if (isEditMode && data?.id) {
         await sejourService.updateSejour(data.id, formData);
       } else {
         await sejourService.addSejour(formData);
       }
     } catch (error) {
-      console.error("Erreur lors de l'opération", error);
       setErrorMessage("Une erreur est survenue lors de l'opération");
-      throw error;
     }
   };
 
-  // Validation pour vérifier que la date de fin est après la date de début
   const validateDateRange = (dateDebut: string, dateFin: string): string | null => {
     if (dateDebut && dateFin) {
       const debut = new Date(dateDebut);
@@ -138,8 +139,7 @@ function Sejour_form({ handleCloseModal, refreshList, data, isEditMode = false }
       fields={formFields}
       initialData={initialData}
       onSubmit={handleSubmit}
-      onCancel={handleCloseModal}
-      onCloseModal={handleCloseModalAndRefresh}
+      onClose={handleCloseModal}
       submitText={isEditMode ? "Modifier" : "Ajouter"}
       cancelText="Annuler"
       errorMessage={errorMessage}
@@ -148,4 +148,4 @@ function Sejour_form({ handleCloseModal, refreshList, data, isEditMode = false }
   );
 }
 
-export default Sejour_form;
+export default SejourForm;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useRevalidator } from "react-router-dom";
 import {
   Container,
   Col,
@@ -14,7 +15,6 @@ import {
 } from "reactstrap";
 import styles from "./Form.module.scss";
 
-// Interface pour définir un champ de formulaire
 export interface FormField {
   name: string;
   label: string;
@@ -24,21 +24,18 @@ export interface FormField {
   validation?: (value: any, allValues?: Record<string, any>) => string | null;
   placeholder?: string;
   disabled?: boolean;
-  colSpan?: number; // Pour les champs qui prennent plus d'espace
-  customComponent?: React.ComponentType<any>; // Pour les composants personnalisés
-  autoComplete?: string; // Indice pour l'autocomplétion navigateur
+  customComponent?: React.ComponentType<any>;
+  autoComplete?: string;
 }
 
-// Interface pour les props du composant Form
 export interface FormProps {
   fields: FormField[];
   initialData?: any;
   onSubmit: (data: any) => Promise<void>;
-  onCancel: () => void;
+  onClose: () => void;
   submitText?: string;
   cancelText?: string;
   title?: string;
-  onCloseModal?: () => void;
   successMessage?: string | ((formData: any) => string);
   errorMessage?: string | null;
   loading?: boolean;
@@ -48,27 +45,23 @@ function Form({
   fields,
   initialData,
   onSubmit,
-  onCancel,
+  onClose,
   submitText = "Valider",
   cancelText = "Annuler",
   title,
-  onCloseModal,
   successMessage,
   errorMessage,
   loading = false,
 }: FormProps) {
-  // État pour les données du formulaire
+  const revalidator = useRevalidator();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  
-  // Référence pour garder trace des données initiales
   const lastInitialDataRef = useRef<any>(null);
   const isInitializedRef = useRef(false);
-  
-  // Initialiser les données du formulaire seulement si c'est la première fois ou si les données ont vraiment changé
+
   useEffect(() => {
     const hasDataChanged = JSON.stringify(initialData) !== JSON.stringify(lastInitialDataRef.current);
     
@@ -83,14 +76,12 @@ function Form({
     }
   }, [initialData, fields]);
 
-  // Gestion des changements de champs
   const handleFieldChange = (fieldName: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [fieldName]: value
     }));
 
-    // Validation en temps réel
     const field = fields.find(f => f.name === fieldName);
     if (field?.validation) {
       const nextAllValues = {
@@ -104,7 +95,6 @@ function Form({
       }));
     }
 
-    // Si on modifie la date de début, revalider la date de fin pour afficher l'erreur au bon endroit
     if (fieldName === 'dateDebut') {
       const dateFinField = fields.find(f => f.name === 'dateFin');
       if (dateFinField?.validation) {
@@ -122,21 +112,15 @@ function Form({
     }
   };
 
-  // Validation de tous les champs
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     let isValid = true;
-
     fields.forEach(field => {
       const value = formData[field.name];
-      
-      // Validation des champs requis
       if (field.required && (!value || value.toString().trim() === "")) {
         errors[field.name] = `${field.label} est requis`;
         isValid = false;
-      }
-      
-      // Validation personnalisée
+      }   
       if (field.validation && value) {
         const error = field.validation(value, formData);
         if (error) {
@@ -145,17 +129,14 @@ function Form({
         }
       }
     });
-
     setValidationErrors(errors);
     return isValid;
   };
 
-  // Soumission du formulaire
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
-
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
@@ -165,6 +146,9 @@ function Form({
           : successMessage;
         setModalMessage(message);
         setModalIsOpen(true);
+      } else {
+        onClose();
+        revalidator.revalidate();
       }
     } catch (error) {
       console.error("Erreur lors de la soumission:", error);
@@ -173,7 +157,6 @@ function Form({
     }
   };
 
-  // Rendu d'un champ
   const renderField = (field: FormField) => {
     const value = formData[field.name] || "";
     const error = validationErrors[field.name];
@@ -191,7 +174,6 @@ function Form({
       autoComplete: field.autoComplete,
     };
 
-    // Si c'est un composant personnalisé, le rendre directement
     if (field.type === 'custom' && field.customComponent) {
       const CustomComponent = field.customComponent;
       return (
@@ -209,20 +191,20 @@ function Form({
 
     return (
       <FormGroup key={field.name} className={styles.form_group}>
-        <Col lg={field.colSpan || 4}>
+        <Col lg={4}>
           <Label className={styles.label}>
             {field.label}
             {field.required && <span className={styles.required}> *</span>}
           </Label>
         </Col>
-        <Col lg={field.colSpan || 8}>
+        <Col lg={8}>
           {field.type === 'select' ? (
             <Input type="select" {...inputProps}>
               <option value="">Choisir...</option>
-              {field.options?.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+              {field.options?.map((option, index) => (
+                 <option key={`${field.name}-option-${index}`} value={option.value}>
+                 {option.label}
+               </option>
               ))}
             </Input>
           ) : (
@@ -245,16 +227,19 @@ function Form({
     <div className={styles.main}>
       <Container className={styles.formContainer}>
         {title && <h2 className={styles.title}>{title}</h2>}
-        
-        {errorMessage && (
-          <p className="errorMessage">{errorMessage}</p>
-        )}
-
-        <ReactstrapForm className={styles.form} autoComplete="off">
+        {errorMessage && <p className={styles.errorMessage}>{errorMessage}</p>}
+        <ReactstrapForm 
+          className={styles.form} 
+          autoComplete="off"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
           {fields.map(renderField)}        
           <div className={styles.buttonContainer}>
             <Button 
-              onClick={onCancel}
+              onClick={onClose}
               disabled={loading || isSubmitting}
             >
               {cancelText}
@@ -269,7 +254,6 @@ function Form({
           </div>
         </ReactstrapForm>
 
-        {/* Modal de confirmation */}
         {modalIsOpen && (
           <Modal isOpen={modalIsOpen} toggle={() => setModalIsOpen(false)}>
             <ModalHeader toggle={() => setModalIsOpen(false)}>
@@ -282,7 +266,8 @@ function Form({
               <Button
                 onClick={() => {
                   setModalIsOpen(false);
-                  onCloseModal?.();
+                  onClose();
+                  revalidator.revalidate();
                 }}
               >
                 Fermer

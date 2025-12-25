@@ -2,19 +2,13 @@ import Axios from "./caller.service";
 import { accountService } from "./account.service";
 import store from "../redux/store";
 import { setUser } from "../redux/auth/authSlice";
+import { normaliserEtTrierUtilisateurs, normaliserUtilisateur } from "../helpers/normaliserUtilisateur";
+import { RoleSysteme } from "../enums/RoleSysteme";
 
 let getAllUsers = async () => {
   try {
     let response = await Axios.get("/utilisateurs");
-    response.data.forEach((user: any) => {
-      if (user.dateExpirationCompte) {
-        user.dateExpirationCompte = user.dateExpirationCompte * 1000;
-      }
-      user.nom = user.nom.toUpperCase();
-    });
-    response.data.sort((a: any, b: any) => {
-      return a.nom.toLocaleLowerCase().localeCompare(b.nom.toLocaleLowerCase());
-    });
+    normaliserEtTrierUtilisateurs(response.data);
     return response;
   } catch {
     throw new Error("Impossible de récupérer la liste des utilisateurs");
@@ -32,8 +26,7 @@ let getUser = async () => {
       }
     );
     if (response) {
-      response.data.dateExpirationCompte =
-        response.data.dateExpirationCompte * 1000;
+      normaliserUtilisateur(response.data);
       store.dispatch(
         setUser({
           role: response.data.role,
@@ -58,24 +51,11 @@ let updateUser = async (utilisateur: any) => {
   return response;
 };
 
-
 let getDirecteurs = async () => {
   try {
-    let response = await Axios.get("/utilisateurs/DIRECTION");
-    const directeurs = response.data;
-
-    directeurs.forEach((user: any) => {
-      if (user.dateExpirationCompte) {
-        user.dateExpirationCompte = user.dateExpirationCompte * 1000;
-      }
-      user.nom = user.nom.toUpperCase();
-    });
-
-    directeurs.sort((a: any, b: any) => {
-      return a.nom.toLocaleLowerCase().localeCompare(b.nom.toLocaleLowerCase());
-    });
-
-    return { data: directeurs };
+    let response = await Axios.get(`/utilisateurs/${RoleSysteme.DIRECTION}`);
+    normaliserEtTrierUtilisateurs(response.data);
+    return { data: response.data };
   } catch {
     throw new Error("Impossible de récupérer la liste des directeurs");
   }
@@ -86,9 +66,53 @@ let deleteUser = async (tokenId: string) => {
     const response = await Axios.delete(`/utilisateurs/${tokenId}`, {
       withCredentials: true,
     });
+    if (response.status !== 204) {
+      throw new Error(`Réponse inattendue : ${response.status}`);
+    }
+    return;
+  } catch (error: any) {
+    console.error("Erreur lors de la suppression de l'utilisateur :", error);
+    if (error.response) {
+      const errorMessage = error.response.data?.error || error.response.data?.message || "Impossible de supprimer l'utilisateur";
+      const adaptedError = new Error(errorMessage);
+      (adaptedError as any).response = {
+        ...error.response,
+        status: error.response.status,
+        data: { error: errorMessage }
+      };
+      throw adaptedError;
+    }
+    throw error;
+  }
+};
+
+let getEquipeBySejour = async (sejourId: number) => {
+  try {
+    const response = await Axios.get(`/utilisateurs/equipe/${sejourId}`);
+    normaliserEtTrierUtilisateurs(response.data);
     return response;
   } catch {
-    throw new Error("Impossible de supprimer l'utilisateur");
+    throw new Error("Impossible de récupérer la liste des membres de l'équipe");
+  }
+};
+
+let getUserByEmail = async (email: string) => {
+  try {
+    const response = await Axios.get(`/utilisateurs/search`, {
+      params: {
+          email: email
+      }
+    });
+    if (response.data) {
+        normaliserUtilisateur(response.data);
+    }
+    return response;
+  } catch (error: any) {
+    if (error.response?.status === 400) {
+      const messageServeur = error.response.data?.message || error.response.data || "Erreur 400";
+      throw new Error(messageServeur);
+    }
+    return null;
   }
 };
 
@@ -96,10 +120,10 @@ let getRoleByGenre = (role: string, genre: string): string => {
   switch (genre) {
     case "Feminin":
       switch (role) {
-        case "ADMIN":
+        case RoleSysteme.ADMIN:
           role = "ADMINISTRATRICE";
           break;
-        case "DIRECTION":
+        case RoleSysteme.DIRECTION:
           role = "DIRECTRICE";
           break;
         case "ADJ_DIRECTION":
@@ -118,10 +142,10 @@ let getRoleByGenre = (role: string, genre: string): string => {
 
     case "Masculin":
       switch (role) {
-        case "ADMIN":
+        case RoleSysteme.ADMIN:
           role = "ADMINISTRATEUR";
           break;
-        case "DIRECTION":
+        case RoleSysteme.DIRECTION:
           role = "DIRECTEUR";
           break;
         case "ADJ_DIRECTION":
@@ -148,7 +172,9 @@ export const utilisateurService = {
   getAllUsers,
   getUser,
   getDirecteurs,
+  getEquipeBySejour,
   getRoleByGenre,
   updateUser,
   deleteUser,
+  getUserByEmail,
 };

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Liste, { ColumnConfig } from '../../../components/Liste/Liste';
 import { sejourService } from '../../../services/sejour.service';
-import Sejour_form from '../../../components/Forms/Sejour_form';
+import SejourForm from '../../../components/Forms/SejourForm';
 import formaterDate from '../../../helpers/formaterDate';
 import calculerDureeEnJours from '../../../helpers/calculerDureeEnJours';
-import { useLoaderData, useNavigate } from 'react-router-dom';
+import { useLoaderData } from 'react-router-dom';
 
 interface Sejour {
   id: number;
@@ -33,12 +33,6 @@ export async function sejoursAdminLoader() {
 const ListeSejoursAdmin: React.FC = () => {
 
   const sejours = useLoaderData() as Sejour[];
-  const navigate = useNavigate();
-
-  const [modalState, setModalState] = useState<{
-    show: boolean;
-    editingSejour: Sejour | null;
-  }>({ show: false, editingSejour: null });
 
   const createColumn = (
     key: string,
@@ -94,18 +88,6 @@ const ListeSejoursAdmin: React.FC = () => {
     },
   ];
 
-  const openModal = (sejour?: Sejour) => {
-    setModalState({ show: true, editingSejour: sejour || null });
-  };
-
-  const closeModal = () => {
-    setModalState({ show: false, editingSejour: null });
-  };
-
-  const refreshList = () => {
-    navigate(".", { replace: true });
-  };
-
   const handleDelete = async (sejour: Sejour, _index: number) => {
     try {
       await sejourService.deleteSejour(sejour.id);
@@ -122,19 +104,11 @@ const ListeSejoursAdmin: React.FC = () => {
       loading={false}
       title="Tous les séjours"
       addButtonText="Ajouter un Séjour"
-      onAdd={() => openModal()}
-      refreshList={refreshList}
-      showModal={modalState.show && !modalState.editingSejour}
-      onCloseModal={closeModal}
-      formComponent={Sejour_form}
+      formComponent={SejourForm}
       canEdit={true}
       canAdd={true}
       canDelete={true}
       onDelete={handleDelete}
-      showEditModal={modalState.show && !!modalState.editingSejour}
-      onCloseEditModal={closeModal}
-      editingItem={modalState.editingSejour}
-      onOpenEditModal={(sejour) => openModal(sejour)}
     />
   );
 };

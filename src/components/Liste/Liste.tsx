@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useState } from "react";
 import {
   Button,
   Row,
@@ -15,11 +15,11 @@ import {
   faTrashAlt,
   faEye,
 } from "@fortawesome/free-solid-svg-icons";
+import { useRevalidator } from "react-router-dom";
 import styles from "./Liste.module.scss";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 
-// Types pour la configuration des colonnes
 export interface ColumnConfig {
   key: string;
   label: string;
@@ -31,61 +31,33 @@ export interface ColumnConfig {
   colSpan?: number;
 }
 
-// Types pour les filtres
 export interface FilterState {
   [key: string]: string;
 }
 
-// Props du composant Liste
 export interface ListeProps<T = any> {
-  // Configuration des colonnes
   columns: ColumnConfig[];
-  
-  // Données
   data: T[];
   loading?: boolean;
-  
-  // Actions
-  onAdd?: () => void;
-  onEdit?: (item: T, index: number) => Promise<void>;
   onDelete?: (item: T, index: number) => Promise<void>;
-  refreshList?: () => void;
-  
-  // Configuration
   title: string;
   addButtonText?: string;
-  
-  // Composants personnalisés
   formComponent?: React.ComponentType<any>;
-  showModal?: boolean;
-  onCloseModal?: () => void;
-  
-  // Gestion des erreurs
   errorMessage?: string | null;
-  
-  // Permissions
   canEdit?: boolean;
   canDelete?: boolean;
   canAdd?: boolean;
   canView?: boolean;
-  
-  // État pour le formulaire de modification
-  showEditModal?: boolean;
-  onCloseEditModal?: () => void;
-  editingItem?: T | null;
-  onOpenEditModal?: (item: T) => void;
   onView?: (item: T) => void;
-  
+  deleteConfirmationMessage?: (item: T) => string;
 }
 
-// Fonction helper pour vérifier la validité
 const checkValidityFilter = (itemValue: number, filterValue: string): boolean => {
   const expirationDate = new Date(itemValue);
   const today = new Date();
   return filterValue === "Valide" ? expirationDate > today : expirationDate <= today;
 };
 
-// Fonction helper pour appliquer les filtres
 const applyFilters = <T extends Record<string, any>>(
   item: T, 
   column: ColumnConfig, 
@@ -142,13 +114,9 @@ const Liste = <T extends Record<string, any>>({
   columns,
   data,
   loading = false,
-  onAdd,
-  refreshList,
   title,
   addButtonText = "Ajouter",
   formComponent: FormComponent,
-  showModal = false,
-  onCloseModal,
   errorMessage,
   canEdit = true,
   canAdd = true,
@@ -156,11 +124,28 @@ const Liste = <T extends Record<string, any>>({
   canView = false,
   onDelete,
   onView,
-  showEditModal = false,
-  onCloseEditModal,
-  editingItem = null,
-  onOpenEditModal,
+  deleteConfirmationMessage,
 }: ListeProps<T>) => {
+
+  const revalidator = useRevalidator();
+
+  // Gestion de l'état modal directement dans Liste
+  const [modalState, setModalState] = useState<{
+    show: boolean;
+    editingItem: T | null;
+  }>({ show: false, editingItem: null });
+
+  const openAddModal = () => {
+    setModalState({ show: true, editingItem: null });
+  };
+
+  const openEditModal = (item: T) => {
+    setModalState({ show: true, editingItem: item });
+  };
+
+  const closeModal = () => {
+    setModalState({ show: false, editingItem: null });
+  };
 
   // Initialisation des filtres avec useState
   const [filters, setFilters] = useState<FilterState>(() => {
@@ -194,17 +179,17 @@ const Liste = <T extends Record<string, any>>({
   });
 
   // Fonction pour mettre à jour un filtre
-  const updateFilter = useCallback((field: string, value: string) => {
+  const updateFilter = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
-  }, []);
+  };
 
   // Fonction pour effacer un filtre spécifique
-  const clearFilter = useCallback((field: string) => {
+  const clearFilter = (field: string) => {
     setFilters(prev => ({ ...prev, [field]: "" }));
-  }, []);
+  };
 
   // Fonction pour effacer tous les filtres
-  const clearAllFilters = useCallback(() => {
+  const clearAllFilters = () => {
     const clearedFilters: FilterState = {};
     columns.forEach(col => {
       if (col.filterable) {
@@ -212,17 +197,15 @@ const Liste = <T extends Record<string, any>>({
       }
     });
     setFilters(clearedFilters);
-  }, [columns]);
+  };
 
   // Gestion de l'édition - maintenant on ouvre le modal de modification
-  const startEditing = useCallback((item: T) => {
-    if (onOpenEditModal) {
-      onOpenEditModal(item);
-    }
-  }, [onOpenEditModal]);
+  const startEditing = (item: T) => {
+    openEditModal(item);
+  };
 
   // Gestion de la suppression - ouvre la modale de confirmation
-  const startDeleting = useCallback((item: T, index: number) => {
+  const startDeleting = (item: T, index: number) => {
     // Construire le nom de l'item pour l'affichage (nom + prénom si disponible)
     let itemName = "";
     if (item.nom && item.prenom) {
@@ -241,10 +224,10 @@ const Liste = <T extends Record<string, any>>({
       itemIndex: index,
       itemName,
     });
-  }, []);
+  };
 
   // Confirmation de la suppression
-  const confirmDelete = useCallback(async () => {
+  const confirmDelete = async () => {
     if (deleteModalState.item && onDelete) {
       try {
         await onDelete(deleteModalState.item, deleteModalState.itemIndex);
@@ -252,29 +235,27 @@ const Liste = <T extends Record<string, any>>({
         setDeleteModalState({ show: false, item: null, itemIndex: -1 });
         // Afficher la modale de succès
         setSuccessModalState({ show: true, itemName });
-        if (refreshList) {
-          refreshList();
-        }
+        revalidator.revalidate();
       } catch (error) {
         console.error("Erreur lors de la suppression:", error);
         // La modale reste ouverte en cas d'erreur
       }
     }
-  }, [deleteModalState, onDelete, refreshList]);
+  };
 
   // Fermer la modale de succès
-  const closeSuccessModal = useCallback(() => {
+  const closeSuccessModal = () => {
     setSuccessModalState({ show: false });
-  }, []);
+  };
 
   // Annulation de la suppression
-  const cancelDelete = useCallback(() => {
+  const cancelDelete = () => {
     setDeleteModalState({ show: false, item: null, itemIndex: -1 });
-  }, []);
+  };
 
 
   // Filtrage des données simplifié
-  const filteredData = useMemo(() => {
+  const filteredData = (() => {
     // Vérifier si data est undefined ou null
     if (!data || !Array.isArray(data)) {
       return [];
@@ -287,7 +268,7 @@ const Liste = <T extends Record<string, any>>({
         return applyFilters(item, column, filterValue);
       });
     });
-  }, [data, filters, columns]);
+  })();
 
   // Rendu des cellules
   const renderCell = (column: ColumnConfig, item: T, index: number) => {
@@ -367,9 +348,9 @@ const Liste = <T extends Record<string, any>>({
             Effacer filtres
           </Button>
         </Col>
-        {canAdd && onAdd && (
+        {canAdd && FormComponent && (
           <Col xs={3} lg={2}>
-            <Button onClick={onAdd}>
+            <Button onClick={openAddModal}>
               {addButtonText}
             </Button>
           </Col>
@@ -466,33 +447,17 @@ const Liste = <T extends Record<string, any>>({
         </table>
       </div>
 
-      {/* Modal pour l'ajout */}
+      {/* Modal unifié pour ajout et modification */}
       {FormComponent && (
-        <Modal isOpen={showModal} toggle={onCloseModal}>
-          <ModalHeader toggle={onCloseModal}>
-            {addButtonText}
+        <Modal isOpen={modalState.show} toggle={closeModal}>
+          <ModalHeader toggle={closeModal}>
+            {modalState.editingItem ? "Modifier" : addButtonText}
           </ModalHeader>
           <ModalBody>
             <FormComponent
-              handleCloseModal={onCloseModal}
-              refreshList={refreshList || (() => window.location.reload())}
-            />
-          </ModalBody>
-        </Modal>
-      )}
-
-      {/* Modal pour la modification */}
-      {FormComponent && (
-        <Modal isOpen={showEditModal} toggle={onCloseEditModal}>
-          <ModalHeader toggle={onCloseEditModal}>
-            Modifier
-          </ModalHeader>
-          <ModalBody>
-            <FormComponent
-              handleCloseModal={onCloseEditModal}
-              refreshList={refreshList || (() => window.location.reload())}
-              data={editingItem}
-              isEditMode={true}
+              handleCloseModal={closeModal}
+              data={modalState.editingItem}
+              isEditMode={!!modalState.editingItem}
             />
           </ModalBody>
         </Modal>
@@ -504,7 +469,11 @@ const Liste = <T extends Record<string, any>>({
           Confirmation de suppression
         </ModalHeader>
         <ModalBody>
-          <p>Vous allez supprimer {deleteModalState.itemName || "cet élément"}. Cette action est irréversible.</p>
+          {deleteConfirmationMessage && deleteModalState.item ? (
+            <p>{deleteConfirmationMessage(deleteModalState.item)}</p>
+          ) : (
+            <p>Vous allez supprimer {deleteModalState.itemName || "cet élément"}. Cette action est irréversible.</p>
+          )}
           <p>Êtes-vous sûr de vouloir continuer ?</p>
         </ModalBody>
         <ModalFooter>

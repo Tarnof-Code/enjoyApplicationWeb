@@ -4,6 +4,8 @@ import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import { sejourService } from "../../../services/sejour.service";
+import Equipe from "../../../components/Liste/Equipe";
+import { Utilisateur } from "../../../types/Utilisateur";
 
 interface Sejour {
     id: number;
@@ -12,6 +14,7 @@ interface Sejour {
     lieuDuSejour: string;
     dateDebut: string;
     dateFin: string;
+    equipe?: Utilisateur[];
 }
 
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
@@ -26,11 +29,9 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 }
 
 const DetailsSejour: React.FC = () => {
-
     const sejour = useLoaderData() as Sejour;
     const [openAccordions, setOpenAccordions] = useState<string[]>(['1']);
     const navigate = useNavigate();
-
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => 
             prev.includes(id) 
@@ -38,7 +39,6 @@ const DetailsSejour: React.FC = () => {
                 : [...prev, id]
         );
     };
-
     const AccordionItem = ({ id, title, children }: { id: string, title: string, children: React.ReactNode }) => {
         const isOpen = openAccordions.includes(id);
         return (
@@ -57,11 +57,9 @@ const DetailsSejour: React.FC = () => {
             </div>
         );
     };
-
     const handleRetour = () => {
         navigate("/directeur/sejours");
     };
-
     if(!sejour) {
         return (
             <div className={styles.pageContainer}>              
@@ -72,9 +70,7 @@ const DetailsSejour: React.FC = () => {
             </div>
         );
     }
-
     const duree = calculerDureeEnJours(sejour.dateDebut, sejour.dateFin);
-
     return (
         <div className={styles.pageContainer}>
             <div className={styles.pageHeader}>
@@ -112,18 +108,15 @@ const DetailsSejour: React.FC = () => {
                         </div>
                     </div>
                 </AccordionItem>
-          
-                {/* Equipe */}
                 <AccordionItem id="2" title="Équipe">
-                    <p className={styles.placeholderText}>À venir...</p>
+                    <Equipe 
+                        membres={sejour.equipe || []} 
+                        sejourId={sejour.id}
+                    />
                 </AccordionItem>
-
-                {/* Liste enfants */}
                 <AccordionItem id="3" title="Liste des enfants">
                     <p className={styles.placeholderText}>À venir...</p>
                 </AccordionItem>
-
-                {/* Plannings */}
                 <AccordionItem id="4" title="Plannings">
                     <p className={styles.placeholderText}>À venir...</p>
                 </AccordionItem>
@@ -133,4 +126,3 @@ const DetailsSejour: React.FC = () => {
 };
 
 export default DetailsSejour;
-

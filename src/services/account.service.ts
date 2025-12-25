@@ -3,22 +3,13 @@ import { jwtDecode } from "jwt-js-decode";
 import store from "../redux/store";
 import { clearUser } from "../redux/auth/authSlice";
 import CryptoJS from "crypto-js";
+import { UserInfos } from "../types/UserInfos";
 
 const secretKey = import.meta.env.VITE_SECRET_KEY as string;
 
 interface Credentials {
   email: string;
   password: string;
-}
-
-interface UserInfos {
-  prenom: string;
-  nom: string;
-  email: string;
-  password: string;
-  genre: string;
-  telephone: string;
-  dateNaissance: string;
 }
 
 const login = async (credentials: Credentials) => {
@@ -78,7 +69,7 @@ let getTokenInfo = () => {
 };
 
 let refreshAccessToken = async () => {
-  logout();
+  localStorage.removeItem("access_token");
   const response = await Axios.post("/auth/refresh-token");
   return response;
 };

@@ -1,6 +1,5 @@
 import Liste, { ColumnConfig } from "../../../components/Liste/Liste";
 import { sejourService } from "../../../services/sejour.service";
-import { useCallback } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import formaterDate from "../../../helpers/formaterDate";
 
@@ -24,10 +23,8 @@ export async function listeSejoursDirecteurLoader() {
 }
 
 const ListeSejoursDirecteur: React.FC = () => {
-
     const sejours = useLoaderData() as Sejour[];
     const navigate = useNavigate();
-
     const createColumn = (
         key: string,
         label: string,
@@ -41,7 +38,6 @@ const ListeSejoursDirecteur: React.FC = () => {
         filterType: type === 'select' ? 'select' : type === 'date' ? 'date' : 'text',
         ...options
     });
-
     const columns: ColumnConfig[] = [
         createColumn('nom', 'Nom'),
         createColumn('description', 'Description'),
@@ -61,15 +57,9 @@ const ListeSejoursDirecteur: React.FC = () => {
             }
         }),
     ];
-    
-    const refreshList = useCallback(() => {
-        navigate(".", { replace: true });
-    }, [navigate]);
-
     const handleView = (sejour: Sejour) => {
         navigate(`/directeur/sejours/${sejour.id}`, { state: { sejour } });
     };
-
     return (
         <Liste
             columns={columns}
@@ -77,7 +67,6 @@ const ListeSejoursDirecteur: React.FC = () => {
             loading={false}
             title="Mes Séjours"
             canEdit={false}
-            refreshList={refreshList}
             canDelete={false}
             canAdd={false}
             canView={true}

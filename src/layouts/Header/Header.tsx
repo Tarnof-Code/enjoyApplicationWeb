@@ -8,6 +8,7 @@ import { RootState } from "../../redux/store";
 import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
 import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling } from "react-icons/fa"; // Importez l'icône que vous souhaitez utiliser
 import { utilisateurService } from "../../services/utilisateur.service";
+import { RoleSysteme } from "../../enums/RoleSysteme";
 
 const Admin_header: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ const Admin_header: React.FC = () => {
         </NavLink>
         <NavbarToggler onClick={toggle} />
         <Collapse isOpen={isOpen} navbar>
-          {role === "ADMIN" && (
+          {role === RoleSysteme.ADMIN && (
             <Nav className="me-auto" navbar>
               <NavItem className={styles.navItemMargin}>
                 <NavLink to={"/utilisateurs"} className={styles.link}>
@@ -53,7 +54,7 @@ const Admin_header: React.FC = () => {
               </NavItem>
             </Nav>
           )}
-          {role === "DIRECTION" && (
+          {role === RoleSysteme.DIRECTION && (
             <Nav className="me-auto" navbar>
               <NavItem className={styles.navItemMargin}>
                 <NavLink to={"/directeur/sejours"} className={styles.link}>

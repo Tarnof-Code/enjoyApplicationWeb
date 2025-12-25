@@ -11,6 +11,7 @@ import ListeUtilisateurs, { utilisateursLoader } from "./Pages/_Admin/ListeUtili
 import ProtectedRoute from "./components/ProtectedRoute";
 import ListeSejoursDirecteur, { listeSejoursDirecteurLoader } from "./Pages/_Directeur/ListeSejoursDirecteur/ListeSejoursDirecteur.tsx";
 import DetailsSejour, { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
+import { RoleSysteme } from "./enums/RoleSysteme";
 
 const App: React.FC = () => {
   const router = createBrowserRouter([
@@ -34,7 +35,7 @@ const App: React.FC = () => {
           path: "/utilisateurs",
           loader: utilisateursLoader,
           element: (
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+            <ProtectedRoute allowedRoles={[RoleSysteme.ADMIN]}>
               <ListeUtilisateurs />
             </ProtectedRoute>
           ),
@@ -43,7 +44,7 @@ const App: React.FC = () => {
           path: "/sejours",
           loader: sejoursAdminLoader,
           element: (
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+            <ProtectedRoute allowedRoles={[RoleSysteme.ADMIN]}>
               <ListeSejoursAdmin />
             </ProtectedRoute>
           ),
@@ -52,7 +53,7 @@ const App: React.FC = () => {
           path: "/directeur/sejours",
           loader: listeSejoursDirecteurLoader,
           element: (
-            <ProtectedRoute allowedRoles={['DIRECTION']}>
+            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
               <ListeSejoursDirecteur />
             </ProtectedRoute>
           ),
@@ -61,7 +62,7 @@ const App: React.FC = () => {
           path: "/directeur/sejours/:id",
           loader: detailsSejourLoader,
           element: (
-            <ProtectedRoute allowedRoles={['DIRECTION']}>
+            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
               <DetailsSejour />
             </ProtectedRoute>
           ),
