@@ -8,7 +8,7 @@ export interface SejourInfos {
   nom: string;
   description: string;
   lieuDuSejour: string;
-  directeurTokenId: string;
+  directeurTokenId?: string;
   dateDebut: string;
   dateFin: string;
 }

@@ -102,12 +102,8 @@ function SejourForm({ handleCloseModal, data, isEditMode = false }: SejourFormPr
       name: "directeurTokenId",
       label: "Directeur",
       type: "custom",
-      required: true,
+      required: false,
       customComponent: DirecteurSelector,
-      validation: (value) => {
-        if (!value) return "Veuillez sélectionner un directeur";
-        return null;
-      }
     },
     {
       name: "dateDebut",
