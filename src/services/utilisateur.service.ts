@@ -3,7 +3,8 @@ import { accountService } from "./account.service";
 import store from "../redux/store";
 import { setUser } from "../redux/auth/authSlice";
 import { normaliserEtTrierUtilisateurs, normaliserUtilisateur } from "../helpers/normaliserUtilisateur";
-import { RoleSysteme } from "../enums/RoleSysteme";
+import { RoleSysteme, RoleSystemeLabels } from "../enums/RoleSysteme";
+import { RoleSejour, RoleSejourLabels } from "../enums/RoleSejour";
 
 let getAllUsers = async () => {
   try {
@@ -116,56 +117,75 @@ let getUserByEmail = async (email: string) => {
   }
 };
 
-let getRoleByGenre = (role: string, genre: string): string => {
-  switch (genre) {
-    case "Feminin":
-      switch (role) {
-        case RoleSysteme.ADMIN:
-          role = "ADMINISTRATRICE";
-          break;
-        case RoleSysteme.DIRECTION:
-          role = "DIRECTRICE";
-          break;
-        case "ADJ_DIRECTION":
-          role = "ADJOINTE";
-          break;
-        case "ANIM":
-          role = "ANIMATRICE";
-          break;
-        case "ANIM_AS":
-          role = "ANIMATRICE_AS";
-          break;
-        default:
-          break;
-      }
-      break;
-
-    case "Masculin":
-      switch (role) {
-        case RoleSysteme.ADMIN:
-          role = "ADMINISTRATEUR";
-          break;
-        case RoleSysteme.DIRECTION:
-          role = "DIRECTEUR";
-          break;
-        case "ADJ_DIRECTION":
-          role = "ADJOINT";
-          break;
-        case "ANIM":
-          role = "ANIMATEUR";
-          break;
-        case "ANIM_AS":
-          role = "ANIMATEUR_AS";
-          break;
-        default:
-          break;
-      }
-      break;
-
-    default:
-      break;
+let getRoleSystemeByGenre = (role: string | null, genre: string | null): string => {
+  if (!role) return "Utilisateur";
+  const baseLabel = role in RoleSystemeLabels 
+    ? RoleSystemeLabels[role as RoleSysteme] 
+    : role;
+  if (genre === "Feminin" || genre === "Féminin") {
+    switch (role) {
+      case RoleSysteme.ADMIN:
+        return "Administratrice";
+      case RoleSysteme.DIRECTION:
+        return "Directrice";
+      case RoleSysteme.BASIC_USER:
+        return "Utilisatrice";
+      default:
+        return baseLabel;
+    }
+  } else if (genre === "Masculin") {
+    switch (role) {
+      case RoleSysteme.ADMIN:
+        return "Administrateur";
+      case RoleSysteme.DIRECTION:
+        return "Directeur";
+      case RoleSysteme.BASIC_USER:
+        return "Utilisateur";
+      default:
+        return baseLabel;
+    }
   }
-  return role;
+  return baseLabel;
+};
+
+let getRoleSejourByGenre = (role: string | null, genre: string | null): string => {
+  if (!role) return "";
+  const baseLabel = role in RoleSejourLabels 
+    ? RoleSejourLabels[role as RoleSejour] 
+    : role;
+  if (genre === "Feminin" || genre === "Féminin") {
+    switch (role) {
+      case RoleSejour.ANIM:
+        return "Animatrice";
+      case RoleSejour.AS:
+        return "Assistante sanitaire";
+      case RoleSejour.ADJOINT:
+        return "Adjointe";
+      case RoleSejour.SB:
+        return "Surveillante de baignade";
+      case RoleSejour.AUTRE:
+        return "Autre";
+      default:
+        return baseLabel;
+    }
+  } else if (genre === "Masculin") {
+    switch (role) {
+      case RoleSejour.ANIM:
+        return "Animateur";
+      case RoleSejour.AS:
+        return "Assistant sanitaire";
+      case RoleSejour.ADJOINT:
+        return "Adjoint";
+      case RoleSejour.SB:
+        return "Surveillant de baignade";
+      case RoleSejour.AUTRE:
+        return "Autre";
+      default:
+        return baseLabel;
+    }
+  }
+  
+  return baseLabel;
 };
 
 export const utilisateurService = {
@@ -173,7 +193,8 @@ export const utilisateurService = {
   getUser,
   getDirecteurs,
   getEquipeBySejour,
-  getRoleByGenre,
+  getRoleSystemeByGenre,
+  getRoleSejourByGenre,
   updateUser,
   deleteUser,
   getUserByEmail,

@@ -7,5 +7,5 @@ export enum RoleSysteme {
 export const RoleSystemeLabels: Record<RoleSysteme, string> = {
     [RoleSysteme.ADMIN]: 'Admin',
     [RoleSysteme.DIRECTION]: 'Direction',
-    [RoleSysteme.BASIC_USER]: 'Utilisateur de base'
+    [RoleSysteme.BASIC_USER]: 'Utilisateur'
 }

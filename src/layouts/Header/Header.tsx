@@ -24,7 +24,8 @@ const Admin_header: React.FC = () => {
   const prenom = useSelector((state: RootState) => state.auth.prenom);
   let role = useSelector((state: RootState) => state.auth.role);
   let genre = useSelector((state: RootState) => state.auth.genre);
-  let roleByGenre = utilisateurService.getRoleByGenre(role || "", genre || "");
+  
+  const roleLabel = utilisateurService.getRoleSystemeByGenre(role, genre);
 
   return (
     <header className={styles.main}>
@@ -66,23 +67,25 @@ const Admin_header: React.FC = () => {
               </NavItem>
             </Nav>
           )}
-          <Nav navbar>
+          <Nav navbar className="ms-auto">
             <NavItem className={styles.navItemMargin}>
               <NavLink to={"/profil"} className={styles.link}>
                 <div className={styles.iconWithText}>
                   <FaUser size={20} />
                   <span>
-                    {prenom} ({roleByGenre})
+                    {prenom} ({roleLabel})
                   </span>
                 </div>
               </NavLink>
             </NavItem>
-            <NavLink to={"/"} onClick={handleLogout} className={styles.link}>
-              <div className={styles.iconWithText}>
-                <FaPowerOff size={20} />
-                <span>Se déconnecter</span>
-              </div>
-            </NavLink>
+            <NavItem>
+              <NavLink to={"/"} onClick={handleLogout} className={styles.link}>
+                <div className={styles.iconWithText}>
+                  <FaPowerOff size={20} />
+                  <span>Se déconnecter</span>
+                </div>
+              </NavLink>
+            </NavItem>
           </Nav>
         </Collapse>
       </Navbar>

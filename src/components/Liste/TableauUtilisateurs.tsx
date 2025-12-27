@@ -72,9 +72,9 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         label: RoleSejourLabels[role]
       }))
     ],
-    render: (value) => {
+    render: (value, item) => {
       if (value) {
-        return RoleSejourLabels[value as RoleSejour];
+        return utilisateurService.getRoleSejourByGenre(value as string, item.genre);
       }
       return '-';
     }
