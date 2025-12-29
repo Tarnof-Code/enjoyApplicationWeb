@@ -1,19 +1,19 @@
 import React from "react";
 import { useRevalidator } from "react-router-dom";
-import { Utilisateur } from "../../types/Utilisateur";
+import { ProfilUtilisateurDTO } from "../../types/api";
 import TableauUtilisateurs from "./TableauUtilisateurs";
 import { sejourService } from "../../services/sejour.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
 
 interface EquipeProps {
-    membres: Utilisateur[];
+    membres: ProfilUtilisateurDTO[];
     sejourId: number;
 }
 
 const Equipe: React.FC<EquipeProps> = ({ membres, sejourId }) => {
     const revalidator = useRevalidator();
 
-    const handleDeleteMembre = async (user: Utilisateur) => {
+    const handleDeleteMembre = async (user: ProfilUtilisateurDTO) => {
         if (!user.tokenId) return;
         try {
             await sejourService.supprimerMembreEquipe(sejourId, user.tokenId);

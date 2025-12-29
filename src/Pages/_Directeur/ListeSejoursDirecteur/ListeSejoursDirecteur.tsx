@@ -2,15 +2,7 @@ import Liste, { ColumnConfig } from "../../../components/Liste/Liste";
 import { sejourService } from "../../../services/sejour.service";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import formaterDate from "../../../helpers/formaterDate";
-
-interface Sejour {
-    id: number;
-    nom: string;
-    description: string;
-    lieuDuSejour: string;
-    dateDebut: string;
-    dateFin: string;
-}
+import { SejourDTO } from "../../../types/api";
 
 export async function listeSejoursDirecteurLoader() {
     try {
@@ -23,7 +15,7 @@ export async function listeSejoursDirecteurLoader() {
 }
 
 const ListeSejoursDirecteur: React.FC = () => {
-    const sejours = useLoaderData() as Sejour[];
+    const sejours = useLoaderData() as SejourDTO[];
     const navigate = useNavigate();
     const createColumn = (
         key: string,

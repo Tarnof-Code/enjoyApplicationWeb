@@ -52,8 +52,12 @@ export interface ListeProps<T = any> {
   deleteConfirmationMessage?: (item: T) => string;
 }
 
-const checkValidityFilter = (itemValue: number, filterValue: string): boolean => {
+const checkValidityFilter = (itemValue: string | number | undefined, filterValue: string): boolean => {
+  if (!itemValue) return false;
   const expirationDate = new Date(itemValue);
+  if (isNaN(expirationDate.getTime())) {
+    return false; 
+  }
   const today = new Date();
   return filterValue === "Valide" ? expirationDate > today : expirationDate <= today;
 };
@@ -76,7 +80,6 @@ const applyFilters = <T extends Record<string, any>>(
       if (column.key === 'age' && item.dateNaissance) {
         return calculerAge(item.dateNaissance) >= parseInt(filterValue);
       } else if (column.key === 'duree' && item.dateDebut && item.dateFin) {
-        // Calculer la durée pour le filtrage
         const debut = new Date(item.dateDebut);
         const fin = new Date(item.dateFin);
         const diffTime = Math.abs(fin.getTime() - debut.getTime());
@@ -85,14 +88,11 @@ const applyFilters = <T extends Record<string, any>>(
       }
       return itemValue >= parseInt(filterValue);
     case 'date':
-      // Filtrage spécial pour les dates de séjour
       if (column.key === 'dateDebut') {
-        // Pour dateDebut : afficher les séjours avec date >= date saisie
         const itemDate = new Date(itemValue);
         const filterDate = new Date(filterValue);
         return itemDate >= filterDate;
       } else if (column.key === 'dateFin') {
-        // Pour dateFin : afficher les séjours avec date <= date saisie
         const itemDate = new Date(itemValue);
         const filterDate = new Date(filterValue);
         return itemDate <= filterDate;
@@ -101,7 +101,6 @@ const applyFilters = <T extends Record<string, any>>(
       }
       return true;
     default:
-      // Gestion spéciale pour les objets directeur
       if (column.key === 'directeur' && itemValue && typeof itemValue === 'object') {
         const directeurName = `${itemValue.prenom || ''} ${itemValue.nom || ''}`.trim();
         return directeurName.toLowerCase().includes(filterValue.toLowerCase());

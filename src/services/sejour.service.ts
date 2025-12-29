@@ -1,19 +1,9 @@
 import { accountService } from "./account.service";
 import Axios from "./caller.service";
-import { UserInfos } from "../types/UserInfos";
-import { normaliserEtTrierUtilisateurs } from "../helpers/normaliserUtilisateur";
-import { AddMembreRequest } from "../types/RoleSejour";
+import { trierUtilisateursParNom } from "../helpers/trierUtilisateurs";
+import { CreateSejourRequest, SejourDTO, MembreEquipeRequest, RegisterRequest } from "../types/api";
 
-export interface SejourInfos {
-  nom: string;
-  description: string;
-  lieuDuSejour: string;
-  directeurTokenId?: string;
-  dateDebut: string;
-  dateFin: string;
-}
-
-let getAllSejours = async () => {
+let getAllSejours = async (): Promise<SejourDTO[]> => {
   try {
     const response = await Axios.get("/sejours");
     return response.data;
@@ -23,11 +13,11 @@ let getAllSejours = async () => {
   }
 };
 
-let getSejourById = async (id: string) => {
+let getSejourById = async (id: string): Promise<SejourDTO> => {
   try {
     const response = await Axios.get(`/sejours/${id}`);
     if (response.data && response.data.equipe) {
-      normaliserEtTrierUtilisateurs(response.data.equipe);
+      response.data.equipe = trierUtilisateursParNom(response.data.equipe);
     }
     return response.data;
   } catch (error) {
@@ -36,9 +26,9 @@ let getSejourById = async (id: string) => {
   }
 };
 
-let ajouterNouveauMembreEquipe = async (sejourId: number, userInfos: UserInfos) => {
+let ajouterNouveauMembreEquipe = async (sejourId: number, request: RegisterRequest) => {
   try {
-    const response = await Axios.post(`/sejours/${sejourId}/equipe/nouveau`, userInfos);
+    const response = await Axios.post(`/sejours/${sejourId}/equipe/nouveau`, request);
     if (response.status !== 201) {
       throw new Error(`Réponse inattendue : ${response.status}`);
     }
@@ -60,7 +50,7 @@ let ajouterNouveauMembreEquipe = async (sejourId: number, userInfos: UserInfos) 
 };
 
 
-let ajouterMembreExistantEquipe = async (sejourId: number, data: AddMembreRequest) => {
+let ajouterMembreExistantEquipe = async (sejourId: number, data: MembreEquipeRequest) => {
   try {
     const response = await Axios.post(`/sejours/${sejourId}/equipe/existant`, data);
     if (response.status !== 201) {
@@ -129,7 +119,7 @@ let supprimerMembreEquipe = async (sejourId: number, userTokenId: string) => {
   }
 };
 
-let getAllSejoursByDirecteur = async () => {
+let getAllSejoursByDirecteur = async (): Promise<SejourDTO[]> => {
   try {
     const tokenInfo = accountService.getTokenInfo();
     const directeurTokenId = tokenInfo?.payload?.sub;
@@ -144,7 +134,7 @@ let getAllSejoursByDirecteur = async () => {
   }
 };
 
-let addSejour = async (sejourData: SejourInfos) => {
+let addSejour = async (sejourData: CreateSejourRequest): Promise<SejourDTO> => {
   try {
     const response = await Axios.post("/sejours", sejourData, {
       withCredentials: true,
@@ -156,7 +146,7 @@ let addSejour = async (sejourData: SejourInfos) => {
   }
 };
 
-let updateSejour = async (id: number, sejourData: SejourInfos) => {
+let updateSejour = async (id: number, sejourData: CreateSejourRequest): Promise<SejourDTO> => {
   try {
     const response = await Axios.put(`/sejours/${id}`, sejourData);
     return response.data;

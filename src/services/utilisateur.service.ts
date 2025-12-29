@@ -2,14 +2,14 @@ import Axios from "./caller.service";
 import { accountService } from "./account.service";
 import store from "../redux/store";
 import { setUser } from "../redux/auth/authSlice";
-import { normaliserEtTrierUtilisateurs, normaliserUtilisateur } from "../helpers/normaliserUtilisateur";
+import { trierUtilisateursParNom } from "../helpers/trierUtilisateurs";
 import { RoleSysteme, RoleSystemeLabels } from "../enums/RoleSysteme";
 import { RoleSejour, RoleSejourLabels } from "../enums/RoleSejour";
 
 let getAllUsers = async () => {
   try {
     let response = await Axios.get("/utilisateurs");
-    normaliserEtTrierUtilisateurs(response.data);
+    response.data = trierUtilisateursParNom(response.data);
     return response;
   } catch {
     throw new Error("Impossible de récupérer la liste des utilisateurs");
@@ -27,7 +27,6 @@ let getUser = async () => {
       }
     );
     if (response) {
-      normaliserUtilisateur(response.data);
       store.dispatch(
         setUser({
           role: response.data.role,
@@ -55,7 +54,7 @@ let updateUser = async (utilisateur: any) => {
 let getDirecteurs = async () => {
   try {
     let response = await Axios.get(`/utilisateurs/${RoleSysteme.DIRECTION}`);
-    normaliserEtTrierUtilisateurs(response.data);
+    response.data = trierUtilisateursParNom(response.data);
     return { data: response.data };
   } catch {
     throw new Error("Impossible de récupérer la liste des directeurs");
@@ -90,7 +89,7 @@ let deleteUser = async (tokenId: string) => {
 let getEquipeBySejour = async (sejourId: number) => {
   try {
     const response = await Axios.get(`/utilisateurs/equipe/${sejourId}`);
-    normaliserEtTrierUtilisateurs(response.data);
+    response.data = trierUtilisateursParNom(response.data);
     return response;
   } catch {
     throw new Error("Impossible de récupérer la liste des membres de l'équipe");
@@ -104,9 +103,6 @@ let getUserByEmail = async (email: string) => {
           email: email
       }
     });
-    if (response.data) {
-        normaliserUtilisateur(response.data);
-    }
     return response;
   } catch (error: any) {
     if (error.response?.status === 400) {

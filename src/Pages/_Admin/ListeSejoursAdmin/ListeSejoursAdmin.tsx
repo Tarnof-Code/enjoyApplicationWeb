@@ -5,20 +5,7 @@ import SejourForm from '../../../components/Forms/SejourForm';
 import formaterDate from '../../../helpers/formaterDate';
 import calculerDureeEnJours from '../../../helpers/calculerDureeEnJours';
 import { useLoaderData } from 'react-router-dom';
-
-interface Sejour {
-  id: number;
-  nom: string;
-  description: string;
-  lieuDuSejour: string;
-  directeur: {
-    tokenId: string;
-    nom: string;
-    prenom: string;
-  };
-  dateDebut: string;
-  dateFin: string;
-}
+import { SejourDTO } from '../../../types/api';
 
 export async function sejoursAdminLoader() {
   try {
@@ -32,7 +19,7 @@ export async function sejoursAdminLoader() {
 
 const ListeSejoursAdmin: React.FC = () => {
 
-  const sejours = useLoaderData() as Sejour[];
+  const sejours = useLoaderData() as SejourDTO[];
 
   const createColumn = (
     key: string,
@@ -65,14 +52,14 @@ const ListeSejoursAdmin: React.FC = () => {
     createColumn('dateDebut', 'Date de début', 'date', {
       filterable: true,
       filterType: 'date',
-      render: (value: Date) => {
+      render: (value: string) => {
         return formaterDate(value);
       }
     }),
     createColumn('dateFin', 'Date de fin', 'date', {
       filterable: true,
       filterType: 'date',
-      render: (value: Date) => {
+      render: (value: string) => {
         return formaterDate(value);
       }
     }),
@@ -82,13 +69,13 @@ const ListeSejoursAdmin: React.FC = () => {
       type: 'number',
       filterable: true,
       filterType: 'number',
-      render: (_value: any, item: Sejour) => {
+      render: (_value: any, item: SejourDTO) => {
         return calculerDureeEnJours(item.dateDebut, item.dateFin) + " jours";
       }
     },
   ];
 
-  const handleDelete = async (sejour: Sejour, _index: number) => {
+  const handleDelete = async (sejour: SejourDTO, _index: number) => {
     try {
       await sejourService.deleteSejour(sejour.id);
     } catch (error) {

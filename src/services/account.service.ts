@@ -3,7 +3,7 @@ import { jwtDecode } from "jwt-js-decode";
 import store from "../redux/store";
 import { clearUser } from "../redux/auth/authSlice";
 import CryptoJS from "crypto-js";
-import { UserInfos } from "../types/UserInfos";
+import { RegisterRequest } from "../types/api";
 
 const secretKey = import.meta.env.VITE_SECRET_KEY as string;
 
@@ -22,8 +22,8 @@ const login = async (credentials: Credentials) => {
   return response;
 };
 
-let addUser = async (userInfos: UserInfos) => {
-  const response = await Axios.post("/auth/inscription", userInfos, {
+let addUser = async (request: RegisterRequest) => {
+  const response = await Axios.post("/auth/inscription", request, {
     withCredentials: true,
     headers: {
       "X-Skip-Token-Refresh": true, // En tête personnalisée pour éviter l'interceptor

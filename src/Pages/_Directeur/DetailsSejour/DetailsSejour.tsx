@@ -5,17 +5,7 @@ import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import { sejourService } from "../../../services/sejour.service";
 import Equipe from "../../../components/Liste/Equipe";
-import { Utilisateur } from "../../../types/Utilisateur";
-
-interface Sejour {
-    id: number;
-    nom: string;
-    description: string;
-    lieuDuSejour: string;
-    dateDebut: string;
-    dateFin: string;
-    equipe?: Utilisateur[];
-}
+import { SejourDTO } from "../../../types/api";
 
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
@@ -29,7 +19,7 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 }
 
 const DetailsSejour: React.FC = () => {
-    const sejour = useLoaderData() as Sejour;
+    const sejour = useLoaderData() as SejourDTO;
     const [openAccordions, setOpenAccordions] = useState<string[]>(['1']);
     const navigate = useNavigate();
     const toggleAccordion = (id: string) => {

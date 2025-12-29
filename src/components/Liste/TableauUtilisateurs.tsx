@@ -2,7 +2,7 @@ import React from "react";
 import { useRevalidator } from "react-router-dom";
 import Liste, { ColumnConfig } from "./Liste";
 import UserForm from "../Forms/UserForm";
-import { Utilisateur } from "../../types/Utilisateur";
+import { ProfilUtilisateurDTO } from "../../types/api";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 import { utilisateurService } from "../../services/utilisateur.service";
@@ -10,15 +10,15 @@ import { RoleSejour, RoleSejourLabels } from "../../enums/RoleSejour";
 import { RoleSysteme, RoleSystemeLabels } from "../../enums/RoleSysteme";
 
 interface TableauUtilisateursProps {
-  users: Utilisateur[];
+  users: ProfilUtilisateurDTO[];
   title?: string;
   excludedRoles?: string[];
   canAdd?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   sejourId?: number;
-  onDelete?: (user: Utilisateur) => Promise<void>;
-  deleteConfirmationMessage?: (user: Utilisateur) => string;
+  onDelete?: (user: ProfilUtilisateurDTO) => Promise<void>;
+  deleteConfirmationMessage?: (user: ProfilUtilisateurDTO) => string;
 }
 
 const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
@@ -35,7 +35,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   
   const revalidator = useRevalidator();
 
-  const handleDefaultDelete = async (user: Utilisateur) => {
+  const handleDefaultDelete = async (user: ProfilUtilisateurDTO) => {
       try {
         if (!user.tokenId) return;
         await utilisateurService.deleteUser(String(user.tokenId));
@@ -87,7 +87,9 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
       { value: 'Valide', label: 'Valides' },
       { value: 'Expiré', label: 'Expirés' }
     ],
-    render: (value) => formaterDate(value)
+    render: (_value, item) => {
+      return formaterDate(item.dateExpirationCompte);
+    }
   });
 
   const baseColumns: ColumnConfig[] = [

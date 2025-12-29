@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import Form, { FormField } from "./Form";
 import DirecteurSelector from "../DirecteurSelector/DirecteurSelector";
-import { sejourService, SejourInfos } from "../../services/sejour.service";
+import { sejourService } from "../../services/sejour.service";
+import { CreateSejourRequest } from "../../types/api";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
 
 interface SejourFormData {
@@ -46,13 +47,13 @@ function SejourForm({ handleCloseModal, data, isEditMode = false }: SejourFormPr
     };
   }, [data, isEditMode]);
 
-  const getSuccessMessage = (formData: SejourInfos): string => {
+  const getSuccessMessage = (formData: CreateSejourRequest): string => {
     return isEditMode
       ? `Le séjour "${formData.nom}" a bien été modifié.`
       : `Le séjour "${formData.nom}" a bien été ajouté.`;
   };
 
-  const handleSubmit = async (formData: SejourInfos) => {
+  const handleSubmit = async (formData: CreateSejourRequest) => {
     try {
       setErrorMessage(null);   
       if (isEditMode && data?.id) {

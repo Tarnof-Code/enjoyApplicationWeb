@@ -5,8 +5,9 @@ import { utilisateurService } from "../../services/utilisateur.service";
 import { sejourService } from "../../services/sejour.service";
 import { regexValidation } from "../../helpers/regexValidation";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
+import dateToISO from "../../helpers/dateToISO";
 import { RoleSejour, RoleSejourLabels } from "../../enums/RoleSejour";
-import { AddMembreRequest } from "../../types/RoleSejour";
+import { MembreEquipeRequest, RegisterRequest } from "../../types/api";
 import { RoleSysteme, RoleSystemeLabels } from "../../enums/RoleSysteme";
 
 interface EmailCheckData {
@@ -23,14 +24,13 @@ interface UserFormData {
   role?: string;
   roleSejour?: RoleSejour;
   motDePasse?: string;
-  password?: string;
   dateExpiration?: string;
   [key: string]: unknown; // Pour permettre d'autres propriétés dynamiques
 }
 
 interface UserFormProps {
   handleCloseModal: () => void;
-  data?: UserFormData & { tokenId?: string; dateExpirationCompte?: number; id?: number }; 
+  data?: UserFormData & { tokenId?: string; dateExpirationCompte?: string | number; id?: number }; 
   isEditMode?: boolean; 
   excludedRoles?: string[];
   sejourId?: number;
@@ -40,7 +40,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [step, setStep] = useState<'email_check' | 'form'>((!isEditMode && sejourId) ? 'email_check' : 'form');
   const [checkedEmail, setCheckedEmail] = useState<string>("");
-  const [foundUser, setFoundUser] = useState<UserFormData & { tokenId?: string; dateExpirationCompte?: number; id?: number } | null>(null);
+  const [foundUser, setFoundUser] = useState<UserFormData & { tokenId?: string; dateExpirationCompte?: string | number; id?: number } | null>(null);
   
   // Déterminer si on édite un membre existant de l'équipe (seul le rôle peut être modifié)
   const isEditingTeamMember = !!(isEditMode && sejourId && data?.tokenId);
@@ -180,48 +180,66 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
           if (!foundUser.tokenId) {
             throw new Error("TokenId manquant pour l'utilisateur trouvé");
           }
-          const addMembreRequest: AddMembreRequest = {
+          const addMembreRequest: MembreEquipeRequest = {
             tokenId: foundUser.tokenId,
             roleSejour: formData.roleSejour as RoleSejour,
           };
           await sejourService.ajouterMembreExistantEquipe(sejourId, addMembreRequest);
         } else {
-          // Ajout d'un nouveau membre (création ou ajout) - UN SEUL APPEL
-          const userInfos = {
+          const registerRequest: RegisterRequest = {
             ...(effectiveEditMode && userData ? userData : {}),
             ...formData,
+            prenom: formData.prenom || '',
+            nom: formData.nom || '',
+            email: formData.email || '',
+            genre: formData.genre || '',
+            telephone: formData.telephone || '',
+            dateNaissance: formData.dateNaissance || '',
+            motDePasse: formData.motDePasse || '',
             role: RoleSysteme.BASIC_USER,
-            password: formData.motDePasse || formData.password
-          } as Parameters<typeof sejourService.ajouterNouveauMembreEquipe>[1];
+            roleSejour: formData.roleSejour
+          };
           // Ne pas envoyer dateExpiration ni dateExpirationCompte - l'API gère
-          await sejourService.ajouterNouveauMembreEquipe(sejourId, userInfos);
+          await sejourService.ajouterNouveauMembreEquipe(sejourId, registerRequest);
         }
       } else {
         // Gestion hors séjour
         if (effectiveEditMode && userData) {
-          let dateExpirationTimestamp;
-          if (formData.dateExpiration) {
-            dateExpirationTimestamp = new Date(formData.dateExpiration).getTime() / 1000;
-          } else {
-            dateExpirationTimestamp = userData.dateExpirationCompte || userData.dateExpiration;
-          }       
+          // UpdateUserRequest attend dateExpirationCompte en string ISO 8601 (Instant sérialisé)
+          // Utiliser le helper centralisé pour gérer tous les formats
+          const dateExpirationCompte = formData.dateExpiration 
+            ? dateToISO(formData.dateExpiration)
+            : dateToISO(userData.dateExpirationCompte);
+          
+          // Construire updatedUser en s'assurant que dateExpirationCompte est correctement formaté
           const updatedUser = {
-            ...userData,
-            ...formData,
-            dateExpiration: dateExpirationTimestamp,
-            dateExpirationCompte: dateExpirationTimestamp,
-            ...(formData.motDePasse && { password: formData.motDePasse })
+            tokenId: userData.tokenId || '',
+            prenom: formData.prenom || userData.prenom || '',
+            nom: formData.nom || userData.nom || '',
+            genre: formData.genre || userData.genre || '',
+            email: formData.email || userData.email || '',
+            telephone: formData.telephone || userData.telephone || '',
+            dateNaissance: formData.dateNaissance || userData.dateNaissance || '',
+            role: (formData.role as RoleSysteme) || userData.role as RoleSysteme,
+            dateExpirationCompte: dateExpirationCompte
+            // Le mot de passe n'est pas inclus dans UpdateUserRequest
           };
           await utilisateurService.updateUser(updatedUser);
         } else {
           // Création d'un utilisateur sans séjour
-          const userInfos = {
-            ...formData,
-            password: formData.motDePasse
-          } as Parameters<typeof accountService.addUser>[0] & { dateExpiration?: number };
-          const dateExpirationTimestamp = new Date(formData.dateExpiration!).getTime() / 1000;
-          userInfos.dateExpiration = dateExpirationTimestamp;
-          await accountService.addUser(userInfos);
+          const registerRequest: RegisterRequest = {
+            prenom: formData.prenom || '',
+            nom: formData.nom || '',
+            email: formData.email || '',
+            genre: formData.genre || '',
+            telephone: formData.telephone || '',
+            dateNaissance: formData.dateNaissance || '',
+            motDePasse: formData.motDePasse || '',
+            role: (formData.role as RoleSysteme) || RoleSysteme.BASIC_USER,
+            roleSejour: formData.roleSejour,
+            dateExpiration: dateToISO(formData.dateExpiration)
+          };
+          await accountService.addUser(registerRequest);
         }
       }
     } catch (error: unknown) {
