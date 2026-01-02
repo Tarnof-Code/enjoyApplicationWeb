@@ -7,7 +7,7 @@ import { regexValidation } from "../../helpers/regexValidation";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
 import dateToISO from "../../helpers/dateToISO";
 import { RoleSejour, RoleSejourLabels } from "../../enums/RoleSejour";
-import { MembreEquipeRequest, RegisterRequest } from "../../types/api";
+import { MembreEquipeRequest, RegisterRequest, ChangePasswordRequest } from "../../types/api";
 import { RoleSysteme, RoleSystemeLabels } from "../../enums/RoleSysteme";
 
 interface EmailCheckData {
@@ -222,9 +222,18 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
             dateNaissance: formData.dateNaissance || userData.dateNaissance || '',
             role: (formData.role as RoleSysteme) || userData.role as RoleSysteme,
             dateExpirationCompte: dateExpirationCompte
-            // Le mot de passe n'est pas inclus dans UpdateUserRequest
           };
           await utilisateurService.updateUser(updatedUser);
+          
+          // Si le champ mot de passe est rempli, appeler l'API de changement de mot de passe
+          if (formData.motDePasse && userData.tokenId) {
+            const changePasswordRequest: ChangePasswordRequest = {
+              tokenId: userData.tokenId,
+              nouveauMotDePasse: formData.motDePasse
+              // Pas besoin d'ancienMotDePasse pour les admins
+            };
+            await utilisateurService.changePassword(changePasswordRequest);
+          }
         } else {
           // Création d'un utilisateur sans séjour
           const registerRequest: RegisterRequest = {

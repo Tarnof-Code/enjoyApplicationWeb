@@ -5,6 +5,7 @@ import { setUser } from "../redux/auth/authSlice";
 import { trierUtilisateursParNom } from "../helpers/trierUtilisateurs";
 import { RoleSysteme, RoleSystemeLabels } from "../enums/RoleSysteme";
 import { RoleSejour, RoleSejourLabels } from "../enums/RoleSejour";
+import { ChangePasswordRequest } from "../types/api";
 
 let getAllUsers = async () => {
   try {
@@ -113,6 +114,27 @@ let getUserByEmail = async (email: string) => {
   }
 };
 
+let changePassword = async (request: ChangePasswordRequest) => {
+  try {
+    const response = await Axios.patch("/utilisateurs/mot-de-passe", request, {
+      withCredentials: true,
+    });
+    return response;
+  } catch (error: any) {
+    if (error.response) {
+      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors du changement de mot de passe";
+      const adaptedError = new Error(errorMessage);
+      (adaptedError as any).response = {
+        ...error.response,
+        status: error.response.status,
+        data: { error: errorMessage }
+      };
+      throw adaptedError;
+    }
+    throw error;
+  }
+};
+
 let getRoleSystemeByGenre = (role: string | null, genre: string | null): string => {
   if (!role) return "Utilisateur";
   const baseLabel = role in RoleSystemeLabels 
@@ -194,4 +216,5 @@ export const utilisateurService = {
   updateUser,
   deleteUser,
   getUserByEmail,
+  changePassword,
 };

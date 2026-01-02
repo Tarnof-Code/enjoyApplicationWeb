@@ -128,6 +128,18 @@ export interface AuthenticationRequest {
   motDePasse: string;
 }
 
+/**
+ * Correspond à ChangePasswordRequest.java
+ * Payload pour changer le mot de passe d'un utilisateur
+ * - Pour un admin : ancienMotDePasse n'est pas requis
+ * - Pour un utilisateur standard : ancienMotDePasse est obligatoire
+ */
+export interface ChangePasswordRequest {
+  tokenId: string;
+  ancienMotDePasse?: string; // Requis uniquement pour les non-admins
+  nouveauMotDePasse: string;
+}
+
 // ============================================================================
 // Response Payloads
 // ============================================================================

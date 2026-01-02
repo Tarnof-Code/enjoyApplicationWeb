@@ -1,5 +1,5 @@
-export default function formaterDate(date: string | Date | number | undefined | null): string {
-    if (!date) return "";
+export function parseDate(date: string | Date | number | undefined | null): Date | null {
+    if (!date) return null;
     
     let newDate: Date;
     
@@ -7,7 +7,6 @@ export default function formaterDate(date: string | Date | number | undefined | 
     if (typeof date === 'number') {
         // Si le nombre est très petit (< 10000000000), c'est probablement en secondes Unix
         // Sinon c'est en millisecondes
-        // Les dates en 1970 suggèrent qu'on traite un timestamp en secondes comme des millisecondes
         if (date < 10000000000) {
             // Timestamp en secondes, convertir en millisecondes
             newDate = new Date(date * 1000);
@@ -20,8 +19,14 @@ export default function formaterDate(date: string | Date | number | undefined | 
         newDate = new Date(date);
     }
     
-    if (isNaN(newDate.getTime())) {
-        return "Date invalide";
+    return isNaN(newDate.getTime()) ? null : newDate;
+}
+
+export default function formaterDate(date: string | Date | number | undefined | null): string {
+    const newDate = parseDate(date);
+    
+    if (!newDate) {
+        return date ? "Date invalide" : "";
     }
     
     return newDate.toLocaleDateString();

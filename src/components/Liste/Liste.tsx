@@ -18,7 +18,7 @@ import {
 import { useRevalidator } from "react-router-dom";
 import styles from "./Liste.module.scss";
 import calculerAge from "../../helpers/calculerAge";
-import formaterDate from "../../helpers/formaterDate";
+import formaterDate, { parseDate } from "../../helpers/formaterDate";
 
 export interface ColumnConfig {
   key: string;
@@ -53,13 +53,14 @@ export interface ListeProps<T = any> {
 }
 
 const checkValidityFilter = (itemValue: string | number | undefined, filterValue: string): boolean => {
-  if (!itemValue) return false;
-  const expirationDate = new Date(itemValue);
-  if (isNaN(expirationDate.getTime())) {
-    return false; 
-  }
+  const expirationDate = parseDate(itemValue);
+  if (!expirationDate) return false;
   const today = new Date();
-  return filterValue === "Valide" ? expirationDate > today : expirationDate <= today;
+  today.setHours(0, 0, 0, 0);
+  expirationDate.setHours(0, 0, 0, 0);
+  return filterValue === "Valide" 
+    ? expirationDate >= today 
+    : expirationDate < today;
 };
 
 const applyFilters = <T extends Record<string, any>>(

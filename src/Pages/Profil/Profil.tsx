@@ -19,15 +19,18 @@ import {
   faClock,
   faCamera,
   faCheck,
-  faTimes
+  faTimes,
+  faKey
 } from "@fortawesome/free-solid-svg-icons";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import { fr } from "date-fns/locale/fr";
+import ChangePasswordForm from "../../components/Forms/ChangePasswordForm";
 
 registerLocale("fr", fr);
 setDefaultLocale("fr");
 
 interface Utilisateur {
+  tokenId?: string;
   prenom?: string;
   nom?: string;
   genre?: string;
@@ -35,6 +38,8 @@ interface Utilisateur {
   telephone?: string;
   dateNaissance?: Date;
   dateExpirationCompte?: Date;
+  role?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -81,12 +86,19 @@ const Profil: React.FC = () => {
           isDate: true,
           icon: faClock,
         },
+        {
+          display: "Mot de passe",
+          property: "motDePasse",
+          isPassword: true,
+          icon: faKey,
+        },
       ]
     },
   ];
   
   const [editingField, setEditingField] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const handleInputChange = (property: string, value: any) => {
     setUtilisateur(prevUtilisateur => ({ 
@@ -104,18 +116,15 @@ const Profil: React.FC = () => {
 
   const handleValidate = async () => {
     if (!utilisateur) return;
-    
     try {
-      const dateExpiration = utilisateur.dateExpirationCompte || new Date();
-      const utilisateurToUpdate = {
+      const utilisateurPourApi = {
         ...utilisateur,
-        dateExpirationCompte: new Date(dateToISO(dateExpiration))
+        dateNaissance: dateToISO(utilisateur.dateNaissance) ?? new Date().toISOString(),
+        dateExpirationCompte: dateToISO(utilisateur.dateExpirationCompte) ?? new Date().toISOString()
       };
-      console.log("utilisateurToUpdate", utilisateurToUpdate);
-      await utilisateurService.updateUser(utilisateurToUpdate);
-
+      await utilisateurService.updateUser(utilisateurPourApi);
       setEditingField(null);
-      setInitialUtilisateur(utilisateurToUpdate);
+      setInitialUtilisateur(utilisateur);
     } catch (error: any) {
       if (error.response?.data?.status === 400) {
         let messageTransmis = error.response.data.message;
@@ -140,7 +149,62 @@ const Profil: React.FC = () => {
   const renderField = (mapping: any) => {
     const isEditing = editingField === mapping.property;
     const isReadOnly = mapping.property === "dateExpirationCompte";
-    
+    const isPassword = mapping.isPassword === true;
+    const handleEditClick = () => {
+      if (isPassword) {
+        setPasswordModalOpen(true);
+      } else {
+        setEditingField(mapping.property);
+      }
+    };
+    const renderValue = () => {
+      if (isPassword) {
+        return <span className={styles.value}>••••••••</span>;
+      }
+      if (mapping.isDate) {
+        return utilisateur && utilisateur[mapping.property] 
+          ? formaterDate(utilisateur[mapping.property] as string | Date)
+          : null;
+      }
+      return utilisateur?.[mapping.property] || <span className="text-muted fst-italic">Non renseigné</span>;
+    };
+    const renderEditingInput = () => {
+      if (mapping.isDate) {
+        return (
+          <DatePicker
+            className="form-control"
+            selected={utilisateur?.[mapping.property]}
+            onChange={(date) => handleInputChange(mapping.property, date)}
+            locale="fr"
+            dateFormat="dd/MM/yyyy"
+            showYearDropdown
+            scrollableYearDropdown
+          />
+        );
+      }
+      if (mapping.property === "genre") {
+        return (
+          <select
+            className="form-select"
+            value={utilisateur?.[mapping.property] || ''}
+            onChange={(e) => handleInputChange(mapping.property, e.target.value)}
+          >
+            <option value="Féminin">Féminin</option>
+            <option value="Masculin">Masculin</option>
+          </select>
+        );
+      }
+      return (
+        <input
+          className="form-control"
+          type="text"
+          value={utilisateur?.[mapping.property] || ''}
+          onChange={(e) => handleInputChange(mapping.property, e.target.value)}
+          autoFocus
+        />
+      );
+    };
+  
     return (
       <div key={mapping.display} className={`${styles.infoItem} ${isEditing ? styles.editing : ''}`}>
         <div className={styles.iconCol}>
@@ -150,51 +214,20 @@ const Profil: React.FC = () => {
         </div>
         
         <div className={styles.contentCol}>
-          <span className={styles.label}>{mapping.display}</span>
-          
+          <span className={styles.label}>{mapping.display}</span>   
           <div className={styles.valueContainer}>
-            {isEditing ? (
-              mapping.isDate ? (
-                <DatePicker
-                  className="form-control"
-                  selected={utilisateur?.[mapping.property]}
-                  onChange={(date) => handleInputChange(mapping.property, date)}
-                  locale="fr"
-                  dateFormat="dd/MM/yyyy"
-                  showYearDropdown
-                  scrollableYearDropdown
-                />
-              ) : mapping.property === "genre" ? (
-                <select
-                  className="form-select"
-                  value={utilisateur?.[mapping.property] || ''}
-                  onChange={(e) => handleInputChange(mapping.property, e.target.value)}
-                >
-                  <option value="Féminin">Féminin</option>
-                  <option value="Masculin">Masculin</option>
-                </select>
-              ) : (
-                <input
-                  className="form-control"
-                  type="text"
-                  value={utilisateur?.[mapping.property] || ''}
-                  onChange={(e) => handleInputChange(mapping.property, e.target.value)}
-                  autoFocus
-                />
-              )
+            {isEditing && !isPassword ? (
+              renderEditingInput()
             ) : (
               <span className={styles.value}>
-                {mapping.isDate 
-                  ? (utilisateur && utilisateur[mapping.property] && formaterDate(utilisateur[mapping.property] as string | Date))
-                  : (utilisateur?.[mapping.property] || <span className="text-muted fst-italic">Non renseigné</span>)
-                }
+                {renderValue()}
               </span>
             )}
           </div>
         </div>
         {!isReadOnly && (
           <div className={styles.actionCol}>
-            {isEditing ? (
+            {isEditing && !isPassword ? (
               <div className={styles.editActions}>
                 <button className={styles.btnSave} onClick={handleValidate} title="Valider">
                   <FontAwesomeIcon icon={faCheck} />
@@ -206,8 +239,8 @@ const Profil: React.FC = () => {
             ) : (
               <button 
                 className={styles.btnEdit} 
-                onClick={() => setEditingField(mapping.property)}
-                title="Modifier"
+                onClick={handleEditClick}
+                title={isPassword ? "Modifier le mot de passe" : "Modifier"}
               >
                 <FontAwesomeIcon icon={faPencilAlt} />
               </button>
@@ -279,6 +312,11 @@ const Profil: React.FC = () => {
           </div>
         </div>
       </div>
+      <ChangePasswordForm
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        tokenId={utilisateur?.tokenId || ""}
+      />
     </div>
   );
 };
