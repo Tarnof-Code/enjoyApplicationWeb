@@ -1,0 +1,53 @@
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.deleteAllButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: auto;
+}
+
+.icon {
+    margin-right: 0.25rem;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.warningText {
+    color: #856404;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    margin: 1rem 0;
+}
+
+.cancelButton {
+    background-color: #212529 !important;
+    border-color: #212529 !important;
+    color: #fff !important;
+    
+    &:hover {
+        background-color: #000 !important;
+        border-color: #000 !important;
+    }
+    
+    &:disabled {
+        background-color: #6c757d !important;
+        border-color: #6c757d !important;
+        opacity: 0.65;
+    }
+}

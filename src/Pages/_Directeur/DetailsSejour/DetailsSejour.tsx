@@ -5,13 +5,15 @@ import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import { sejourService } from "../../../services/sejour.service";
 import Equipe from "../../../components/Liste/Equipe";
-import { SejourDTO } from "../../../types/api";
+import ListeEnfants from "../../../components/Liste/ListeEnfants";
+import { SejourDTO, EnfantDto } from "../../../types/api";
 
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
     try {
-        const response = await sejourService.getSejourById(params.id);
-        return response;
+        const sejour = await sejourService.getSejourById(params.id);
+        const enfants = await sejourService.getEnfantsDuSejour(parseInt(params.id));
+        return { sejour, enfants };
     } catch (error) {
         console.error("Erreur chargement séjour", error);
         return error;
@@ -19,9 +21,23 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 }
 
 const DetailsSejour: React.FC = () => {
-    const sejour = useLoaderData() as SejourDTO;
+    const loaderData = useLoaderData() as { sejour: SejourDTO; enfants: EnfantDto[] } | Error;
     const [openAccordions, setOpenAccordions] = useState<string[]>(['1']);
     const navigate = useNavigate();
+    
+    // Gérer le cas où loaderData est une erreur
+    if (loaderData instanceof Error) {
+        return (
+            <div className={styles.pageContainer}>              
+                <button onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                    ← Retour à la liste
+                </button>
+                <p className={styles.error}>Erreur lors du chargement du séjour</p>
+            </div>
+        );
+    }
+    
+    const { sejour, enfants } = loaderData;
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => 
             prev.includes(id) 
@@ -104,8 +120,11 @@ const DetailsSejour: React.FC = () => {
                         sejourId={sejour.id}
                     />
                 </AccordionItem>
-                <AccordionItem id="3" title="Liste des enfants">
-                    <p className={styles.placeholderText}>À venir...</p>
+                <AccordionItem id="3" title={`Liste des enfants (${enfants?.length || 0})`}>
+                    <ListeEnfants 
+                        enfants={enfants || []} 
+                        sejourId={sejour.id}
+                    />
                 </AccordionItem>
                 <AccordionItem id="4" title="Plannings">
                     <p className={styles.placeholderText}>À venir...</p>

@@ -60,6 +60,21 @@ export interface ProfilUtilisateurDTO {
   dateExpirationCompte: string; 
 }
 
+/**
+ * Correspond à EnfantDto.java
+ * DTO utilisé pour retourner les informations d'un enfant
+ * Note: L'entité Enfant contient uniquement les informations personnelles de l'enfant
+ * (nom, prénom, genre, date de naissance, niveau scolaire), sans les informations des parents.
+ */
+export interface EnfantDto {
+  id: number;
+  nom: string;
+  prenom: string;
+  genre: string; // Genre enum (Masculin, Féminin)
+  dateNaissance: string; // Date sérialisée en ISO 8601
+  niveauScolaire: string; // NiveauScolaire enum
+}
+
 // ============================================================================
 // Request Payloads
 // ============================================================================
@@ -140,6 +155,27 @@ export interface ChangePasswordRequest {
   nouveauMotDePasse: string;
 }
 
+/**
+ * Correspond à AddEnfantRequest.java
+ * Payload pour ajouter un enfant à un séjour
+ */
+export interface AddEnfantRequest {
+  enfantId: number;
+}
+
+/**
+ * Payload pour créer un nouvel enfant et l'ajouter à un séjour
+ * Note: Contient uniquement les informations personnelles de l'enfant,
+ * sans les informations des parents.
+ */
+export interface CreateEnfantRequest {
+  nom: string;
+  prenom: string;
+  genre: string; // Masculin ou Féminin
+  dateNaissance: string; // Date au format ISO 8601
+  niveauScolaire: string; // PS, MS, GS, CP, CE1, CE2, CM1, CM2, SIXIEME, CINQUIEME, QUATRIEME, TROISIEME, DEUXIEME, PREMIERE, TERMINALE
+}
+
 // ============================================================================
 // Response Payloads
 // ============================================================================
@@ -178,4 +214,16 @@ export interface ErrorResponse {
   message: string;
   path?: string; 
   errors?: string[]; 
+}
+
+/**
+ * Correspond à ExcelImportResponse.java
+ * Réponse après import Excel d'enfants
+ */
+export interface ExcelImportResponse {
+  totalLignes: number;
+  enfantsCrees: number;
+  enfantsDejaExistants: number;
+  erreurs: number;
+  messagesErreur: string[];
 }
