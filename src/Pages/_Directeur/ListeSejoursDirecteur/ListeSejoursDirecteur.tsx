@@ -49,7 +49,7 @@ const ListeSejoursDirecteur: React.FC = () => {
             }
         }),
     ];
-    const handleView = (sejour: Sejour) => {
+    const handleView = (sejour: SejourDTO) => {
         navigate(`/directeur/sejours/${sejour.id}`, { state: { sejour } });
     };
     return (
