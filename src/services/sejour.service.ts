@@ -1,7 +1,7 @@
 import { accountService } from "./account.service";
 import Axios from "./caller.service";
 import { trierUtilisateursParNom, trierEnfantsParNom } from "../helpers/trierUtilisateurs";
-import { CreateSejourRequest, SejourDTO, MembreEquipeRequest, RegisterRequest, EnfantDto, CreateEnfantRequest, ExcelImportResponse } from "../types/api";
+import { CreateSejourRequest, SejourDTO, MembreEquipeRequest, RegisterRequest, EnfantDto, CreateEnfantRequest, ExcelImportResponse, DossierEnfantDto } from "../types/api";
 
 let getAllSejours = async (): Promise<SejourDTO[]> => {
   try {
@@ -188,6 +188,26 @@ let getEnfantsDuSejour = async (sejourId: number): Promise<EnfantDto[]> => {
     return response.data;
   } catch (error) {
     console.error("Une erreur s'est produite lors de la récupération des enfants :", error);
+    throw error;
+  }
+};
+
+let getDossierEnfant = async (sejourId: number, enfantId: number): Promise<DossierEnfantDto> => {
+  try {
+    const response = await Axios.get(`/sejours/${sejourId}/enfants/${enfantId}/dossier`);
+    return response.data;
+  } catch (error: any) {
+    console.error("Erreur lors de la récupération du dossier :", error);
+    if (error.response) {
+      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de la récupération du dossier";
+      const adaptedError = new Error(errorMessage);
+      (adaptedError as any).response = {
+        ...error.response,
+        status: error.response.status,
+        data: { error: errorMessage }
+      };
+      throw adaptedError;
+    }
     throw error;
   }
 };
@@ -396,6 +416,7 @@ export const sejourService = {
   updateSejour,
   deleteSejour,
   getEnfantsDuSejour,
+  getDossierEnfant,
   supprimerEnfantDuSejour,
   supprimerTousLesEnfants,
   creerEtAjouterEnfant,

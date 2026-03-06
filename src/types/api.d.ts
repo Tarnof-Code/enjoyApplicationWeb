@@ -217,6 +217,28 @@ export interface ErrorResponse {
 }
 
 /**
+ * Correspond à DossierEnfantDto.java
+ * DTO pour les informations de dossier d'un enfant (contacts parents, médical, traitements)
+ */
+export interface DossierEnfantDto {
+  id: number;
+  enfantId: number;
+  emailParent1: string | null;
+  telephoneParent1: string | null;
+  emailParent2: string | null;
+  telephoneParent2: string | null;
+  informationsMedicales: string | null;
+  pai: string | null;
+  informationsAlimentaires: string | null;
+  traitementMatin: string | null;
+  traitementMidi: string | null;
+  traitementSoir: string | null;
+  traitementSiBesoin: string | null;
+  autresInformations: string | null;
+  aPrendreEnSortie: string | null;
+}
+
+/**
  * Correspond à ExcelImportResponse.java
  * Réponse après import Excel d'enfants
  */

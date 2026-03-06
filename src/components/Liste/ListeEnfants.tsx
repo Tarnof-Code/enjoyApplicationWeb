@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useRevalidator } from "react-router-dom";
+import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -20,6 +20,7 @@ interface ListeEnfantsProps {
 
 const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
     const revalidator = useRevalidator();
+    const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
     const [isDeletingAll, setIsDeletingAll] = useState(false);
@@ -78,6 +79,10 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
         }
     };
 
+    const handleDossier = (enfant: EnfantDto) => {
+        navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`);
+    };
+
     const FormWithProps = (props: any) => (
         <AddEnfantForm 
             {...props} 
@@ -116,6 +121,8 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
                 canAdd={true}
                 canEdit={true}
                 canDelete={true}
+                canDossier={true}
+                onDossier={handleDossier}
                 formComponent={FormWithProps}
                 addButtonText="Ajouter un enfant"
                 deleteConfirmationMessage={(enfant) => `Voulez-vous retirer ${enfant.prenom} ${enfant.nom} de ce séjour ?`}

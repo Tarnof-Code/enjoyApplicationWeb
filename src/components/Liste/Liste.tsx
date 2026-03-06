@@ -14,6 +14,7 @@ import {
   faTimes,
   faTrashAlt,
   faEye,
+  faFolder,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRevalidator } from "react-router-dom";
 import styles from "./Liste.module.scss";
@@ -49,6 +50,8 @@ export interface ListeProps<T = any> {
   canAdd?: boolean;
   canView?: boolean;
   onView?: (item: T) => void;
+  canDossier?: boolean;
+  onDossier?: (item: T) => void;
   deleteConfirmationMessage?: (item: T) => string;
 }
 
@@ -122,8 +125,10 @@ const Liste = <T extends Record<string, any>>({
   canAdd = true,
   canDelete = true,
   canView = false,
+  canDossier = false,
   onDelete,
   onView,
+  onDossier,
   deleteConfirmationMessage,
 }: ListeProps<T>) => {
 
@@ -296,6 +301,16 @@ const Liste = <T extends Record<string, any>>({
                 icon={faEye}
                 onClick={() => onView && onView(item)}
                 style={{ cursor: 'pointer' }}
+                title="Voir"
+              />
+            )}
+            {canDossier && onDossier && (
+              <FontAwesomeIcon
+                className="icone_dossier"
+                icon={faFolder}
+                onClick={() => onDossier(item)}
+                style={{ cursor: 'pointer' }}
+                title="Voir le dossier"
               />
             )}
             {canEdit && (

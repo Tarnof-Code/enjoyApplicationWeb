@@ -11,6 +11,7 @@ import ListeUtilisateurs, { utilisateursLoader } from "./Pages/_Admin/ListeUtili
 import ProtectedRoute from "./components/ProtectedRoute";
 import ListeSejoursDirecteur, { listeSejoursDirecteurLoader } from "./Pages/_Directeur/ListeSejoursDirecteur/ListeSejoursDirecteur.tsx";
 import DetailsSejour, { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
+import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Directeur/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 
 const App: React.FC = () => {
@@ -64,6 +65,15 @@ const App: React.FC = () => {
           element: (
             <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
               <DetailsSejour />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "/directeur/sejours/:sejourId/enfants/:enfantId/dossier",
+          loader: dossierEnfantLoader,
+          element: (
+            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
+              <DossierEnfant />
             </ProtectedRoute>
           ),
         },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LoaderFunctionArgs, useLoaderData, useNavigate } from "react-router-dom";
+import { LoaderFunctionArgs, useLoaderData, useNavigate, useLocation } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
@@ -22,7 +22,11 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 
 const DetailsSejour: React.FC = () => {
     const loaderData = useLoaderData() as { sejour: SejourDTO; enfants: EnfantDto[] } | Error;
-    const [openAccordions, setOpenAccordions] = useState<string[]>(['1']);
+    const location = useLocation();
+    const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
+        const state = location.state as { openAccordion?: string } | null;
+        return state?.openAccordion ? [state.openAccordion] : ['1'];
+    });
     const navigate = useNavigate();
     
     // Gérer le cas où loaderData est une erreur
