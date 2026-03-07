@@ -12,6 +12,15 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.editButton {
+    margin-left: auto;
+}
+
+.editIcon {
+    margin-right: 0.5rem;
 }
 
 .backButton {

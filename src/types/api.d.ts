@@ -239,6 +239,12 @@ export interface DossierEnfantDto {
 }
 
 /**
+ * Correspond à UpdateDossierEnfantRequest.java
+ * Payload pour modifier un dossier enfant (tous les champs doivent être envoyés)
+ */
+export type UpdateDossierEnfantRequest = Omit<DossierEnfantDto, 'id' | 'enfantId'>;
+
+/**
  * Correspond à ExcelImportResponse.java
  * Réponse après import Excel d'enfants
  */

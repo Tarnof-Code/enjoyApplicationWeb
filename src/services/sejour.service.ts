@@ -1,7 +1,7 @@
 import { accountService } from "./account.service";
 import Axios from "./caller.service";
 import { trierUtilisateursParNom, trierEnfantsParNom } from "../helpers/trierUtilisateurs";
-import { CreateSejourRequest, SejourDTO, MembreEquipeRequest, RegisterRequest, EnfantDto, CreateEnfantRequest, ExcelImportResponse, DossierEnfantDto } from "../types/api";
+import { CreateSejourRequest, SejourDTO, MembreEquipeRequest, RegisterRequest, EnfantDto, CreateEnfantRequest, ExcelImportResponse, DossierEnfantDto, UpdateDossierEnfantRequest } from "../types/api";
 
 let getAllSejours = async (): Promise<SejourDTO[]> => {
   try {
@@ -200,6 +200,26 @@ let getDossierEnfant = async (sejourId: number, enfantId: number): Promise<Dossi
     console.error("Erreur lors de la récupération du dossier :", error);
     if (error.response) {
       const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de la récupération du dossier";
+      const adaptedError = new Error(errorMessage);
+      (adaptedError as any).response = {
+        ...error.response,
+        status: error.response.status,
+        data: { error: errorMessage }
+      };
+      throw adaptedError;
+    }
+    throw error;
+  }
+};
+
+let updateDossierEnfant = async (sejourId: number, enfantId: number, request: UpdateDossierEnfantRequest): Promise<DossierEnfantDto> => {
+  try {
+    const response = await Axios.put(`/sejours/${sejourId}/enfants/${enfantId}/dossier`, request);
+    return response.data;
+  } catch (error: any) {
+    console.error("Erreur lors de la modification du dossier :", error);
+    if (error.response) {
+      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de la modification du dossier";
       const adaptedError = new Error(errorMessage);
       (adaptedError as any).response = {
         ...error.response,
@@ -417,6 +437,7 @@ export const sejourService = {
   deleteSejour,
   getEnfantsDuSejour,
   getDossierEnfant,
+  updateDossierEnfant,
   supprimerEnfantDuSejour,
   supprimerTousLesEnfants,
   creerEtAjouterEnfant,

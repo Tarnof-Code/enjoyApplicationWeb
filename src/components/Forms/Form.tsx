@@ -18,7 +18,7 @@ import styles from "./Form.module.scss";
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'custom';
+  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'textarea' | 'custom';
   required?: boolean;
   options?: { value: string; label: string }[];
   validation?: (value: any, allValues?: Record<string, any>) => string | null;
@@ -207,6 +207,12 @@ function Form({
                </option>
               ))}
             </Input>
+          ) : field.type === 'textarea' ? (
+            <Input
+              type="textarea"
+              rows={4}
+              {...inputProps}
+            />
           ) : (
             <Input
               type={field.type === 'password' ? 'password' : field.type === 'custom' ? 'text' : field.type}

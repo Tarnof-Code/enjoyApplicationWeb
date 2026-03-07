@@ -1,8 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LoaderFunctionArgs, useLoaderData, useNavigate, useParams } from "react-router-dom";
+import { Button, Modal, ModalHeader, ModalBody } from "reactstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import styles from "./DossierEnfant.module.scss";
 import { sejourService } from "../../../services/sejour.service";
 import { DossierEnfantDto, EnfantDto } from "../../../types/api";
+import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
 
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     const { sejourId, enfantId } = params;
@@ -27,7 +31,8 @@ const formatValue = (value: string | null): string => {
 const DossierEnfant: React.FC = () => {
     const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined } | Error;
     const navigate = useNavigate();
-    const { sejourId } = useParams();
+    const { sejourId, enfantId } = useParams();
+    const [showEditModal, setShowEditModal] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -69,6 +74,16 @@ const DossierEnfant: React.FC = () => {
                 <h1 className={styles.pageTitle}>
                     Dossier de <span className={styles.enfantNameBadge}>{enfantNom}</span>
                 </h1>
+                {sejourId && enfantId && (
+                    <Button
+                        color="primary"
+                        onClick={() => setShowEditModal(true)}
+                        className={styles.editButton}
+                    >
+                        <FontAwesomeIcon icon={faPencilAlt} className={styles.editIcon} />
+                        Modifier
+                    </Button>
+                )}
             </div>
 
             <div className={styles.dossierContent}>
@@ -148,6 +163,22 @@ const DossierEnfant: React.FC = () => {
                     </div>
                 </section>
             </div>
+
+            <Modal isOpen={showEditModal} toggle={() => setShowEditModal(false)} size="lg">
+                <ModalHeader toggle={() => setShowEditModal(false)}>
+                    Modifier le dossier
+                </ModalHeader>
+                <ModalBody>
+                    {showEditModal && sejourId && enfantId && (
+                        <DossierEnfantForm
+                            handleCloseModal={() => setShowEditModal(false)}
+                            sejourId={parseInt(sejourId)}
+                            enfantId={parseInt(enfantId)}
+                            data={dossier}
+                        />
+                    )}
+                </ModalBody>
+            </Modal>
         </div>
     );
 };
