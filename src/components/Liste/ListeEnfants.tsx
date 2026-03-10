@@ -3,7 +3,7 @@ import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { EnfantDto } from "../../types/api";
+import { EnfantDto, GroupeDto } from "../../types/api";
 import Liste, { ColumnConfig } from "./Liste";
 import { sejourService } from "../../services/sejour.service";
 import calculerAge from "../../helpers/calculerAge";
@@ -13,12 +13,13 @@ import ImportExcelEnfants from "./ImportExcelEnfants";
 import { NiveauScolaireLabels } from "../../enums/NiveauScolaire";
 import styles from "./ListeEnfants.module.scss";
 
-interface ListeEnfantsProps {
+export interface ListeEnfantsProps {
     enfants: EnfantDto[];
+    groupes?: GroupeDto[];
     sejourId: number;
 }
 
-const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
+const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejourId }) => {
     const revalidator = useRevalidator();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -38,6 +39,12 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
     const createColumn = (key: string, label: string, type: ColumnConfig['type'] = 'text', options?: Partial<ColumnConfig>): ColumnConfig => ({
         key, label, type, filterable: true, filterType: type === 'select' ? 'select' : 'text', ...options
     });
+
+    const getGroupesPourEnfant = (enfantId: number): string[] => {
+        return groupes
+            .filter((g) => g.enfants.some((e) => e.id === enfantId))
+            .map((g) => g.nom);
+    };
 
     const columns: ColumnConfig[] = [
         createColumn('nom', 'Nom'),
@@ -62,7 +69,22 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
             filterType: 'number',
             render: (_, item) => `${calculerAge(item.dateNaissance)} ans`
         }),
+        ...(groupes.length > 0
+            ? [
+                createColumn('groupes', 'Groupe(s)', 'text', {
+                    filterable: true,
+                    render: (_, item) => {
+                        const noms = getGroupesPourEnfant(item.id);
+                        return noms.length > 0 ? noms.join(", ") : "—";
+                    }
+                })
+            ]
+            : []),
     ];
+
+    const dataWithGroupes = groupes.length > 0
+        ? enfants.map((e) => ({ ...e, groupes: getGroupesPourEnfant(e.id).join(", ") || "—" }))
+        : enfants;
 
     const handleDeleteAllEnfants = async () => {
         setIsDeletingAll(true);
@@ -115,7 +137,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, sejourId }) => {
             <Liste
                 title={`Liste des enfants (${enfants.length})`}
                 columns={columns}
-                data={enfants}
+                data={dataWithGroupes}
                 loading={false}
                 onDelete={handleDeleteEnfant}
                 canAdd={true}

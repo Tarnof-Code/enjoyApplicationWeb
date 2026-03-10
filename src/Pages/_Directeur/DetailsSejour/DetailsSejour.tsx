@@ -4,16 +4,21 @@ import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import { sejourService } from "../../../services/sejour.service";
+import { groupeService } from "../../../services/groupe.service";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
-import { SejourDTO, EnfantDto } from "../../../types/api";
+import ListeGroupes from "../../../components/Liste/ListeGroupes";
+import { SejourDTO, EnfantDto, GroupeDto } from "../../../types/api";
 
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
     try {
-        const sejour = await sejourService.getSejourById(params.id);
-        const enfants = await sejourService.getEnfantsDuSejour(parseInt(params.id));
-        return { sejour, enfants };
+        const [sejour, enfants, groupes] = await Promise.all([
+            sejourService.getSejourById(params.id),
+            sejourService.getEnfantsDuSejour(parseInt(params.id)),
+            groupeService.getGroupesDuSejour(parseInt(params.id)),
+        ]);
+        return { sejour, enfants, groupes };
     } catch (error) {
         console.error("Erreur chargement séjour", error);
         return error;
@@ -21,7 +26,7 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 }
 
 const DetailsSejour: React.FC = () => {
-    const loaderData = useLoaderData() as { sejour: SejourDTO; enfants: EnfantDto[] } | Error;
+    const loaderData = useLoaderData() as { sejour: SejourDTO; enfants: EnfantDto[]; groupes: GroupeDto[] } | Error;
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
         const state = location.state as { openAccordion?: string } | null;
@@ -41,7 +46,7 @@ const DetailsSejour: React.FC = () => {
         );
     }
     
-    const { sejour, enfants } = loaderData;
+    const { sejour, enfants, groupes } = loaderData;
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => 
             prev.includes(id) 
@@ -127,10 +132,19 @@ const DetailsSejour: React.FC = () => {
                 <AccordionItem id="3" title={`Liste des enfants (${enfants?.length || 0})`}>
                     <ListeEnfants 
                         enfants={enfants || []} 
+                        groupes={groupes || []}
                         sejourId={sejour.id}
                     />
                 </AccordionItem>
-                <AccordionItem id="4" title="Plannings">
+                <AccordionItem id="4" title={`Groupes (${groupes?.length || 0})`}>
+                    <ListeGroupes 
+                        groupes={groupes || []} 
+                        enfants={enfants || []} 
+                        sejourId={sejour.id}
+                        dateDebutSejour={sejour.dateDebut}
+                    />
+                </AccordionItem>
+                <AccordionItem id="5" title="Plannings">
                     <p className={styles.placeholderText}>À venir...</p>
                 </AccordionItem>
             </div>

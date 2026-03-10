@@ -57,6 +57,27 @@
   }
 }
 
+.filterInputWithIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+
+  .filterIcon {
+    position: absolute;
+    left: 0.5rem;
+    color: #6c757d;
+    pointer-events: none;
+    font-size: 0.85rem;
+  }
+
+  input {
+    padding-left: 1.75rem;
+    width: 100%;
+  }
+}
+
 .clearFilterButton {
   background: none;
   border: none;

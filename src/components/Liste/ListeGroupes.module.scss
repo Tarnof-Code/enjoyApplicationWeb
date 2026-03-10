@@ -1,0 +1,280 @@
+@use "../../_variables" as *;
+
+.container {
+    width: 100%;
+}
+
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.icon {
+    margin-right: 0.5rem;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.placeholderText {
+    color: #999;
+    font-style: italic;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.groupesList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.groupeCard {
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 1.25rem;
+    background: #fafafa;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.groupeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.groupeHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.editButton {
+    background-color: #fff !important;
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+
+    &:hover {
+        background-color: #f8f9fa !important;
+        border-color: #dee2e6 !important;
+        color: #212529 !important;
+    }
+}
+
+.deleteButton {
+    color: #fff !important;
+
+    &:hover {
+        color: #fff !important;
+    }
+}
+
+.groupeHeaderButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+
+    &:hover {
+        opacity: 0.85;
+    }
+}
+
+.chevronIcon {
+    font-size: 0.85rem;
+    color: #6c757d;
+    flex-shrink: 0;
+}
+
+.groupeCount {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: normal;
+}
+
+.groupeNom {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.25rem 0;
+}
+
+.groupeDescription {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0 0 0.5rem 0;
+}
+
+.trancheRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.trancheBadge {
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.6rem;
+    background: rgba($bleu_principal, 0.1);
+    color: $bleu_principal;
+    border-radius: 1rem;
+}
+
+.addTrancheButton {
+    margin-left: auto;
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #fff !important;
+
+    &:hover {
+        background-color: #218838 !important;
+        border-color: #1e7e34 !important;
+        color: #fff !important;
+    }
+}
+
+.addTrancheList {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+
+    li {
+        padding: 0.25rem 0;
+        border-bottom: 1px solid #eee;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+}
+
+.enfantsSection {
+    border-top: 1px solid #e8e8e8;
+    padding-top: 1rem;
+}
+
+.enfantsTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #333;
+}
+
+.noEnfants {
+    color: #999;
+    font-style: italic;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.enfantsList {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+.enfantItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    border: 1px solid #eee;
+}
+
+.enfantMeta {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.removeBtn {
+    padding: 0.25rem;
+    color: #dc3545;
+    text-decoration: none;
+
+    &:hover {
+        color: #bd2130;
+    }
+}
+
+.addEnfant {
+    margin-bottom: 1rem;
+}
+
+.addEnfantInputWrapper {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+}
+
+.addEnfantInput {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.9rem;
+
+    &:focus {
+        outline: none;
+        border-color: $bleu_principal;
+        box-shadow: 0 0 0 2px rgba($bleu_principal, 0.2);
+    }
+}
+
+.addEnfantDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: white;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.addEnfantOption {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+
+    &:hover {
+        background-color: rgba($bleu_principal, 0.1);
+    }
+}
+
+.addEnfantOptionEmpty {
+    padding: 0.5rem 0.75rem;
+    color: #6c757d;
+    font-size: 0.9rem;
+}

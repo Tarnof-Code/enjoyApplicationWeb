@@ -11,6 +11,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPencilAlt,
+  faSearch,
   faTimes,
   faTrashAlt,
   faEye,
@@ -411,20 +412,24 @@ const Liste = <T extends Record<string, any>>({
                           />
                         ) : column.filterType === 'date' ? (
                           <input
-                            placeholder="Rechercher une date"
+                            placeholder="Date"
                             type="date"
                             value={filters[`${column.key}Filter`] || ""}
                             onChange={(e) => updateFilter(`${column.key}Filter`, e.target.value)}
                             autoComplete="off"
                           />
                         ) : (
-                        <input
-                          placeholder={`Rechercher ${column.label.toLowerCase()}`}
-                          type="text"
-                          value={filters[`${column.key}Filter`] || ""}
-                          onChange={(e) => updateFilter(`${column.key}Filter`, e.target.value)}
-                          autoComplete="off"
-                        />
+                        <div className={styles.filterInputWithIcon}>
+                          <FontAwesomeIcon icon={faSearch} className={styles.filterIcon} />
+                          <input
+                            type="text"
+                            placeholder={column.label}
+                            value={filters[`${column.key}Filter`] || ""}
+                            onChange={(e) => updateFilter(`${column.key}Filter`, e.target.value)}
+                            autoComplete="off"
+                            aria-label={`Filtrer ${column.label.toLowerCase()}`}
+                          />
+                        </div>
                       )}
                       {filters[`${column.key}Filter`] && column.filterType !== 'select' && (
                         <button

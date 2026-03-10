@@ -255,3 +255,52 @@ export interface ExcelImportResponse {
   erreurs: number;
   messagesErreur: string[];
 }
+
+// ============================================================================
+// Groupes
+// ============================================================================
+
+/** Type de regroupement : manuel, par âge ou par niveau scolaire */
+export type TypeGroupe = 'THEMATIQUE' | 'AGE' | 'NIVEAU_SCOLAIRE';
+
+/**
+ * Correspond à CreateGroupeRequest.java
+ * Payload pour créer ou modifier un groupe
+ */
+export interface CreateGroupeRequest {
+  nom: string;
+  description?: string | null;
+  typeGroupe: TypeGroupe;
+  ageMin?: number | null;
+  ageMax?: number | null;
+  niveauScolaireMin?: string | null;
+  niveauScolaireMax?: string | null;
+}
+
+/**
+ * Correspond à ReferentInfos (classe interne ou DTO)
+ * Informations sur un référent d'un groupe
+ */
+export interface ReferentInfos {
+  tokenId: string;
+  nom: string;
+  prenom: string;
+}
+
+/**
+ * Correspond à GroupeDto.java
+ * DTO pour un groupe d'enfants d'un séjour
+ */
+export interface GroupeDto {
+  id: number;
+  nom: string;
+  description: string | null;
+  typeGroupe: TypeGroupe;
+  ageMin: number | null;
+  ageMax: number | null;
+  niveauScolaireMin: string | null;
+  niveauScolaireMax: string | null;
+  sejourId: number;
+  enfants: EnfantDto[];
+  referents: ReferentInfos[];
+}

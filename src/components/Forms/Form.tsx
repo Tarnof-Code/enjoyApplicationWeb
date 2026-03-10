@@ -18,14 +18,17 @@ import styles from "./Form.module.scss";
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'textarea' | 'custom';
-  required?: boolean;
+  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'textarea' | 'number' | 'custom';
+  /** Obligatoire : boolean ou fonction (formData) => boolean pour un required conditionnel */
+  required?: boolean | ((formData: Record<string, any>) => boolean);
   options?: { value: string; label: string }[];
   validation?: (value: any, allValues?: Record<string, any>) => string | null;
   placeholder?: string;
   disabled?: boolean;
   customComponent?: React.ComponentType<any>;
   autoComplete?: string;
+  /** Si défini, le champ n'est affiché que lorsque la fonction retourne true */
+  visible?: (formData: Record<string, any>) => boolean;
 }
 
 export interface FormProps {
@@ -39,6 +42,8 @@ export interface FormProps {
   successMessage?: string | ((formData: any) => string);
   errorMessage?: string | null;
   loading?: boolean;
+  /** Contenu informatif affiché au-dessus des champs (peut dépendre de formData) */
+  infoContent?: (formData: Record<string, any>) => React.ReactNode;
 }
 
 function Form({
@@ -52,6 +57,7 @@ function Form({
   successMessage,
   errorMessage,
   loading = false,
+  infoContent,
 }: FormProps) {
   const revalidator = useRevalidator();
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -117,11 +123,13 @@ function Form({
     let isValid = true;
     fields.forEach(field => {
       const value = formData[field.name];
-      if (field.required && (!value || value.toString().trim() === "")) {
+      const isVisible = !field.visible || field.visible(formData);
+      const isRequired = typeof field.required === 'function' ? field.required(formData) : !!field.required;
+      if (isRequired && isVisible && (!value || value.toString().trim() === "")) {
         errors[field.name] = `${field.label} est requis`;
         isValid = false;
-      }   
-      if (field.validation && value) {
+      }
+      if (field.validation && isVisible) {
         const error = field.validation(value, formData);
         if (error) {
           errors[field.name] = error;
@@ -174,6 +182,8 @@ function Form({
       autoComplete: field.autoComplete,
     };
 
+    const isRequired = typeof field.required === 'function' ? field.required(formData) : !!field.required;
+
     if (field.type === 'custom' && field.customComponent) {
       const CustomComponent = field.customComponent;
       return (
@@ -184,17 +194,18 @@ function Form({
           error={error}
           disabled={field.disabled || loading}
           label={field.label}
-          required={field.required}
+          required={isRequired}
         />
       );
     }
+    const showRequired = (!field.visible || field.visible(formData)) && isRequired;
 
     return (
       <FormGroup key={field.name} className={styles.form_group}>
         <Col lg={4}>
           <Label className={styles.label}>
             {field.label}
-            {field.required && <span className={styles.required}> *</span>}
+            {showRequired && <span className={styles.required}> *</span>}
           </Label>
         </Col>
         <Col lg={8}>
@@ -215,7 +226,7 @@ function Form({
             />
           ) : (
             <Input
-              type={field.type === 'password' ? 'password' : field.type === 'custom' ? 'text' : field.type}
+              type={field.type === 'password' ? 'password' : field.type === 'custom' ? 'text' : field.type === 'number' ? 'number' : field.type}
               {...inputProps}
             />
           )}
@@ -234,6 +245,7 @@ function Form({
       <Container className={styles.formContainer}>
         {title && <h2 className={styles.title}>{title}</h2>}
         {errorMessage && <p className={styles.errorMessage}>{errorMessage}</p>}
+        {infoContent?.(formData)}
         <ReactstrapForm 
           className={styles.form} 
           autoComplete="off"
@@ -242,7 +254,7 @@ function Form({
             handleSubmit();
           }}
         >
-          {fields.map(renderField)}        
+          {fields.filter((f) => !f.visible || f.visible(formData)).map(renderField)}        
           <div className={styles.buttonContainer}>
             <Button 
               onClick={onClose}
