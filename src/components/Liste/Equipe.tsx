@@ -2,7 +2,7 @@ import React from "react";
 import { useRevalidator } from "react-router-dom";
 import { ProfilUtilisateurDTO } from "../../types/api";
 import TableauUtilisateurs from "./TableauUtilisateurs";
-import { sejourService } from "../../services/sejour.service";
+import { sejourEquipeService } from "../../services/sejour-equipe.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
 
 interface EquipeProps {
@@ -16,7 +16,7 @@ const Equipe: React.FC<EquipeProps> = ({ membres, sejourId }) => {
     const handleDeleteMembre = async (user: ProfilUtilisateurDTO) => {
         if (!user.tokenId) return;
         try {
-            await sejourService.supprimerMembreEquipe(sejourId, user.tokenId);
+            await sejourEquipeService.supprimerMembreEquipe(sejourId, user.tokenId);
             revalidator.revalidate();
         } catch (error) {
             console.error("Erreur lors du retrait du membre", error);

@@ -4,7 +4,8 @@ import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import { sejourService } from "../../../services/sejour.service";
-import { groupeService } from "../../../services/groupe.service";
+import { sejourEnfantService } from "../../../services/sejour-enfant.service";
+import { sejourGroupeService } from "../../../services/sejour-groupe.service";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
@@ -15,8 +16,8 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     try {
         const [sejour, enfants, groupes] = await Promise.all([
             sejourService.getSejourById(params.id),
-            sejourService.getEnfantsDuSejour(parseInt(params.id)),
-            groupeService.getGroupesDuSejour(parseInt(params.id)),
+            sejourEnfantService.getEnfantsDuSejour(parseInt(params.id)),
+            sejourGroupeService.getGroupesDuSejour(parseInt(params.id)),
         ]);
         return { sejour, enfants, groupes };
     } catch (error) {

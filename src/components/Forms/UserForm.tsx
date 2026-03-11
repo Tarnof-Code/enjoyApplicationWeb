@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import Form, { FormField } from "./Form";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
-import { sejourService } from "../../services/sejour.service";
+import { sejourEquipeService } from "../../services/sejour-equipe.service";
 import { regexValidation } from "../../helpers/regexValidation";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
 import dateToISO from "../../helpers/dateToISO";
@@ -170,7 +170,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
         // Gestion des membres d'un séjour - l'API gère la date d'expiration
         if (isEditMode && userData?.tokenId) {
           // Modification du rôle d'un membre existant
-          await sejourService.modifierRoleMembreEquipe(
+          await sejourEquipeService.modifierRoleMembreEquipe(
             sejourId, 
             userData.tokenId, 
             formData.roleSejour as RoleSejour
@@ -184,7 +184,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
             tokenId: foundUser.tokenId,
             roleSejour: formData.roleSejour as RoleSejour,
           };
-          await sejourService.ajouterMembreExistantEquipe(sejourId, addMembreRequest);
+          await sejourEquipeService.ajouterMembreExistantEquipe(sejourId, addMembreRequest);
         } else {
           const registerRequest: RegisterRequest = {
             ...(effectiveEditMode && userData ? userData : {}),
@@ -200,7 +200,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
             roleSejour: formData.roleSejour
           };
           // Ne pas envoyer dateExpiration ni dateExpirationCompte - l'API gère
-          await sejourService.ajouterNouveauMembreEquipe(sejourId, registerRequest);
+          await sejourEquipeService.ajouterNouveauMembreEquipe(sejourId, registerRequest);
         }
       } else {
         // Gestion hors séjour

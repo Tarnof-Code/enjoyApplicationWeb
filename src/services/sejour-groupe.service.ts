@@ -146,7 +146,7 @@ let retirerReferent = async (sejourId: number, groupeId: number, referentTokenId
   }
 };
 
-export const groupeService = {
+export const sejourGroupeService = {
   getGroupesDuSejour,
   getGroupeById,
   creerGroupe,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Form, { FormField } from "./Form";
-import { groupeService } from "../../services/groupe.service";
+import { sejourGroupeService } from "../../services/sejour-groupe.service";
 import { CreateGroupeRequest, GroupeDto, EnfantDto, TypeGroupe } from "../../types/api";
 import { getNiveauScolaireOptions } from "../../enums/NiveauScolaire";
 import { getEnfantsMatchingTranche } from "../../helpers/groupeTranche";
@@ -142,9 +142,9 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
         };
         try {
             if (isEditMode && groupe) {
-                await groupeService.modifierGroupe(sejourId, groupe.id, request);
+                await sejourGroupeService.modifierGroupe(sejourId, groupe.id, request);
             } else {
-                const created = await groupeService.creerGroupe(sejourId, request);
+                const created = await sejourGroupeService.creerGroupe(sejourId, request);
                 // Si le backend n'a pas ajouté les enfants (ex. créés avant la liste d'enfants), on les ajoute côté frontend
                 if (
                     (created.typeGroupe === "AGE" || created.typeGroupe === "NIVEAU_SCOLAIRE") &&
@@ -154,7 +154,7 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
                 ) {
                     const matching = getEnfantsMatchingTranche(created, enfants, dateDebutSejour, new Set());
                     for (const enfant of matching) {
-                        await groupeService.ajouterEnfantAuGroupe(sejourId, created.id, enfant.id);
+                        await sejourGroupeService.ajouterEnfantAuGroupe(sejourId, created.id, enfant.id);
                     }
                 }
             }

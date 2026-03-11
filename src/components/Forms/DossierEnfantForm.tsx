@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Form, { FormField } from "./Form";
-import { sejourService } from "../../services/sejour.service";
+import { sejourEnfantService } from "../../services/sejour-enfant.service";
 import { DossierEnfantDto, UpdateDossierEnfantRequest } from "../../types/api";
 import { regexValidation } from "../../helpers/regexValidation";
 
@@ -80,7 +80,7 @@ function DossierEnfantForm({ handleCloseModal, sejourId, enfantId, data }: Dossi
                 autresInformations: toRequestValue(formData.autresInformations as string),
                 aPrendreEnSortie: toRequestValue(formData.aPrendreEnSortie as string),
             };
-            await sejourService.updateDossierEnfant(sejourId, enfantId, request);
+            await sejourEnfantService.updateDossierEnfant(sejourId, enfantId, request);
         } catch (error: any) {
             const errorMsg = error.response?.data?.error ||
                 error.response?.data?.message ||

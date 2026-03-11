@@ -4,7 +4,7 @@ import { Button, Modal, ModalHeader, ModalBody } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import styles from "./DossierEnfant.module.scss";
-import { sejourService } from "../../../services/sejour.service";
+import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { DossierEnfantDto, EnfantDto } from "../../../types/api";
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
 
@@ -13,8 +13,8 @@ export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     if (!sejourId || !enfantId) throw new Error("Paramètres manquants");
     try {
         const [dossier, enfants] = await Promise.all([
-            sejourService.getDossierEnfant(parseInt(sejourId), parseInt(enfantId)),
-            sejourService.getEnfantsDuSejour(parseInt(sejourId))
+            sejourEnfantService.getDossierEnfant(parseInt(sejourId), parseInt(enfantId)),
+            sejourEnfantService.getEnfantsDuSejour(parseInt(sejourId))
         ]);
         const enfant = enfants.find((e: EnfantDto) => e.id === parseInt(enfantId));
         return { dossier, enfant };

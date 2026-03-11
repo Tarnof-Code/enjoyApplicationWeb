@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import Form, { FormField } from "./Form";
-import { sejourService } from "../../services/sejour.service";
+import { sejourEnfantService } from "../../services/sejour-enfant.service";
 import { CreateEnfantRequest, EnfantDto } from "../../types/api";
 import dateToISO from "../../helpers/dateToISO";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
@@ -115,11 +115,11 @@ function AddEnfantForm({ handleCloseModal, sejourId, data, isEditMode = false }:
             if (isEditMode && data?.id) {
                 // Mode édition : modifier l'enfant existant
                 console.log("Modification de l'enfant:", request);
-                await sejourService.modifierEnfant(sejourId, data.id, request);
+                await sejourEnfantService.modifierEnfant(sejourId, data.id, request);
             } else {
                 // Mode création : créer un nouvel enfant
                 console.log("Création de l'enfant:", request);
-                await sejourService.creerEtAjouterEnfant(sejourId, request);
+                await sejourEnfantService.creerEtAjouterEnfant(sejourId, request);
             }
             // Ne pas fermer le modal ici, le composant Form le fera après avoir affiché le message de succès
         } catch (error: any) {

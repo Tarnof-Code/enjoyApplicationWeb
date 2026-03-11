@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { EnfantDto, GroupeDto } from "../../types/api";
 import Liste, { ColumnConfig } from "./Liste";
-import { sejourService } from "../../services/sejour.service";
+import { sejourEnfantService } from "../../services/sejour-enfant.service";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 import AddEnfantForm from "../Forms/AddEnfantForm";
@@ -28,7 +28,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
 
     const handleDeleteEnfant = async (enfant: EnfantDto, _index: number) => {
         try {
-            await sejourService.supprimerEnfantDuSejour(sejourId, enfant.id);
+            await sejourEnfantService.supprimerEnfantDuSejour(sejourId, enfant.id);
             revalidator.revalidate();
         } catch (error) {
             console.error("Erreur lors du retrait de l'enfant", error);
@@ -90,7 +90,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
         setIsDeletingAll(true);
         setErrorMessage(null);
         try {
-            await sejourService.supprimerTousLesEnfants(sejourId);
+            await sejourEnfantService.supprimerTousLesEnfants(sejourId);
             setShowDeleteAllModal(false);
             revalidator.revalidate();
         } catch (error: any) {

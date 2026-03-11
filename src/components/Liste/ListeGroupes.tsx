@@ -4,7 +4,7 @@ import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faChevronDown, faChevronRight, faTrash, faUserMinus, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { GroupeDto, EnfantDto } from "../../types/api";
-import { groupeService } from "../../services/groupe.service";
+import { sejourGroupeService } from "../../services/sejour-groupe.service";
 import CreateGroupeForm from "../Forms/CreateGroupeForm";
 import { NiveauScolaireLabels } from "../../enums/NiveauScolaire";
 import calculerAge from "../../helpers/calculerAge";
@@ -76,7 +76,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
     const handleRetirerEnfant = async (groupe: GroupeDto, enfant: EnfantDto) => {
         setErrorMessage(null);
         try {
-            await groupeService.retirerEnfantDuGroupe(sejourId, groupe.id, enfant.id);
+            await sejourGroupeService.retirerEnfantDuGroupe(sejourId, groupe.id, enfant.id);
             setRetirerEnfantModal(null);
             revalidator.revalidate();
         } catch (error) {
@@ -96,7 +96,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
     const handleAjouterEnfant = async (groupe: GroupeDto, enfantId: number) => {
         setErrorMessage(null);
         try {
-            await groupeService.ajouterEnfantAuGroupe(sejourId, groupe.id, enfantId);
+            await sejourGroupeService.ajouterEnfantAuGroupe(sejourId, groupe.id, enfantId);
             setAddEnfantModal(null);
             setAddEnfantSearch((prev) => ({ ...prev, [groupe.id]: "" }));
             revalidator.revalidate();
@@ -120,7 +120,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
         setIsAddingTranche(true);
         try {
             for (const enfant of addTrancheModal.enfants) {
-                await groupeService.ajouterEnfantAuGroupe(sejourId, addTrancheModal.groupe.id, enfant.id);
+                await sejourGroupeService.ajouterEnfantAuGroupe(sejourId, addTrancheModal.groupe.id, enfant.id);
             }
             setAddTrancheModal(null);
             revalidator.revalidate();
@@ -137,7 +137,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
         setIsDeleting(true);
         setErrorMessage(null);
         try {
-            await groupeService.supprimerGroupe(sejourId, deleteModal.groupe.id);
+            await sejourGroupeService.supprimerGroupe(sejourId, deleteModal.groupe.id);
             setDeleteModal({ show: false, groupe: null });
             revalidator.revalidate();
         } catch (error) {

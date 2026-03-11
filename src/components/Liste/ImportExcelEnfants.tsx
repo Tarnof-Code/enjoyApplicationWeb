@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExcel } from "@fortawesome/free-solid-svg-icons";
-import { sejourService } from "../../services/sejour.service";
+import { sejourEnfantService } from "../../services/sejour-enfant.service";
 import { ExcelImportResponse } from "../../types/api";
 import { useRevalidator } from "react-router-dom";
 import styles from "./ImportExcelEnfants.module.scss";
@@ -37,7 +37,7 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
         setImportResult(null);
 
         try {
-            const result = await sejourService.importerEnfantsExcel(sejourId, file);
+            const result = await sejourEnfantService.importerEnfantsExcel(sejourId, file);
             setImportResult(result);
             setIsModalOpen(true);
             // Réinitialiser l'input file
