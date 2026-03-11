@@ -1,5 +1,6 @@
 import Axios from "./caller.service";
 import { accountService } from "./account.service";
+import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
 import store from "../redux/store";
 import { setUser } from "../redux/auth/authSlice";
 import { trierUtilisateursParNom } from "../helpers/trierUtilisateurs";
@@ -67,23 +68,13 @@ let deleteUser = async (tokenId: string) => {
     const response = await Axios.delete(`/utilisateurs/${tokenId}`, {
       withCredentials: true,
     });
-    if (response.status !== 204) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
+    validateResponseStatus(response, 204);
     return;
-  } catch (error: any) {
-    console.error("Erreur lors de la suppression de l'utilisateur :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Impossible de supprimer l'utilisateur";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = {
-        ...error.response,
-        status: error.response.status,
-        data: { error: errorMessage }
-      };
-      throw adaptedError;
-    }
-    throw error;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Impossible de supprimer l'utilisateur",
+      logContext: "Erreur lors de la suppression de l'utilisateur",
+    });
   }
 };
 
@@ -120,18 +111,11 @@ let changePassword = async (request: ChangePasswordRequest) => {
       withCredentials: true,
     });
     return response;
-  } catch (error: any) {
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors du changement de mot de passe";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = {
-        ...error.response,
-        status: error.response.status,
-        data: { error: errorMessage }
-      };
-      throw adaptedError;
-    }
-    throw error;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors du changement de mot de passe",
+      logContext: "Erreur lors du changement de mot de passe",
+    });
   }
 };
 

@@ -1,4 +1,5 @@
 import Axios from "./caller.service";
+import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
 import { CreateGroupeRequest, GroupeDto } from "../types/api";
 
 let getGroupesDuSejour = async (sejourId: number): Promise<GroupeDto[]> => {
@@ -24,19 +25,13 @@ let getGroupeById = async (sejourId: number, groupeId: number): Promise<GroupeDt
 let creerGroupe = async (sejourId: number, request: CreateGroupeRequest): Promise<GroupeDto> => {
   try {
     const response = await Axios.post(`/sejours/${sejourId}/groupes`, request);
-    if (response.status !== 201) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
+    validateResponseStatus(response, 201);
     return response.data;
-  } catch (error: any) {
-    console.error("Erreur lors de la création du groupe :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de la création du groupe";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de la création du groupe",
+      logContext: "Erreur lors de la création du groupe",
+    });
   }
 };
 
@@ -44,105 +39,71 @@ let modifierGroupe = async (sejourId: number, groupeId: number, request: CreateG
   try {
     const response = await Axios.put(`/sejours/${sejourId}/groupes/${groupeId}`, request);
     return response.data;
-  } catch (error: any) {
-    console.error("Erreur lors de la modification du groupe :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de la modification du groupe";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de la modification du groupe",
+      logContext: "Erreur lors de la modification du groupe",
+    });
   }
 };
 
 let supprimerGroupe = async (sejourId: number, groupeId: number) => {
   try {
     const response = await Axios.delete(`/sejours/${sejourId}/groupes/${groupeId}`);
-    if (response.status !== 204) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
-  } catch (error: any) {
-    console.error("Erreur lors de la suppression du groupe :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de la suppression du groupe";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+    validateResponseStatus(response, 204);
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de la suppression du groupe",
+      logContext: "Erreur lors de la suppression du groupe",
+    });
   }
 };
 
 let ajouterEnfantAuGroupe = async (sejourId: number, groupeId: number, enfantId: number) => {
   try {
     const response = await Axios.post(`/sejours/${sejourId}/groupes/${groupeId}/enfants/${enfantId}`);
-    if (response.status !== 204) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
-  } catch (error: any) {
-    console.error("Erreur lors de l'ajout de l'enfant au groupe :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de l'ajout de l'enfant au groupe";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+    validateResponseStatus(response, 204);
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de l'ajout de l'enfant au groupe",
+      logContext: "Erreur lors de l'ajout de l'enfant au groupe",
+    });
   }
 };
 
 let retirerEnfantDuGroupe = async (sejourId: number, groupeId: number, enfantId: number) => {
   try {
     const response = await Axios.delete(`/sejours/${sejourId}/groupes/${groupeId}/enfants/${enfantId}`);
-    if (response.status !== 204) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
-  } catch (error: any) {
-    console.error("Erreur lors du retrait de l'enfant du groupe :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors du retrait de l'enfant du groupe";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+    validateResponseStatus(response, 204);
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors du retrait de l'enfant du groupe",
+      logContext: "Erreur lors du retrait de l'enfant du groupe",
+    });
   }
 };
 
 let ajouterReferent = async (sejourId: number, groupeId: number, referentTokenId: string) => {
   try {
     const response = await Axios.post(`/sejours/${sejourId}/groupes/${groupeId}/referents`, { referentTokenId });
-    if (response.status !== 201) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
-  } catch (error: any) {
-    console.error("Erreur lors de l'ajout du référent :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors de l'ajout du référent";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+    validateResponseStatus(response, 201);
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de l'ajout du référent",
+      logContext: "Erreur lors de l'ajout du référent",
+    });
   }
 };
 
 let retirerReferent = async (sejourId: number, groupeId: number, referentTokenId: string) => {
   try {
     const response = await Axios.delete(`/sejours/${sejourId}/groupes/${groupeId}/referents/${referentTokenId}`);
-    if (response.status !== 204) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
-  } catch (error: any) {
-    console.error("Erreur lors du retrait du référent :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Erreur lors du retrait du référent";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = { ...error.response, status: error.response.status, data: { error: errorMessage } };
-      throw adaptedError;
-    }
-    throw error;
+    validateResponseStatus(response, 204);
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors du retrait du référent",
+      logContext: "Erreur lors du retrait du référent",
+    });
   }
 };
 

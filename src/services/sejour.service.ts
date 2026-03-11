@@ -1,6 +1,7 @@
 import { accountService } from "./account.service";
 import Axios from "./caller.service";
 import { trierUtilisateursParNom } from "../helpers/trierUtilisateurs";
+import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
 import { CreateSejourRequest, SejourDTO } from "../types/api";
 
 let getAllSejours = async (): Promise<SejourDTO[]> => {
@@ -66,23 +67,13 @@ let updateSejour = async (id: number, sejourData: CreateSejourRequest): Promise<
 let deleteSejour = async (sejourId: number) => {
   try {
     const response = await Axios.delete(`/sejours/${sejourId}`);
-    if (response.status !== 204) {
-      throw new Error(`Réponse inattendue : ${response.status}`);
-    }
+    validateResponseStatus(response, 204);
     return;
-  } catch (error: any) {
-    console.error("Une erreur s'est produite lors de la suppression :", error);
-    if (error.response) {
-      const errorMessage = error.response.data?.error || error.response.data?.message || "Une erreur s'est produite lors de la suppression";
-      const adaptedError = new Error(errorMessage);
-      (adaptedError as any).response = {
-        ...error.response,
-        status: error.response.status,
-        data: { error: errorMessage }
-      };
-      throw adaptedError;
-    }
-    throw error;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Une erreur s'est produite lors de la suppression",
+      logContext: "Une erreur s'est produite lors de la suppression",
+    });
   }
 };
 
