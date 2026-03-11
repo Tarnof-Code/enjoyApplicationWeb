@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LoaderFunctionArgs, useLoaderData, useNavigate, useParams } from "react-router-dom";
+import { LoaderFunctionArgs, useLoaderData, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
@@ -28,19 +28,35 @@ const formatValue = (value: string | null): string => {
     return value?.trim() || "—";
 };
 
+interface DossierLocationState {
+    from?: 'groupes' | 'enfants';
+    openAccordion?: string;
+    expandedGroupeId?: number;
+}
+
 const DossierEnfant: React.FC = () => {
     const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined } | Error;
     const navigate = useNavigate();
+    const location = useLocation();
     const { sejourId, enfantId } = useParams();
     const [showEditModal, setShowEditModal] = useState(false);
+    const returnState = location.state as DossierLocationState | null;
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
 
     const handleRetour = () => {
-        if (sejourId) {
-            navigate(`/directeur/sejours/${sejourId}`, { state: { openAccordion: '3' } });
+        if (sejourId && returnState?.openAccordion) {
+            navigate(`/directeur/sejours/${sejourId}`, {
+                state: {
+                    openAccordion: returnState.openAccordion,
+                    expandedGroupeId: returnState.expandedGroupeId
+                },
+                replace: true
+            });
+        } else if (sejourId) {
+            navigate(`/directeur/sejours/${sejourId}`, { replace: true });
         } else {
             navigate(-1);
         }

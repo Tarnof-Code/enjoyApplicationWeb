@@ -30,9 +30,10 @@ const DetailsSejour: React.FC = () => {
     const loaderData = useLoaderData() as { sejour: SejourDTO; enfants: EnfantDto[]; groupes: GroupeDto[] } | Error;
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
-        const state = location.state as { openAccordion?: string } | null;
+        const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
         return state?.openAccordion ? [state.openAccordion] : ['1'];
     });
+    const expandedGroupeIdFromState = (location.state as { expandedGroupeId?: number } | null)?.expandedGroupeId;
     const navigate = useNavigate();
     
     // Gérer le cas où loaderData est une erreur
@@ -143,6 +144,7 @@ const DetailsSejour: React.FC = () => {
                         enfants={enfants || []} 
                         sejourId={sejour.id}
                         dateDebutSejour={sejour.dateDebut}
+                        initialExpandedGroupeId={expandedGroupeIdFromState}
                     />
                 </AccordionItem>
                 <AccordionItem id="5" title="Plannings">

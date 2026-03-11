@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useRevalidator } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faChevronDown, faChevronRight, faTrash, faUserMinus, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faChevronDown, faChevronRight, faTrash, faUserMinus, faUserPlus, faFolder } from "@fortawesome/free-solid-svg-icons";
 import { GroupeDto, EnfantDto } from "../../types/api";
 import { sejourGroupeService } from "../../services/sejour-groupe.service";
 import CreateGroupeForm from "../Forms/CreateGroupeForm";
@@ -17,15 +17,25 @@ interface ListeGroupesProps {
     enfants: EnfantDto[];
     sejourId: number;
     dateDebutSejour: string;
+    initialExpandedGroupeId?: number;
 }
 
-const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour }) => {
+const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour, initialExpandedGroupeId }) => {
     const revalidator = useRevalidator();
+    const navigate = useNavigate();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [deleteModal, setDeleteModal] = useState<{ show: boolean; groupe: GroupeDto | null }>({ show: false, groupe: null });
     const [isDeleting, setIsDeleting] = useState(false);
-    const [expandedGroupes, setExpandedGroupes] = useState<Set<number>>(new Set());
+    const [expandedGroupes, setExpandedGroupes] = useState<Set<number>>(() =>
+        initialExpandedGroupeId ? new Set([initialExpandedGroupeId]) : new Set()
+    );
+
+    useEffect(() => {
+        if (initialExpandedGroupeId) {
+            setExpandedGroupes((prev) => new Set([...prev, initialExpandedGroupeId]));
+        }
+    }, [initialExpandedGroupeId]);
     const [addEnfantSearch, setAddEnfantSearch] = useState<Record<number, string>>({});
     const [addEnfantFocused, setAddEnfantFocused] = useState<number | null>(null);
     const [addEnfantModal, setAddEnfantModal] = useState<{ groupe: GroupeDto; enfant: EnfantDto } | null>(null);
@@ -302,11 +312,22 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                         <ul className={styles.enfantsList}>
                                             {groupe.enfants.map((enfant) => (
                                                 <li key={enfant.id} className={styles.enfantItem}>
-                                                    <span>
-                                                        {enfant.nom} {enfant.prenom}
-                                                        <span className={styles.enfantMeta}>
-                                                            {" "}
-                                                            ({ageAtSejour(enfant)} ans, {NiveauScolaireLabels[enfant.niveauScolaire as keyof typeof NiveauScolaireLabels] || enfant.niveauScolaire})
+                                                    <span className={styles.enfantNameWrapper}>
+                                                        <FontAwesomeIcon
+                                                            className="icone_dossier"
+                                                            icon={faFolder}
+                                                            onClick={() => navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`, {
+                                                                state: { from: 'groupes', openAccordion: '4', expandedGroupeId: groupe.id }
+                                                            })}
+                                                            style={{ cursor: 'pointer' }}
+                                                            title="Voir le dossier"
+                                                        />
+                                                        <span>
+                                                            {enfant.nom} {enfant.prenom}
+                                                            <span className={styles.enfantMeta}>
+                                                                {" "}
+                                                                ({ageAtSejour(enfant)} ans, {NiveauScolaireLabels[enfant.niveauScolaire as keyof typeof NiveauScolaireLabels] || enfant.niveauScolaire})
+                                                            </span>
                                                         </span>
                                                     </span>
                                                     <Button
