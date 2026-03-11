@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,9 +18,10 @@ interface ListeGroupesProps {
     sejourId: number;
     dateDebutSejour: string;
     initialExpandedGroupeId?: number;
+    onGroupRendered?: (groupeId: number) => void;
 }
 
-const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour, initialExpandedGroupeId }) => {
+const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour, initialExpandedGroupeId, onGroupRendered }) => {
     const revalidator = useRevalidator();
     const navigate = useNavigate();
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -30,11 +31,52 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
     const [expandedGroupes, setExpandedGroupes] = useState<Set<number>>(() =>
         initialExpandedGroupeId ? new Set([initialExpandedGroupeId]) : new Set()
     );
+    const groupeRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const lastExpandedGroupeId = useRef<number | null>(null);
+    const hasScrolledFromReturn = useRef(false);
 
     useEffect(() => {
         if (initialExpandedGroupeId) {
-            setExpandedGroupes((prev) => new Set([...prev, initialExpandedGroupeId]));
+            setExpandedGroupes(new Set([initialExpandedGroupeId]));
         }
+    }, [initialExpandedGroupeId]);
+
+    const scrollToGroupe = (groupeId: number) => {
+        const el = groupeRefs.current[groupeId] ?? document.querySelector(`[data-groupe-id="${groupeId}"]`) as HTMLElement | null;
+        if (!el) return;
+        const headerOffset = 80;
+        const elementTop = el.getBoundingClientRect().top + window.scrollY;
+        const targetPosition = elementTop - headerOffset;
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+    };
+
+    // Scroll quand on clique pour ouvrir un groupe
+    useEffect(() => {
+        const id = lastExpandedGroupeId.current;
+        if (!id) return;
+        lastExpandedGroupeId.current = null;
+        requestAnimationFrame(() => scrollToGroupe(id));
+    }, [expandedGroupes]);
+
+    // Notifier le parent quand le groupe est rendu (pour scroll au retour du dossier)
+    const hasNotifiedGroupRendered = useRef(false);
+    useLayoutEffect(() => {
+        if (!initialExpandedGroupeId || hasNotifiedGroupRendered.current) return;
+        const el = groupeRefs.current[initialExpandedGroupeId];
+        if (el) {
+            hasNotifiedGroupRendered.current = true;
+            onGroupRendered?.(initialExpandedGroupeId);
+        }
+    });
+    useEffect(() => {
+        if (!initialExpandedGroupeId || hasScrolledFromReturn.current) return;
+        hasScrolledFromReturn.current = true;
+        const timer1 = setTimeout(() => scrollToGroupe(initialExpandedGroupeId), 100);
+        const timer2 = setTimeout(() => scrollToGroupe(initialExpandedGroupeId), 650);
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
     }, [initialExpandedGroupeId]);
     const [addEnfantSearch, setAddEnfantSearch] = useState<Record<number, string>>({});
     const [addEnfantFocused, setAddEnfantFocused] = useState<number | null>(null);
@@ -48,10 +90,14 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
 
     const toggleGroupe = (groupeId: number) => {
         setExpandedGroupes((prev) => {
-            const next = new Set(prev);
-            if (next.has(groupeId)) next.delete(groupeId);
-            else next.add(groupeId);
-            return next;
+            if (prev.has(groupeId)) {
+                const next = new Set(prev);
+                next.delete(groupeId);
+                return next;
+            }
+            lastExpandedGroupeId.current = groupeId;
+            // Un seul groupe ouvert à la fois
+            return new Set([groupeId]);
         });
     };
 
@@ -182,7 +228,12 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
 
                         const isExpanded = expandedGroupes.has(groupe.id);
                         return (
-                            <div key={groupe.id} className={styles.groupeCard}>
+                            <div
+                                key={groupe.id}
+                                ref={ref => { groupeRefs.current[groupe.id] = ref; }}
+                                data-groupe-id={groupe.id}
+                                className={styles.groupeCard}
+                            >
                                 <div className={styles.groupeHeader}>
                                     <button
                                         type="button"
@@ -316,9 +367,11 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                                         <FontAwesomeIcon
                                                             className="icone_dossier"
                                                             icon={faFolder}
-                                                            onClick={() => navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`, {
-                                                                state: { from: 'groupes', openAccordion: '4', expandedGroupeId: groupe.id }
-                                                            })}
+                                                            onClick={() => {
+                                                                const state = { from: 'groupes' as const, openAccordion: '4', expandedGroupeId: groupe.id };
+                                                                navigate(`/directeur/sejours/${sejourId}`, { state, replace: true });
+                                                                navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`, { state });
+                                                            }}
                                                             style={{ cursor: 'pointer' }}
                                                             title="Voir le dossier"
                                                         />

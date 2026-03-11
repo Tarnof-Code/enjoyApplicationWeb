@@ -102,9 +102,9 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
     };
 
     const handleDossier = (enfant: EnfantDto) => {
-        navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`, {
-            state: { from: 'enfants', openAccordion: '3' }
-        });
+        const state = { from: 'enfants' as const, openAccordion: '3' };
+        navigate(`/directeur/sejours/${sejourId}`, { state, replace: true });
+        navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`, { state });
     };
 
     const FormWithProps = (props: any) => (

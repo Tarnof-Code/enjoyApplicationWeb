@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { LoaderFunctionArgs, useLoaderData, useNavigate, useLocation } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
@@ -35,6 +35,10 @@ const DetailsSejour: React.FC = () => {
     });
     const expandedGroupeIdFromState = (location.state as { expandedGroupeId?: number } | null)?.expandedGroupeId;
     const navigate = useNavigate();
+    const accordionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const lastOpenedAccordion = useRef<string | null>(null);
+    const hasScrolledFromReturn = useRef(false);
+    const scrollToGroupeRef = useRef<((groupeId: number) => void) | null>(null);
     
     // Gérer le cas où loaderData est une erreur
     if (loaderData instanceof Error) {
@@ -50,16 +54,95 @@ const DetailsSejour: React.FC = () => {
     
     const { sejour, enfants, groupes } = loaderData;
     const toggleAccordion = (id: string) => {
-        setOpenAccordions(prev => 
-            prev.includes(id) 
-                ? prev.filter(item => item !== id) 
-                : [...prev, id]
-        );
+        setOpenAccordions(prev => {
+            const isOpening = !prev.includes(id);
+            if (isOpening) lastOpenedAccordion.current = id;
+            // Un seul accordéon ouvert à la fois
+            return isOpening ? [id] : prev.filter(item => item !== id);
+        });
     };
+    useEffect(() => {
+        const id = lastOpenedAccordion.current;
+        if (!id) return;
+        const el = accordionRefs.current[id];
+        if (el) {
+            requestAnimationFrame(() => {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+        lastOpenedAccordion.current = null;
+    }, [openAccordions]);
+
+    // Quand l'accordéon Groupes est fermé, réinitialiser le state pour que les groupes soient fermés à la réouverture
+    useEffect(() => {
+        if (!openAccordions.includes('4')) {
+            const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
+            if (state?.expandedGroupeId) {
+                const { expandedGroupeId: _, ...rest } = state;
+                navigate(location.pathname, { state: rest, replace: true });
+            }
+        }
+    }, [openAccordions, location.pathname, location.state, navigate]);
+
+    // Scroll vers l'accordéon ou le groupe au retour depuis le dossier enfant
+    useLayoutEffect(() => {
+        const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
+        const accordionId = state?.openAccordion;
+        const expandedGroupeId = state?.expandedGroupeId;
+        if (!accordionId || !openAccordions.includes(accordionId) || hasScrolledFromReturn.current) return;
+
+        hasScrolledFromReturn.current = true;
+
+        const headerOffset = 80;
+
+        const scrollToGroupe = (el: HTMLElement) => {
+            const elementTop = el.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: elementTop - headerOffset, behavior: 'smooth' });
+        };
+
+        const scrollToAccordion = () => {
+            const el = accordionRefs.current[accordionId] ?? document.querySelector(`[data-accordion-id="${accordionId}"]`) as HTMLElement | null;
+            if (el) {
+                const elementTop = el.getBoundingClientRect().top + window.scrollY;
+                window.scrollTo({ top: elementTop - headerOffset, behavior: 'smooth' });
+            }
+        };
+
+        if (expandedGroupeId) {
+            // Priorité au groupe : ListeGroupes notifiera via onGroupRendered, sinon polling
+            scrollToGroupeRef.current = (groupeId: number) => {
+                const el = document.querySelector(`[data-groupe-id="${groupeId}"]`) as HTMLElement | null;
+                if (el) scrollToGroupe(el);
+            };
+            let cancelled = false;
+            let attempts = 0;
+            const tryScrollToGroupe = () => {
+                if (cancelled) return;
+                const el = document.querySelector(`[data-groupe-id="${expandedGroupeId}"]`) as HTMLElement | null;
+                if (el) {
+                    scrollToGroupe(el);
+                    return;
+                }
+                if (++attempts < 40) setTimeout(tryScrollToGroupe, 80);
+                else scrollToAccordion(); // fallback si groupe introuvable
+            };
+            setTimeout(tryScrollToGroupe, 150);
+            const timer2 = setTimeout(tryScrollToGroupe, 600);
+            return () => {
+                cancelled = true;
+                scrollToGroupeRef.current = null;
+                clearTimeout(timer2);
+            };
+        }
+
+        scrollToAccordion();
+        const timer = setTimeout(scrollToAccordion, 400);
+        return () => clearTimeout(timer);
+    }, [location.state, location.key, openAccordions]);
     const AccordionItem = ({ id, title, children }: { id: string, title: string, children: React.ReactNode }) => {
         const isOpen = openAccordions.includes(id);
         return (
-            <div className={styles.accordionItem}>
+            <div ref={ref => { accordionRefs.current[id] = ref; }} data-accordion-id={id} className={styles.accordionItem}>
                 <button 
                     className={`${styles.accordionHeader} ${isOpen ? styles.active : ''}`}
                     onClick={() => toggleAccordion(id)}
@@ -145,6 +228,9 @@ const DetailsSejour: React.FC = () => {
                         sejourId={sejour.id}
                         dateDebutSejour={sejour.dateDebut}
                         initialExpandedGroupeId={expandedGroupeIdFromState}
+                        onGroupRendered={(groupeId) => {
+                            requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));
+                        }}
                     />
                 </AccordionItem>
                 <AccordionItem id="5" title="Plannings">
