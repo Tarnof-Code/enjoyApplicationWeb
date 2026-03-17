@@ -256,6 +256,27 @@ export interface ExcelImportResponse {
   messagesErreur: string[];
 }
 
+/**
+ * Correspond à ExcelImportColumnSpec.java
+ * Spécification d'une colonne pour l'import Excel
+ */
+export interface ExcelImportColumnSpec {
+  champ: string;
+  libelle: string;
+  motsCles: string[];
+  obligatoire: boolean;
+}
+
+/**
+ * Correspond à ExcelImportSpecResponse.java
+ * Notice d'import Excel (colonnes obligatoires, optionnelles, formats acceptés)
+ */
+export interface ExcelImportSpecResponse {
+  colonnesObligatoires: ExcelImportColumnSpec[];
+  colonnesOptionnelles: ExcelImportColumnSpec[];
+  formatsAcceptes: string[];
+}
+
 // ============================================================================
 // Groupes
 // ============================================================================

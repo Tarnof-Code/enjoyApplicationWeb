@@ -1,7 +1,7 @@
 import Axios from "./caller.service";
 import { trierEnfantsParNom } from "../helpers/trierUtilisateurs";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
-import { EnfantDto, CreateEnfantRequest, ExcelImportResponse, DossierEnfantDto, UpdateDossierEnfantRequest } from "../types/api";
+import { EnfantDto, CreateEnfantRequest, ExcelImportResponse, ExcelImportSpecResponse, DossierEnfantDto, UpdateDossierEnfantRequest } from "../types/api";
 
 let getEnfantsDuSejour = async (sejourId: number): Promise<EnfantDto[]> => {
   try {
@@ -96,6 +96,18 @@ let modifierEnfant = async (sejourId: number, enfantId: number, request: CreateE
   }
 };
 
+let getExcelImportSpec = async (sejourId: number): Promise<ExcelImportSpecResponse> => {
+  try {
+    const response = await Axios.get(`/sejours/${sejourId}/enfants/import/spec`);
+    return response.data as ExcelImportSpecResponse;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de la récupération de la notice d'import Excel",
+      logContext: "Erreur lors de la récupération de la spécification d'import Excel",
+    });
+  }
+};
+
 let importerEnfantsExcel = async (sejourId: number, file: File): Promise<ExcelImportResponse> => {
   try {
     const formData = new FormData();
@@ -127,5 +139,6 @@ export const sejourEnfantService = {
   supprimerTousLesEnfants,
   creerEtAjouterEnfant,
   modifierEnfant,
+  getExcelImportSpec,
   importerEnfantsExcel,
 };

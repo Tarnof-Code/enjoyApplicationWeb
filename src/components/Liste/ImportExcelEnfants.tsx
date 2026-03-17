@@ -1,9 +1,9 @@
 import React, { useState, useRef } from "react";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { faFileExcel, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { sejourEnfantService } from "../../services/sejour-enfant.service";
-import { ExcelImportResponse } from "../../types/api";
+import { ExcelImportResponse, ExcelImportSpecResponse } from "../../types/api";
 import { useRevalidator } from "react-router-dom";
 import styles from "./ImportExcelEnfants.module.scss";
 
@@ -13,11 +13,30 @@ interface ImportExcelEnfantsProps {
 
 const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+    const [importSpec, setImportSpec] = useState<ExcelImportSpecResponse | null>(null);
+    const [isLoadingSpec, setIsLoadingSpec] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [importResult, setImportResult] = useState<ExcelImportResponse | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const revalidator = useRevalidator();
+
+    const handleOpenNotice = async () => {
+        setIsNoticeModalOpen(true);
+        if (!importSpec) {
+            setIsLoadingSpec(true);
+            try {
+                const spec = await sejourEnfantService.getExcelImportSpec(sejourId);
+                setImportSpec(spec);
+            } catch (error) {
+                console.error("Erreur lors du chargement de la notice", error);
+                setImportSpec(null);
+            } finally {
+                setIsLoadingSpec(false);
+            }
+        }
+    };
 
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -100,15 +119,26 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
 
     return (
         <>
-            <Button
-                color="success"
-                onClick={handleFileButtonClick}
-                disabled={isUploading}
-                className={styles.importButton}
-            >
-                <FontAwesomeIcon icon={faFileExcel} className={styles.icon} />
-                {isUploading ? "Import en cours..." : "Importer depuis Excel"}
-            </Button>
+            <div className={styles.importGroup}>
+                <Button
+                    color="success"
+                    onClick={handleFileButtonClick}
+                    disabled={isUploading}
+                    className={styles.importButton}
+                >
+                    <FontAwesomeIcon icon={faFileExcel} className={styles.icon} />
+                    {isUploading ? "Import en cours..." : "Importer depuis Excel"}
+                </Button>
+                <button
+                    type="button"
+                    className={styles.infoButton}
+                    onClick={handleOpenNotice}
+                    title="Notice des colonnes Excel"
+                    aria-label="Afficher la notice des colonnes Excel"
+                >
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                </button>
+            </div>
             
             <input
                 ref={fileInputRef}
@@ -123,6 +153,55 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                     {errorMessage}
                 </div>
             )}
+
+            <Modal isOpen={isNoticeModalOpen} toggle={() => setIsNoticeModalOpen(false)} size="lg">
+                <ModalHeader toggle={() => setIsNoticeModalOpen(false)}>
+                    Notice d'import Excel — Colonnes et noms attendus
+                </ModalHeader>
+                <ModalBody>
+                    {isLoadingSpec ? (
+                        <p>Chargement de la notice...</p>
+                    ) : importSpec ? (
+                        <div className={styles.noticeContainer}>
+                            <p className={styles.noticeIntro}>
+                                Votre fichier Excel doit contenir une première ligne d'en-têtes. Les colonnes sont détectées via des mots-clés dans les noms de colonnes. Vous pouvez utiliser les majuscules et des espaces.
+                            </p>
+                            <div className={styles.formatsSection}>
+                                <strong>Formats acceptés :</strong> {importSpec.formatsAcceptes?.join(", ") || ".xlsx, .xls"}
+                            </div>
+                            <div className={styles.columnsSection}>
+                                <h6>Colonnes obligatoires</h6>
+                                <ul>
+                                    {importSpec.colonnesObligatoires?.map((col) => (
+                                        <li key={col.champ}>
+                                            <strong>{col.libelle}</strong> — Mots-clés acceptés : {col.motsCles?.join(", ") || col.champ}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            {importSpec.colonnesOptionnelles && importSpec.colonnesOptionnelles.length > 0 && (
+                                <div className={styles.columnsSection}>
+                                    <h6>Colonnes optionnelles (dossier enfant)</h6>
+                                    <ul>
+                                        {importSpec.colonnesOptionnelles.map((col) => (
+                                            <li key={col.champ}>
+                                                <strong>{col.libelle}</strong> — Mots-clés acceptés : {col.motsCles?.join(", ") || col.champ}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <p>Impossible de charger la notice. Veuillez réessayer.</p>
+                    )}
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="primary" onClick={() => setIsNoticeModalOpen(false)}>
+                        Fermer
+                    </Button>
+                </ModalFooter>
+            </Modal>
 
             <Modal isOpen={isModalOpen} toggle={handleCloseModal} size="lg">
                 <ModalHeader toggle={handleCloseModal}>
