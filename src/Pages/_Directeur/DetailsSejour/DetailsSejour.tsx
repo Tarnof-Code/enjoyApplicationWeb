@@ -227,6 +227,24 @@ const DetailsSejour: React.FC = () => {
                         enfants={enfants || []} 
                         sejourId={sejour.id}
                         dateDebutSejour={sejour.dateDebut}
+                        equipe={(() => {
+                            const seen = new Set<string>();
+                            const result: { tokenId: string; nom: string; prenom: string }[] = [];
+                            if (sejour.directeur && !seen.has(sejour.directeur.tokenId)) {
+                                seen.add(sejour.directeur.tokenId);
+                                result.push({ tokenId: sejour.directeur.tokenId, nom: sejour.directeur.nom, prenom: sejour.directeur.prenom });
+                            }
+                            for (const m of sejour.equipe || []) {
+                                if (!seen.has(m.tokenId)) {
+                                    seen.add(m.tokenId);
+                                    result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
+                                }
+                            }
+                            return result.sort((a, b) => {
+                                const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
+                                return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
+                            });
+                        })()}
                         initialExpandedGroupeId={expandedGroupeIdFromState}
                         onGroupRendered={(groupeId) => {
                             requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));

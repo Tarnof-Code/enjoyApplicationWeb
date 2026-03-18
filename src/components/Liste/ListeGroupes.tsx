@@ -3,6 +3,7 @@ import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faChevronDown, faChevronRight, faTrash, faUserMinus, faUserPlus, faFolder } from "@fortawesome/free-solid-svg-icons";
+import { EquipePerson } from "../Forms/ReferentsSelector";
 import { GroupeDto, EnfantDto } from "../../types/api";
 import { sejourGroupeService } from "../../services/sejour-groupe.service";
 import CreateGroupeForm from "../Forms/CreateGroupeForm";
@@ -17,11 +18,13 @@ interface ListeGroupesProps {
     enfants: EnfantDto[];
     sejourId: number;
     dateDebutSejour: string;
+    /** Équipe complète (directeur + membres) pour sélection des référents */
+    equipe?: EquipePerson[];
     initialExpandedGroupeId?: number;
     onGroupRendered?: (groupeId: number) => void;
 }
 
-const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour, initialExpandedGroupeId, onGroupRendered }) => {
+const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour, equipe = [], initialExpandedGroupeId, onGroupRendered }) => {
     const revalidator = useRevalidator();
     const navigate = useNavigate();
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -278,6 +281,14 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                     {groupe.description && (
                                         <p className={styles.groupeDescription}>{groupe.description}</p>
                                     )}
+                                    <div className={styles.referentsRow}>
+                                        <span className={styles.referentsLabel}>Référents :</span>
+                                        <span className={styles.referentsList}>
+                                            {(groupe.referents?.length ?? 0) > 0
+                                                ? groupe.referents!.map((r) => `${r.prenom} ${r.nom}`).join(", ")
+                                                : "Pas de référent pour ce groupe"}
+                                        </span>
+                                    </div>
                                     <div className={styles.trancheRow}>
                                         <span className={styles.trancheBadge}>
                                             {getTypeLabel(groupe)} {formatTranche(groupe)}
@@ -411,6 +422,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                         handleCloseModal={handleCreateSuccess}
                         enfants={enfants}
                         dateDebutSejour={dateDebutSejour}
+                        equipe={equipe}
                     />
                 </ModalBody>
             </Modal>
@@ -423,6 +435,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                             sejourId={sejourId}
                             groupe={editGroupe}
                             handleCloseModal={handleEditSuccess}
+                            equipe={equipe}
                         />
                     )}
                 </ModalBody>

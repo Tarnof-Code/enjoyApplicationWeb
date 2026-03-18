@@ -43,6 +43,44 @@
   font-weight: 500;
 }
 
+.form_group_label_top {
+  align-items: flex-start;
+}
+
+.referents_form_group {
+  margin-bottom: 1em !important;
+}
+
+.referents_content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.referents_row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .label {
+    min-width: 9rem;
+    font-weight: 600;
+    margin-bottom: 0;
+  }
+}
+
+.checkbox_label_inline,
+.checkbox_label_indent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.checkbox_label_indent {
+  margin-left: 10rem; // Aligne avec la première case (9rem label + 1rem gap)
+}
+
 .buttonContainer {
   display: flex;
   align-items: center;

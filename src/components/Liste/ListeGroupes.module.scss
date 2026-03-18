@@ -124,6 +124,23 @@
     margin: 0 0 0.5rem 0;
 }
 
+.referentsRow {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.referentsLabel {
+    font-weight: 600;
+    color: #555;
+}
+
+.referentsList {
+    color: #333;
+}
+
 .trancheRow {
     display: flex;
     align-items: center;

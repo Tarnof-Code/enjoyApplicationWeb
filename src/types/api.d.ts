@@ -285,6 +285,14 @@ export interface ExcelImportSpecResponse {
 export type TypeGroupe = 'THEMATIQUE' | 'AGE' | 'NIVEAU_SCOLAIRE';
 
 /**
+ * Correspond à AjouterReferentRequest.java
+ * Payload pour ajouter un référent à un groupe
+ */
+export interface AjouterReferentRequest {
+  referentTokenId: string;
+}
+
+/**
  * Correspond à CreateGroupeRequest.java
  * Payload pour créer ou modifier un groupe
  */

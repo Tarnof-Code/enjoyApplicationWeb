@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Form, { FormField } from "./Form";
+import ReferentsSelector, { EquipePerson } from "./ReferentsSelector";
 import { sejourGroupeService } from "../../services/sejour-groupe.service";
 import { CreateGroupeRequest, GroupeDto, EnfantDto, TypeGroupe } from "../../types/api";
 import { getNiveauScolaireOptions } from "../../enums/NiveauScolaire";
@@ -16,9 +17,11 @@ interface CreateGroupeFormProps {
     enfants?: EnfantDto[];
     /** Date de début du séjour pour le calcul de l'âge */
     dateDebutSejour?: string;
+    /** Équipe complète (directeur + membres) pour sélection des référents */
+    equipe?: EquipePerson[];
 }
 
-function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], dateDebutSejour = "" }: CreateGroupeFormProps) {
+function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], dateDebutSejour = "", equipe = [] }: CreateGroupeFormProps) {
     const isEditMode = !!groupe;
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -126,7 +129,26 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
                 return null;
             }
         },
+        {
+            name: "referents",
+            label: "Référents",
+            type: "custom",
+            required: false,
+            customComponent: (props: { value: string; onChange: (v: string) => void; error?: string; disabled?: boolean }) => (
+                <ReferentsSelector {...props} equipe={equipe} />
+            ),
+        },
     ];
+
+    const parseSelectedReferents = (value: unknown): string[] => {
+        if (!value || typeof value !== "string") return [];
+        try {
+            const arr = JSON.parse(value) as string[];
+            return Array.isArray(arr) ? arr : [];
+        } catch {
+            return [];
+        }
+    };
 
     const handleSubmit = async (formData: Record<string, unknown>) => {
         setErrorMessage(null);
@@ -140,11 +162,27 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
             niveauScolaireMin: typeGroupe === "NIVEAU_SCOLAIRE" && formData.niveauScolaireMin ? (formData.niveauScolaireMin as string) : null,
             niveauScolaireMax: typeGroupe === "NIVEAU_SCOLAIRE" && formData.niveauScolaireMax ? (formData.niveauScolaireMax as string) : null,
         };
+        const selectedReferentIds = parseSelectedReferents(formData.referents);
         try {
             if (isEditMode && groupe) {
                 await sejourGroupeService.modifierGroupe(sejourId, groupe.id, request);
+                const currentIds = new Set((groupe.referents ?? []).map((r) => r.tokenId));
+                const selectedSet = new Set(selectedReferentIds);
+                for (const tokenId of selectedSet) {
+                    if (!currentIds.has(tokenId)) {
+                        await sejourGroupeService.ajouterReferent(sejourId, groupe.id, { referentTokenId: tokenId });
+                    }
+                }
+                for (const tokenId of currentIds) {
+                    if (!selectedSet.has(tokenId)) {
+                        await sejourGroupeService.retirerReferent(sejourId, groupe.id, tokenId);
+                    }
+                }
             } else {
                 const created = await sejourGroupeService.creerGroupe(sejourId, request);
+                for (const tokenId of selectedReferentIds) {
+                    await sejourGroupeService.ajouterReferent(sejourId, created.id, { referentTokenId: tokenId });
+                }
                 // Si le backend n'a pas ajouté les enfants (ex. créés avant la liste d'enfants), on les ajoute côté frontend
                 if (
                     (created.typeGroupe === "AGE" || created.typeGroupe === "NIVEAU_SCOLAIRE") &&
@@ -188,6 +226,7 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
             ageMax: groupe.ageMax != null ? String(groupe.ageMax) : "",
             niveauScolaireMin: groupe.niveauScolaireMin ?? "",
             niveauScolaireMax: groupe.niveauScolaireMax ?? "",
+            referents: JSON.stringify((groupe.referents ?? []).map((r) => r.tokenId)),
         }
         : {
             nom: "",
@@ -197,6 +236,7 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
             ageMax: "",
             niveauScolaireMin: "",
             niveauScolaireMax: "",
+            referents: "[]",
         };
 
     return (

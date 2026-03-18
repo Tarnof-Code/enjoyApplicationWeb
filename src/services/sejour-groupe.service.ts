@@ -1,6 +1,6 @@
 import Axios from "./caller.service";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
-import { CreateGroupeRequest, GroupeDto } from "../types/api";
+import { AjouterReferentRequest, CreateGroupeRequest, GroupeDto } from "../types/api";
 
 let getGroupesDuSejour = async (sejourId: number): Promise<GroupeDto[]> => {
   try {
@@ -83,9 +83,9 @@ let retirerEnfantDuGroupe = async (sejourId: number, groupeId: number, enfantId:
   }
 };
 
-let ajouterReferent = async (sejourId: number, groupeId: number, referentTokenId: string) => {
+let ajouterReferent = async (sejourId: number, groupeId: number, request: AjouterReferentRequest) => {
   try {
-    const response = await Axios.post(`/sejours/${sejourId}/groupes/${groupeId}/referents`, { referentTokenId });
+    const response = await Axios.post(`/sejours/${sejourId}/groupes/${groupeId}/referents`, request);
     validateResponseStatus(response, 201);
   } catch (error: unknown) {
     adaptAxiosError(error, {
