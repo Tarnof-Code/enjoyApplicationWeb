@@ -11,6 +11,49 @@ interface ImportExcelEnfantsProps {
     sejourId: number;
 }
 
+/** Formate un mot-clé pour l'affichage (ex: emailparent1 → email parent 1). Ne formate pas les chaînes déjà formatées par l'API (ex: "(email ou mail)"). */
+function formatKeywordForDisplay(keyword: string): string {
+    if (!keyword) return keyword;
+    if (keyword.includes(" ou ") || keyword.startsWith("(")) return keyword;
+    const words = ["parent", "naissance", "matin", "midi", "soir", "besoin", "sibesoin", "alimentaire", "alimentaires", "medical", "médical", "informations", "info", "infos", "regime", "medicament", "traitement", "prendre", "sortie", "autres", "autre", "sanitaire", "sanitaires"];
+    let result = keyword
+        .replace(/aprendreensortie/gi, "à prendre en sortie")
+        .replace(/prendreensortie/gi, "prendre en sortie")
+        .replace(/prendreen/gi, "prendre en")
+        .replace(/traitementdu/gi, "traitement du")
+        .replace(/traitementle/gi, "traitement le");
+    for (const word of words) {
+        const re = new RegExp(`(.*)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
+        result = result.replace(re, (_, prefix) => (prefix ? prefix + " " : "") + word);
+    }
+    result = result.replace(/([a-zA-Zàâäéèêëïîôùûüç])(\d)/g, "$1 $2");
+    return result.trim();
+}
+
+/** Formate les mots-clés d'une colonne pour l'affichage. L'API renvoie des groupes (ET entre groupes, OU dans un groupe). */
+function formatMotsClesForDisplay(motsCles: string[]): string {
+    if (!motsCles?.length) return "";
+    return motsCles.map(formatKeywordForDisplay).join(" ET ");
+}
+
+/** Affiche les mots-clés avec ET et ou en gras */
+function MotsClesAvecGras({ motsCles }: { motsCles: string[] }) {
+    const text = formatMotsClesForDisplay(motsCles);
+    if (!text) return null;
+    const parts = text.split(/(\sET\s|\sou\s)/gi);
+    return (
+        <>
+            {parts.map((part, i) =>
+                /^\sET\s$/i.test(part) || /^\sou\s$/i.test(part) ? (
+                    <strong key={i}>{part}</strong>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+}
+
 const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
@@ -163,18 +206,25 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                         <p>Chargement de la notice...</p>
                     ) : importSpec ? (
                         <div className={styles.noticeContainer}>
-                            <p className={styles.noticeIntro}>
-                                Votre fichier Excel doit contenir une première ligne d'en-têtes. Les colonnes sont détectées via des mots-clés dans les noms de colonnes. Vous pouvez utiliser les majuscules et des espaces.
-                            </p>
+                            <div className={styles.noticeIntro}>
+                                <p><strong>Comment ça marche :</strong></p>
+                                <ul>
+                                    <li>La première ligne de votre fichier doit contenir les en-têtes des colonnes.</li>
+                                    <li>Chaque colonne est détectée par <strong>groupes de mots-clés</strong> : l'en-tête doit contenir <strong>tous</strong> les groupes (<strong>ET</strong>), avec <strong>au moins un</strong> mot par groupe (<strong>ou</strong>). Ex. : Email parent 1 = (email <strong>ou</strong> mail) <strong>ET</strong> parent <strong>ET</strong> 1.</li>
+                                    <li>Majuscules, espaces et accents sont ignorés — « Nom de l'enfant », « NOM », « Prénom » ou « Prenom » fonctionnent.</li>
+                                    <li>Vous pouvez ajouter d'autres mots dans vos en-têtes (ex. « Email du parent 1 », « Date de naissance de l'enfant »).</li>
+                                </ul>
+                            </div>
                             <div className={styles.formatsSection}>
                                 <strong>Formats acceptés :</strong> {importSpec.formatsAcceptes?.join(", ") || ".xlsx, .xls"}
                             </div>
                             <div className={styles.columnsSection}>
                                 <h6>Colonnes obligatoires</h6>
+                                <p className={styles.keywordsHint}>L'en-tête doit contenir tous les groupes (<strong>ET</strong>), au moins un mot par groupe (<strong>ou</strong>) :</p>
                                 <ul>
                                     {importSpec.colonnesObligatoires?.map((col) => (
                                         <li key={col.champ}>
-                                            <strong>{col.libelle}</strong> — Mots-clés acceptés : {col.motsCles?.join(", ") || col.champ}
+                                            <strong>{col.libelle}</strong> — {col.motsCles?.length ? <MotsClesAvecGras motsCles={col.motsCles} /> : formatKeywordForDisplay(col.champ)}
                                         </li>
                                     ))}
                                 </ul>
@@ -182,10 +232,11 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                             {importSpec.colonnesOptionnelles && importSpec.colonnesOptionnelles.length > 0 && (
                                 <div className={styles.columnsSection}>
                                     <h6>Colonnes optionnelles (dossier enfant)</h6>
+                                    <p className={styles.keywordsHint}>L'en-tête doit contenir tous les groupes (<strong>ET</strong>), au moins un mot par groupe (<strong>ou</strong>) :</p>
                                     <ul>
                                         {importSpec.colonnesOptionnelles.map((col) => (
                                             <li key={col.champ}>
-                                                <strong>{col.libelle}</strong> — Mots-clés acceptés : {col.motsCles?.join(", ") || col.champ}
+                                                <strong>{col.libelle}</strong> — {col.motsCles?.length ? <MotsClesAvecGras motsCles={col.motsCles} /> : formatKeywordForDisplay(col.champ)}
                                             </li>
                                         ))}
                                     </ul>

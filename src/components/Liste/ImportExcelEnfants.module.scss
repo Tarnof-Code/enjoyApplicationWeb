@@ -56,7 +56,22 @@
 
 .noticeIntro {
     color: #495057;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
+
+    ul {
+        margin: 0.5rem 0 0 1rem;
+        padding-left: 0.5rem;
+
+        li {
+            margin-bottom: 0.35rem;
+        }
+    }
+}
+
+.keywordsHint {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin: -0.25rem 0 0.5rem 0;
 }
 
 .formatsSection {
