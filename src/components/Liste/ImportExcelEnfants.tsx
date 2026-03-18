@@ -63,6 +63,7 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
     const [importResult, setImportResult] = useState<ExcelImportResponse | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const pendingRevalidateRef = useRef(false);
     const revalidator = useRevalidator();
 
     const handleOpenNotice = async () => {
@@ -97,26 +98,22 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
         setIsUploading(true);
         setErrorMessage(null);
         setImportResult(null);
+        pendingRevalidateRef.current = false;
 
         try {
             const result = await sejourEnfantService.importerEnfantsExcel(sejourId, file);
             setImportResult(result);
             setIsModalOpen(true);
-            // Réinitialiser l'input file
+            pendingRevalidateRef.current = result.enfantsCrees > 0;
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
-            // Rafraîchir la liste des enfants
-            revalidator.revalidate();
         } catch (error: any) {
             console.error("Erreur lors de l'import Excel", error);
             console.error("Détails de l'erreur:", error.response?.data);
-            
-            // Gérer les erreurs réseau différemment des erreurs HTTP
             let errorMsg: string;
             if (!error.response) {
-                // Erreur réseau (pas de réponse du serveur)
-                if (error.message && error.message.toLowerCase().includes('network')) {
+                if (error.message?.toLowerCase().includes('network')) {
                     errorMsg = "Erreur de connexion réseau. Vérifiez votre connexion internet et que le serveur est accessible.";
                 } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
                     errorMsg = "La requête a expiré. Veuillez réessayer.";
@@ -124,26 +121,16 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                     errorMsg = "Impossible de contacter le serveur. Vérifiez votre connexion internet.";
                 }
             } else {
-                // Erreur HTTP avec réponse du serveur
-                // Extraire le message d'erreur du backend
                 const backendError = error.response?.data;
-                if (backendError) {
-                    // Si c'est un objet avec un champ 'error' ou 'message'
-                    if (typeof backendError === 'object') {
-                        errorMsg = backendError.error || backendError.message || error.message || "Une erreur s'est produite lors de l'import du fichier Excel";
-                        
-                        // Si le message indique des données incomplètes, ajouter des conseils
-                        if (errorMsg.toLowerCase().includes('incomplet') || errorMsg.toLowerCase().includes('manquant')) {
-                            errorMsg += " Veuillez vérifier que votre fichier Excel contient toutes les colonnes requises : Nom, Prénom, Genre, Date de naissance, Niveau scolaire.";
-                        }
-                    } else {
-                        errorMsg = backendError;
+                if (backendError && typeof backendError === 'object') {
+                    errorMsg = backendError.error || backendError.message || error.message || "Une erreur s'est produite lors de l'import du fichier Excel";
+                    if (errorMsg.toLowerCase().includes('incomplet') || errorMsg.toLowerCase().includes('manquant')) {
+                        errorMsg += " Veuillez vérifier que votre fichier Excel contient toutes les colonnes requises : Nom, Prénom, Genre, Date de naissance, Niveau scolaire.";
                     }
                 } else {
-                    errorMsg = error.message || "Une erreur s'est produite lors de l'import du fichier Excel";
+                    errorMsg = (typeof backendError === 'string' ? backendError : null) || error.message || "Une erreur s'est produite lors de l'import du fichier Excel";
                 }
             }
-            
             setErrorMessage(errorMsg);
         } finally {
             setIsUploading(false);
@@ -151,6 +138,10 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
     };
 
     const handleCloseModal = () => {
+        if (pendingRevalidateRef.current) {
+            revalidator.revalidate();
+            pendingRevalidateRef.current = false;
+        }
         setIsModalOpen(false);
         setImportResult(null);
         setErrorMessage(null);
@@ -254,7 +245,7 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                 </ModalFooter>
             </Modal>
 
-            <Modal isOpen={isModalOpen} toggle={handleCloseModal} size="lg">
+            <Modal isOpen={isModalOpen} toggle={handleCloseModal} size="lg" zIndex={1060}>
                 <ModalHeader toggle={handleCloseModal}>
                     Résultat de l'import Excel
                 </ModalHeader>
@@ -279,16 +270,29 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                                 </ul>
                             </div>
 
-                            {importResult.messagesErreur && importResult.messagesErreur.length > 0 && (
-                                <div className={styles.errorsList}>
-                                    <h5>Détails des erreurs :</h5>
-                                    <ul>
-                                        {importResult.messagesErreur.map((message, index) => (
-                                            <li key={index} className={styles.errorItem}>{message}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                            {(() => {
+                                const messagesErreur = importResult.messagesErreur ?? [];
+                                const hasDuplicates = importResult.enfantsDejaExistants > 0;
+                                const hasDuplicateDetails = messagesErreur.some(
+                                    (m) => m.toLowerCase().includes("déjà existant") || m.toLowerCase().includes("deja existant") || m.toLowerCase().includes("existe déjà") || m.toLowerCase().includes("doublon")
+                                );
+                                const allMessages = [
+                                    ...messagesErreur,
+                                    ...(hasDuplicates && !hasDuplicateDetails
+                                        ? [`${importResult.enfantsDejaExistants} enfant(s) déjà présent(s) dans ce séjour — non réimporté(s).`]
+                                        : []),
+                                ];
+                                return allMessages.length > 0 ? (
+                                    <div className={styles.errorsList}>
+                                        <h5>Détails des erreurs et avertissements :</h5>
+                                        <ul>
+                                            {allMessages.map((message, index) => (
+                                                <li key={index} className={styles.errorItem}>{message}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : null;
+                            })()}
                         </div>
                     ) : (
                         <div>
