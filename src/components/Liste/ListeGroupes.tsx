@@ -13,6 +13,10 @@ import { trierEnfantsParNom } from "../../helpers/trierUtilisateurs";
 import { getEnfantsMatchingTranche } from "../../helpers/groupeTranche";
 import styles from "./ListeGroupes.module.scss";
 
+type AddEnfantsModalState =
+    | { step: "pick"; groupe: GroupeDto }
+    | { step: "recap"; groupeNom: string; noms: string[] };
+
 interface ListeGroupesProps {
     groupes: GroupeDto[];
     enfants: EnfantDto[];
@@ -81,10 +85,10 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
             clearTimeout(timer2);
         };
     }, [initialExpandedGroupeId]);
-    const [addEnfantSearch, setAddEnfantSearch] = useState<Record<number, string>>({});
-    const [addEnfantFocused, setAddEnfantFocused] = useState<number | null>(null);
-    const [addEnfantModal, setAddEnfantModal] = useState<{ groupe: GroupeDto; enfant: EnfantDto } | null>(null);
-    const [isAddingEnfant, setIsAddingEnfant] = useState(false);
+    const [addEnfantsModal, setAddEnfantsModal] = useState<AddEnfantsModalState | null>(null);
+    const [pickerSearch, setPickerSearch] = useState("");
+    const [pickerSelectedIds, setPickerSelectedIds] = useState<Set<number>>(new Set());
+    const [isAddingEnfants, setIsAddingEnfants] = useState(false);
     const [retirerEnfantModal, setRetirerEnfantModal] = useState<{ groupe: GroupeDto; enfant: EnfantDto } | null>(null);
     const [isRetirantEnfant, setIsRetirantEnfant] = useState(false);
     const [editGroupe, setEditGroupe] = useState<GroupeDto | null>(null);
@@ -152,25 +156,58 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
         await handleRetirerEnfant(retirerEnfantModal.groupe, retirerEnfantModal.enfant);
     };
 
-    const handleAjouterEnfant = async (groupe: GroupeDto, enfantId: number) => {
-        setErrorMessage(null);
-        try {
-            await sejourGroupeService.ajouterEnfantAuGroupe(sejourId, groupe.id, enfantId);
-            setAddEnfantModal(null);
-            setAddEnfantSearch((prev) => ({ ...prev, [groupe.id]: "" }));
+    const openAddEnfantsPicker = (groupe: GroupeDto) => {
+        setPickerSearch("");
+        setPickerSelectedIds(new Set());
+        setAddEnfantsModal({ step: "pick", groupe });
+    };
+
+    const dismissAddEnfantsModal = (runRevalidate: boolean) => {
+        setAddEnfantsModal(null);
+        setPickerSearch("");
+        setPickerSelectedIds(new Set());
+        if (runRevalidate) {
             revalidator.revalidate();
-        } catch (error) {
-            console.error("Erreur lors de l'ajout de l'enfant", error);
-            setErrorMessage("Erreur lors de l'ajout de l'enfant au groupe");
-        } finally {
-            setIsAddingEnfant(false);
         }
     };
 
-    const confirmAjouterEnfant = async () => {
-        if (!addEnfantModal) return;
-        setIsAddingEnfant(true);
-        await handleAjouterEnfant(addEnfantModal.groupe, addEnfantModal.enfant.id);
+    const togglePickerEnfant = (enfantId: number) => {
+        setPickerSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(enfantId)) next.delete(enfantId);
+            else next.add(enfantId);
+            return next;
+        });
+    };
+
+    const confirmAjouterEnfantsSelection = async () => {
+        if (addEnfantsModal?.step !== "pick" || pickerSelectedIds.size === 0) return;
+        const { groupe } = addEnfantsModal;
+        setIsAddingEnfants(true);
+        setErrorMessage(null);
+        try {
+            const ids = Array.from(pickerSelectedIds);
+            for (const enfantId of ids) {
+                await sejourGroupeService.ajouterEnfantAuGroupe(sejourId, groupe.id, enfantId);
+            }
+            const groupeNom = groupe.nom;
+            const byId = new Map(enfants.map((e) => [e.id, e]));
+            const noms = ids
+                .map((id) => {
+                    const e = byId.get(id);
+                    return e ? `${e.nom} ${e.prenom}`.trim() : `Enfant #${id}`;
+                })
+                .sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+            // Même modale : étape récap (pas de revalidate tant que l’utilisateur n’a pas fermé — évite de remonter l’arbre / perdre l’état).
+            setAddEnfantsModal({ step: "recap", groupeNom, noms });
+            setPickerSearch("");
+            setPickerSelectedIds(new Set());
+        } catch (error) {
+            console.error("Erreur lors de l'ajout des enfants", error);
+            setErrorMessage("Erreur lors de l'ajout des enfants au groupe");
+        } finally {
+            setIsAddingEnfants(false);
+        }
     };
 
     const handleAjouterTranche = async () => {
@@ -317,51 +354,15 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
 
                                     {enfantsHorsGroupe.length > 0 && (
                                         <div className={styles.addEnfant}>
-                                            <div className={styles.addEnfantInputWrapper}>
-                                                <input
-                                                    type="text"
-                                                    className={styles.addEnfantInput}
-                                                    placeholder="Ajouter un enfant..."
-                                                    value={addEnfantSearch[groupe.id] ?? ""}
-                                                    onChange={(e) =>
-                                                        setAddEnfantSearch((prev) => ({
-                                                            ...prev,
-                                                            [groupe.id]: e.target.value,
-                                                        }))
-                                                    }
-                                                    onFocus={() => setAddEnfantFocused(groupe.id)}
-                                                    onBlur={() => setTimeout(() => setAddEnfantFocused(null), 150)}
-                                                />
-                                                {(addEnfantFocused === groupe.id || (addEnfantSearch[groupe.id] ?? "").length > 0) && (() => {
-                                                    const search = (addEnfantSearch[groupe.id] ?? "").toLowerCase().trim();
-                                                    const searchWords = search ? search.split(/\s+/).filter(Boolean) : [];
-                                                    const filtered = enfantsHorsGroupe.filter((e: EnfantDto) => {
-                                                        if (!search) return true;
-                                                        const fullName = `${e.nom} ${e.prenom}`.toLowerCase();
-                                                        return searchWords.every((word) => fullName.includes(word));
-                                                    });
-                                                    return (
-                                                        <ul className={styles.addEnfantDropdown}>
-                                                            {filtered.length === 0 ? (
-                                                                <li className={styles.addEnfantOptionEmpty}>Aucun enfant trouvé</li>
-                                                            ) : (
-                                                                filtered.map((e) => (
-                                                                    <li
-                                                                        key={e.id}
-                                                                        className={styles.addEnfantOption}
-                                                                        onMouseDown={(ev) => {
-                                                                            ev.preventDefault();
-                                                                            setAddEnfantModal({ groupe, enfant: e });
-                                                                        }}
-                                                                    >
-                                                                        {e.nom} {e.prenom} ({ageAtSejour(e)} ans, {NiveauScolaireLabels[e.niveauScolaire as keyof typeof NiveauScolaireLabels] ?? e.niveauScolaire})
-                                                                    </li>
-                                                                ))
-                                                            )}
-                                                        </ul>
-                                                    );
-                                                })()}
-                                            </div>
+                                            <Button
+                                                color="primary"
+                                                size="sm"
+                                                className={styles.addEnfantsButton}
+                                                onClick={() => openAddEnfantsPicker(groupe)}
+                                            >
+                                                <FontAwesomeIcon icon={faUserPlus} className={styles.icon} />
+                                                Ajouter des enfants
+                                            </Button>
                                         </div>
                                     )}
 
@@ -441,24 +442,119 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </ModalBody>
             </Modal>
 
-            <Modal isOpen={!!addEnfantModal} toggle={() => setAddEnfantModal(null)}>
-                <ModalHeader toggle={() => setAddEnfantModal(null)}>
-                    Ajouter un enfant au groupe
+            <Modal
+                isOpen={addEnfantsModal !== null}
+                toggle={() => {
+                    if (!addEnfantsModal || isAddingEnfants) return;
+                    dismissAddEnfantsModal(addEnfantsModal.step === "recap");
+                }}
+                size="lg"
+            >
+                <ModalHeader
+                    toggle={() => {
+                        if (!addEnfantsModal || isAddingEnfants) return;
+                        dismissAddEnfantsModal(addEnfantsModal.step === "recap");
+                    }}
+                >
+                    {addEnfantsModal?.step === "recap" ? "Ajout au groupe" : "Ajouter des enfants"}
                 </ModalHeader>
                 <ModalBody>
-                    {addEnfantModal && (
-                        <p>
-                            Voulez-vous ajouter <strong>{addEnfantModal.enfant.nom} {addEnfantModal.enfant.prenom}</strong> au groupe <strong>{addEnfantModal.groupe.nom}</strong> ?
+                    {addEnfantsModal?.step === "pick" &&
+                        (() => {
+                            const g = addEnfantsModal.groupe;
+                            const gid = g.id;
+                            const idsDansGroupe = new Set(g.enfants.map((e) => e.id));
+                            const hors = trierEnfantsParNom(enfants.filter((e) => !idsDansGroupe.has(e.id)));
+                            const search = pickerSearch.toLowerCase().trim();
+                            const searchWords = search ? search.split(/\s+/).filter(Boolean) : [];
+                            const filtered = hors.filter((e: EnfantDto) => {
+                                if (!search) return true;
+                                const fullName = `${e.nom} ${e.prenom}`.toLowerCase();
+                                return searchWords.every((word) => fullName.includes(word));
+                            });
+                            return (
+                                <>
+                                    <p className={styles.pickerIntro}>
+                                        Groupe <strong>{g.nom}</strong> — cochez les enfants à ajouter, puis validez.
+                                    </p>
+                                    <label className={styles.pickerSearchLabel} htmlFor={`picker-search-${gid}`}>
+                                        Filtrer la liste
+                                    </label>
+                                    <input
+                                        id={`picker-search-${gid}`}
+                                        type="search"
+                                        className={styles.pickerSearchInput}
+                                        placeholder="Nom, prénom…"
+                                        value={pickerSearch}
+                                        onChange={(e) => setPickerSearch(e.target.value)}
+                                        autoComplete="off"
+                                    />
+                                    <ul className={styles.pickerList} role="listbox" aria-multiselectable>
+                                        {filtered.length === 0 ? (
+                                            <li className={styles.pickerEmpty}>Aucun enfant ne correspond au filtre.</li>
+                                        ) : (
+                                            filtered.map((e) => (
+                                                <li key={e.id} className={styles.pickerRow}>
+                                                    <label className={styles.pickerRowLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            className={styles.pickerCheckbox}
+                                                            checked={pickerSelectedIds.has(e.id)}
+                                                            onChange={() => togglePickerEnfant(e.id)}
+                                                        />
+                                                        <span>
+                                                            {e.nom} {e.prenom}
+                                                            <span className={styles.pickerRowMeta}>
+                                                                {" "}
+                                                                ({calculerAge(e.dateNaissance, dateDebutSejour)} ans,{" "}
+                                                                {NiveauScolaireLabels[e.niveauScolaire as keyof typeof NiveauScolaireLabels] ?? e.niveauScolaire})
+                                                            </span>
+                                                        </span>
+                                                    </label>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                </>
+                            );
+                        })()}
+                    {addEnfantsModal?.step === "recap" && (
+                        <p className={styles.recapEnfantsMessage}>
+                            {addEnfantsModal.noms.length === 1 ? (
+                                <>
+                                    L&apos;enfant <strong>{addEnfantsModal.noms[0]}</strong> a bien été ajouté au groupe{" "}
+                                    <strong>{addEnfantsModal.groupeNom}</strong>.
+                                </>
+                            ) : (
+                                <>
+                                    Les enfants <strong>{addEnfantsModal.noms.join(", ")}</strong> ont bien été ajoutés au groupe{" "}
+                                    <strong>{addEnfantsModal.groupeNom}</strong>.
+                                </>
+                            )}
                         </p>
                     )}
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="secondary" onClick={() => setAddEnfantModal(null)}>
-                        Annuler
-                    </Button>
-                    <Button color="primary" onClick={confirmAjouterEnfant} disabled={isAddingEnfant}>
-                        {isAddingEnfant ? "Ajout en cours..." : "Confirmer"}
-                    </Button>
+                    {addEnfantsModal?.step === "pick" ? (
+                        <>
+                            <Button color="secondary" onClick={() => dismissAddEnfantsModal(false)} disabled={isAddingEnfants}>
+                                Annuler
+                            </Button>
+                            <Button
+                                color="primary"
+                                onClick={confirmAjouterEnfantsSelection}
+                                disabled={isAddingEnfants || pickerSelectedIds.size === 0}
+                            >
+                                {isAddingEnfants ? "Ajout en cours..." : `Valider (${pickerSelectedIds.size})`}
+                            </Button>
+                        </>
+                    ) : (
+                        addEnfantsModal?.step === "recap" && (
+                            <Button color="primary" onClick={() => dismissAddEnfantsModal(true)}>
+                                OK
+                            </Button>
+                        )
+                    )}
                 </ModalFooter>
             </Modal>
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { LoaderFunctionArgs, useLoaderData, useNavigate, useLocation } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
@@ -10,6 +10,32 @@ import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
 import { SejourDTO, EnfantDto, GroupeDto } from "../../../types/api";
+
+/** Composant stable (hors du parent) : évite de remonter tout le contenu à chaque rendu du détail séjour. */
+function SejourAccordionItem({
+    id,
+    title,
+    isOpen,
+    onToggle,
+    containerRef,
+    children,
+}: {
+    id: string;
+    title: string;
+    isOpen: boolean;
+    onToggle: () => void;
+    containerRef: (el: HTMLDivElement | null) => void;
+    children: ReactNode;
+}) {
+    return (
+        <div ref={containerRef} data-accordion-id={id} className={styles.accordionItem}>
+            <button type="button" className={`${styles.accordionHeader} ${isOpen ? styles.active : ""}`} onClick={onToggle}>
+                {title}
+            </button>
+            {isOpen && <div className={styles.accordionBody}>{children}</div>}
+        </div>
+    );
+}
 
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
@@ -139,24 +165,6 @@ const DetailsSejour: React.FC = () => {
         const timer = setTimeout(scrollToAccordion, 400);
         return () => clearTimeout(timer);
     }, [location.state, location.key, openAccordions]);
-    const AccordionItem = ({ id, title, children }: { id: string, title: string, children: React.ReactNode }) => {
-        const isOpen = openAccordions.includes(id);
-        return (
-            <div ref={ref => { accordionRefs.current[id] = ref; }} data-accordion-id={id} className={styles.accordionItem}>
-                <button 
-                    className={`${styles.accordionHeader} ${isOpen ? styles.active : ''}`}
-                    onClick={() => toggleAccordion(id)}
-                >
-                    {title}
-                </button>
-                {isOpen && (
-                    <div className={styles.accordionBody}>
-                        {children}
-                    </div>
-                )}
-            </div>
-        );
-    };
     const handleRetour = () => {
         navigate("/directeur/sejours");
     };
@@ -184,7 +192,15 @@ const DetailsSejour: React.FC = () => {
 
             <div className={styles.accordion}>
                 {/* Informations générales */}
-                <AccordionItem id="1" title="Informations générales">
+                <SejourAccordionItem
+                    id="1"
+                    title="Informations générales"
+                    isOpen={openAccordions.includes("1")}
+                    onToggle={() => toggleAccordion("1")}
+                    containerRef={(el) => {
+                        accordionRefs.current["1"] = el;
+                    }}
+                >
                     <div className={styles.singleRow}>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Description</span>
@@ -207,21 +223,45 @@ const DetailsSejour: React.FC = () => {
                             <span className={styles.value}>{duree} jour{duree > 1 ? 's' : ''}</span>
                         </div>
                     </div>
-                </AccordionItem>
-                <AccordionItem id="2" title="Équipe">
+                </SejourAccordionItem>
+                <SejourAccordionItem
+                    id="2"
+                    title="Équipe"
+                    isOpen={openAccordions.includes("2")}
+                    onToggle={() => toggleAccordion("2")}
+                    containerRef={(el) => {
+                        accordionRefs.current["2"] = el;
+                    }}
+                >
                     <Equipe 
                         membres={sejour.equipe || []} 
                         sejourId={sejour.id}
                     />
-                </AccordionItem>
-                <AccordionItem id="3" title={`Liste des enfants (${enfants?.length || 0})`}>
+                </SejourAccordionItem>
+                <SejourAccordionItem
+                    id="3"
+                    title={`Liste des enfants (${enfants?.length || 0})`}
+                    isOpen={openAccordions.includes("3")}
+                    onToggle={() => toggleAccordion("3")}
+                    containerRef={(el) => {
+                        accordionRefs.current["3"] = el;
+                    }}
+                >
                     <ListeEnfants 
                         enfants={enfants || []} 
                         groupes={groupes || []}
                         sejourId={sejour.id}
                     />
-                </AccordionItem>
-                <AccordionItem id="4" title={`Groupes (${groupes?.length || 0})`}>
+                </SejourAccordionItem>
+                <SejourAccordionItem
+                    id="4"
+                    title={`Groupes (${groupes?.length || 0})`}
+                    isOpen={openAccordions.includes("4")}
+                    onToggle={() => toggleAccordion("4")}
+                    containerRef={(el) => {
+                        accordionRefs.current["4"] = el;
+                    }}
+                >
                     <ListeGroupes 
                         groupes={groupes || []} 
                         enfants={enfants || []} 
@@ -250,10 +290,18 @@ const DetailsSejour: React.FC = () => {
                             requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));
                         }}
                     />
-                </AccordionItem>
-                <AccordionItem id="5" title="Plannings">
+                </SejourAccordionItem>
+                <SejourAccordionItem
+                    id="5"
+                    title="Plannings"
+                    isOpen={openAccordions.includes("5")}
+                    onToggle={() => toggleAccordion("5")}
+                    containerRef={(el) => {
+                        accordionRefs.current["5"] = el;
+                    }}
+                >
                     <p className={styles.placeholderText}>À venir...</p>
-                </AccordionItem>
+                </SejourAccordionItem>
             </div>
         </div>
     );
