@@ -1,0 +1,144 @@
+@use "../../_variables" as *;
+
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.warningText {
+    color: #856404;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.card {
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    background: #fafbfc;
+}
+
+.cardHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.dateBadge {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $bleu_principal;
+    background: rgba($bleu_principal, 0.1);
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+}
+
+.nom {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #1a1a1a;
+}
+
+.meta {
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 0.35rem;
+}
+
+.description {
+    margin-top: 0.65rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #333;
+    white-space: pre-wrap;
+}
+
+.empty {
+    color: #666;
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+
+.animateurList {
+    margin: 0.25rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.modalField {
+    margin-bottom: 1rem;
+}
+
+.checkboxRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.checkboxGroup {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.35rem;
+}
+
+.noGroupes {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+}
+
+.modalFooter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.modalFooterMessage {
+    flex: 1 1 auto;
+    min-width: 12rem;
+    margin-right: auto;
+}
+
+.modalFooterError {
+    display: block;
+    color: #dc3545;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.modalFooterActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}

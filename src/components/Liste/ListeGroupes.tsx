@@ -21,7 +21,7 @@ interface ListeGroupesProps {
     groupes: GroupeDto[];
     enfants: EnfantDto[];
     sejourId: number;
-    dateDebutSejour: string;
+    dateDebutSejour: string | number;
     /** Équipe complète (directeur + membres) pour sélection des référents */
     equipe?: EquipePerson[];
     initialExpandedGroupeId?: number;

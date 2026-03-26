@@ -16,7 +16,7 @@ interface CreateGroupeFormProps {
     /** Enfants du séjour (pour ajout auto à la création si backend ne l'a pas fait) */
     enfants?: EnfantDto[];
     /** Date de début du séjour pour le calcul de l'âge */
-    dateDebutSejour?: string;
+    dateDebutSejour?: string | number;
     /** Équipe complète (directeur + membres) pour sélection des référents */
     equipe?: EquipePerson[];
 }

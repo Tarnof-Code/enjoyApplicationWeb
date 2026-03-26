@@ -19,15 +19,15 @@ import { RoleSysteme } from "../enums/RoleSysteme";
 // ============================================================================
 
 /**
- * Correspond à SejourDTO.java
- * DTO utilisé pour retourner les informations d'un séjour
+ * Correspond à SejourDto.java (record) — champs date en java.util.Date.
+ * JSON : souvent chaîne ISO 8601 (cf. AI_MEMORY.md) ; selon Jackson, timestamp ms (number) possible.
  */
 export interface SejourDTO {
   id: number;
   nom: string;
   description: string;
-  dateDebut: string;
-  dateFin: string; 
+  dateDebut: string | number;
+  dateFin: string | number;
   lieuDuSejour: string;
   directeur?: DirecteurInfos; 
   equipe?: ProfilUtilisateurDTO[]; 
@@ -332,4 +332,61 @@ export interface GroupeDto {
   sejourId: number;
   enfants: EnfantDto[];
   referents: ReferentInfos[];
+}
+
+// ============================================================================
+// Activités
+// ============================================================================
+
+/**
+ * Correspond à ActiviteDto.MembreEquipeInfo (record imbriqué)
+ */
+export interface ActiviteMembreEquipeInfo {
+  tokenId: string;
+  nom: string;
+  prenom: string;
+}
+
+/**
+ * Correspond à ActiviteDto.java
+ */
+export interface ActiviteDto {
+  id: number;
+  /** LocalDate sérialisée en chaîne ISO (yyyy-MM-dd) en général */
+  date: string;
+  nom: string;
+  description: string | null;
+  sejourId: number;
+  membres: ActiviteMembreEquipeInfo[];
+  groupeIds: number[];
+}
+
+/**
+ * Correspond à CreateActiviteRequest.java (record)
+ * - date : LocalDate → JSON yyyy-MM-dd
+ * - nom : @NotBlank, @Size(max=200)
+ * - description : optionnelle, @Size(max=5000)
+ * - membreTokenIds : @NotEmpty, éléments @NotBlank
+ * - groupeIds : @NotEmpty, éléments @NotNull
+ */
+export interface CreateActiviteRequest {
+  /** LocalDate côté API */
+  date: string;
+  /** max 200 caractères */
+  nom: string;
+  /** max 5000 caractères ; omettre ou null si absent */
+  description?: string | null;
+  membreTokenIds: string[];
+  groupeIds: number[];
+}
+
+/**
+ * Correspond à UpdateActiviteRequest.java
+ */
+export interface UpdateActiviteRequest {
+  date: string;
+  nom: string;
+  description?: string | null;
+  membreTokenIds: string[];
+  groupeIds: number[];
 }

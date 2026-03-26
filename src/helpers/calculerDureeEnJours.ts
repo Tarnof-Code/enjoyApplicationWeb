@@ -1,4 +1,4 @@
-export const calculerDureeEnJours = (dateDebut: string, dateFin: string): number => {
+export const calculerDureeEnJours = (dateDebut: string | number, dateFin: string | number): number => {
     const debut = new Date(dateDebut);
     const fin = new Date(dateFin);
     const diffTime = Math.abs(fin.getTime() - debut.getTime());

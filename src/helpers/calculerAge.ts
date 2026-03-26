@@ -1,5 +1,5 @@
-export default function calculerAge(date: string | Date, referenceDate?: string | Date): number {
-    var aujourdHui = referenceDate ? new Date(referenceDate) : new Date();
+export default function calculerAge(date: string | Date | number, referenceDate?: string | Date | number): number {
+    var aujourdHui = referenceDate !== undefined ? new Date(referenceDate) : new Date();
     var dateNaissance = new Date(date)
     var anneeAujourdHui = aujourdHui.getFullYear();
     var anneeNaissance = dateNaissance.getFullYear();

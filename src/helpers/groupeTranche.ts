@@ -14,7 +14,7 @@ import { niveauScolaireDansTranche } from "../enums/NiveauScolaire";
 export function getEnfantsMatchingTranche(
     groupe: GroupeDto,
     enfants: EnfantDto[],
-    dateDebutSejour: string,
+    dateDebutSejour: string | number,
     idsExclus: Set<number> = new Set()
 ): EnfantDto[] {
     const ageAtSejour = (e: EnfantDto) => calculerAge(e.dateNaissance, dateDebutSejour);

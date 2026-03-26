@@ -1,0 +1,286 @@
+import React, { useMemo, useState } from "react";
+import { useRevalidator } from "react-router-dom";
+import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
+import { ActiviteDto, CreateActiviteRequest, GroupeDto, SejourDTO } from "../../types/api";
+import { sejourActiviteService } from "../../services/sejour-activite.service";
+import formaterDate, { parseDate } from "../../helpers/formaterDate";
+import styles from "./ListeActivites.module.scss";
+
+export interface MembreEquipeSejour {
+    tokenId: string;
+    nom: string;
+    prenom: string;
+}
+
+export interface ListeActivitesProps {
+    activites: ActiviteDto[];
+    sejour: SejourDTO;
+    groupes: GroupeDto[];
+    equipe: MembreEquipeSejour[];
+}
+
+function formatActiviteDateForDisplay(date: ActiviteDto["date"]): string {
+    if (Array.isArray(date)) {
+        const [y, m, d] = date as unknown as number[];
+        if (y != null && m != null && d != null) {
+            return formaterDate(new Date(y, m - 1, d));
+        }
+    }
+    const parsed = parseDate(date as string);
+    return parsed ? formaterDate(parsed) : String(date);
+}
+
+/**
+ * SejourDto.dateDebut est un java.util.Date : JSON = chaîne ISO (AI_MEMORY) ou nombre (timestamp ms).
+ */
+function sejourDebutToInputDate(value: SejourDTO["dateDebut"]): string {
+    if (typeof value === "string") {
+        const t = value.trim();
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    }
+    const d = parseDate(value);
+    if (d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+}
+
+const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe }) => {
+    const revalidator = useRevalidator();
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formDate, setFormDate] = useState("");
+    const [formNom, setFormNom] = useState("");
+    const [formDescription, setFormDescription] = useState("");
+    const [selectedGroupeIds, setSelectedGroupeIds] = useState<Set<number>>(() => new Set());
+    const [selectedTokens, setSelectedTokens] = useState<Set<string>>(() => new Set());
+
+    const groupeById = useMemo(() => new Map(groupes.map((g) => [g.id, g])), [groupes]);
+
+    const openModal = () => {
+        setErrorMessage(null);
+        setFormDate(sejourDebutToInputDate(sejour.dateDebut));
+        setFormNom("");
+        setFormDescription("");
+        const initialGroupes = new Set<number>();
+        if (groupes.length === 1) initialGroupes.add(groupes[0].id);
+        setSelectedGroupeIds(initialGroupes);
+        const initial = new Set<string>();
+        if (equipe.length === 1) initial.add(equipe[0].tokenId);
+        setSelectedTokens(initial);
+        setModalOpen(true);
+    };
+
+    const toggleToken = (tokenId: string) => {
+        setSelectedTokens((prev) => {
+            const next = new Set(prev);
+            if (next.has(tokenId)) next.delete(tokenId);
+            else next.add(tokenId);
+            return next;
+        });
+    };
+
+    const toggleGroupeId = (groupeId: number) => {
+        setSelectedGroupeIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(groupeId)) next.delete(groupeId);
+            else next.add(groupeId);
+            return next;
+        });
+    };
+
+    const handleCreer = async () => {
+        setErrorMessage(null);
+        if (!formDate.trim()) {
+            setErrorMessage("La date est obligatoire.");
+            return;
+        }
+        if (!formNom.trim()) {
+            setErrorMessage("Le nom est obligatoire.");
+            return;
+        }
+        if (selectedGroupeIds.size === 0) {
+            setErrorMessage("Au moins un groupe est requis.");
+            return;
+        }
+        if (selectedTokens.size === 0) {
+            setErrorMessage("Au moins un membre d'équipe est requis.");
+            return;
+        }
+
+        const payload: CreateActiviteRequest = {
+            date: formDate,
+            nom: formNom.trim(),
+            membreTokenIds: [...selectedTokens],
+            groupeIds: [...selectedGroupeIds].sort((x, y) => x - y),
+        };
+        const desc = formDescription.trim();
+        if (desc) payload.description = desc;
+
+        setSubmitting(true);
+        try {
+            await sejourActiviteService.creerActivite(sejour.id, payload);
+            setModalOpen(false);
+            revalidator.revalidate();
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Impossible de créer l'activité";
+            setErrorMessage(msg);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div>
+            <div className={styles.actionsContainer}>
+                <Button color="primary" onClick={openModal} disabled={equipe.length === 0 || groupes.length === 0}>
+                    Ajouter une activité
+                </Button>
+            </div>
+            {equipe.length === 0 && (
+                <p className={styles.warningText}>
+                    Aucun membre d&apos;équipe n&apos;est défini pour ce séjour. Ajoutez d&apos;abord un directeur et des membres
+                    d&apos;équipe pour pouvoir planifier des activités.
+                </p>
+            )}
+            {equipe.length > 0 && groupes.length === 0 && (
+                <p className={styles.warningText}>
+                    Aucun groupe n&apos;est défini pour ce séjour. Créez au moins un groupe pour pouvoir planifier des activités.
+                </p>
+            )}
+            {errorMessage && !modalOpen && <div className={styles.errorMessage}>{errorMessage}</div>}
+
+            {activites.length === 0 ? (
+                <p className={styles.empty}>Aucune activité planifiée pour ce séjour.</p>
+            ) : (
+                <div className={styles.list}>
+                    {activites.map((a) => (
+                        <article key={a.id} className={styles.card}>
+                            <div className={styles.cardHeader}>
+                                <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
+                                <span className={styles.nom}>{a.nom}</span>
+                            </div>
+                            <div className={styles.meta}>
+                                <strong>Animateurs :</strong>{" "}
+                                {a.membres?.length
+                                    ? a.membres.map((m) => `${m.prenom} ${m.nom}`.trim()).join(", ")
+                                    : "—"}
+                            </div>
+                            {a.groupeIds?.length ? (
+                                <div className={styles.meta}>
+                                    <strong>Groupes :</strong>{" "}
+                                    {a.groupeIds
+                                        .map((id) => groupeById.get(id)?.nom)
+                                        .filter(Boolean)
+                                        .join(", ") || "—"}
+                                </div>
+                            ) : null}
+                            {a.description ? <p className={styles.description}>{a.description}</p> : null}
+                        </article>
+                    ))}
+                </div>
+            )}
+
+            <Modal isOpen={modalOpen} toggle={() => !submitting && setModalOpen(false)} size="lg">
+                <ModalHeader toggle={() => !submitting && setModalOpen(false)}>Nouvelle activité</ModalHeader>
+                <ModalBody>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-date">Date</Label>
+                        <Input
+                            id="act-date"
+                            type="date"
+                            value={formDate}
+                            onChange={(e) => setFormDate(e.target.value)}
+                            disabled={submitting}
+                            required
+                        />
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-nom">Nom</Label>
+                        <Input
+                            id="act-nom"
+                            type="text"
+                            value={formNom}
+                            onChange={(e) => setFormNom(e.target.value)}
+                            disabled={submitting}
+                            maxLength={200}
+                            required
+                        />
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-desc">Description (optionnel)</Label>
+                        <Input
+                            id="act-desc"
+                            type="textarea"
+                            rows={3}
+                            value={formDescription}
+                            onChange={(e) => setFormDescription(e.target.value)}
+                            disabled={submitting}
+                            maxLength={5000}
+                        />
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label>Groupes concernés</Label>
+                        <div className={styles.checkboxGroup}>
+                            {groupes.length === 0 ? (
+                                <p className={styles.noGroupes}>Aucun groupe sur ce séjour.</p>
+                            ) : (
+                                groupes.map((g) => (
+                                    <div key={g.id} className={styles.checkboxRow}>
+                                        <Input
+                                            type="checkbox"
+                                            id={`grp-${g.id}`}
+                                            checked={selectedGroupeIds.has(g.id)}
+                                            onChange={() => toggleGroupeId(g.id)}
+                                            disabled={submitting}
+                                        />
+                                        <Label for={`grp-${g.id}`} className="mb-0">
+                                            {g.nom}
+                                        </Label>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label>Animateurs (membres de l&apos;équipe du séjour)</Label>
+                        <div className={styles.checkboxGroup}>
+                            {equipe.map((m) => (
+                                <div key={m.tokenId} className={styles.checkboxRow}>
+                                    <Input
+                                        type="checkbox"
+                                        id={`anim-${m.tokenId}`}
+                                        checked={selectedTokens.has(m.tokenId)}
+                                        onChange={() => toggleToken(m.tokenId)}
+                                        disabled={submitting}
+                                    />
+                                    <Label for={`anim-${m.tokenId}`} className="mb-0">
+                                        {m.prenom} {m.nom}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    </FormGroup>
+                </ModalBody>
+                <ModalFooter className={styles.modalFooter}>
+                    <div className={styles.modalFooterMessage} aria-live="polite">
+                        {errorMessage ? <span className={styles.modalFooterError}>{errorMessage}</span> : null}
+                    </div>
+                    <div className={styles.modalFooterActions}>
+                        <Button color="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>
+                            Annuler
+                        </Button>
+                        <Button color="primary" onClick={handleCreer} disabled={submitting}>
+                            {submitting ? "Enregistrement…" : "Créer"}
+                        </Button>
+                    </div>
+                </ModalFooter>
+            </Modal>
+        </div>
+    );
+};
+
+export default ListeActivites;

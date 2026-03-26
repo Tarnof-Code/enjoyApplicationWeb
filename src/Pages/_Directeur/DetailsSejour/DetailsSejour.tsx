@@ -6,10 +6,12 @@ import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import { sejourService } from "../../../services/sejour.service";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { sejourGroupeService } from "../../../services/sejour-groupe.service";
+import { sejourActiviteService } from "../../../services/sejour-activite.service";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
-import { SejourDTO, EnfantDto, GroupeDto } from "../../../types/api";
+import ListeActivites from "../../../components/Liste/ListeActivites";
+import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto } from "../../../types/api";
 
 /** Composant stable (hors du parent) : évite de remonter tout le contenu à chaque rendu du détail séjour. */
 function SejourAccordionItem({
@@ -40,12 +42,13 @@ function SejourAccordionItem({
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
     try {
-        const [sejour, enfants, groupes] = await Promise.all([
+        const [sejour, enfants, groupes, activites] = await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(parseInt(params.id)),
             sejourGroupeService.getGroupesDuSejour(parseInt(params.id)),
+            sejourActiviteService.getActivitesDuSejour(parseInt(params.id)),
         ]);
-        return { sejour, enfants, groupes };
+        return { sejour, enfants, groupes, activites };
     } catch (error) {
         console.error("Erreur chargement séjour", error);
         return error;
@@ -53,7 +56,9 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 }
 
 const DetailsSejour: React.FC = () => {
-    const loaderData = useLoaderData() as { sejour: SejourDTO; enfants: EnfantDto[]; groupes: GroupeDto[] } | Error;
+    const loaderData = useLoaderData() as
+        | { sejour: SejourDTO; enfants: EnfantDto[]; groupes: GroupeDto[]; activites: ActiviteDto[] }
+        | Error;
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
         const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
@@ -78,7 +83,7 @@ const DetailsSejour: React.FC = () => {
         );
     }
     
-    const { sejour, enfants, groupes } = loaderData;
+    const { sejour, enfants, groupes, activites } = loaderData;
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => {
             const isOpening = !prev.includes(id);
@@ -179,6 +184,30 @@ const DetailsSejour: React.FC = () => {
         );
     }
     const duree = calculerDureeEnJours(sejour.dateDebut, sejour.dateFin);
+
+    const membresEquipePourActivites = (() => {
+        const seen = new Set<string>();
+        const result: { tokenId: string; nom: string; prenom: string }[] = [];
+        if (sejour.directeur && !seen.has(sejour.directeur.tokenId)) {
+            seen.add(sejour.directeur.tokenId);
+            result.push({
+                tokenId: sejour.directeur.tokenId,
+                nom: sejour.directeur.nom,
+                prenom: sejour.directeur.prenom,
+            });
+        }
+        for (const m of sejour.equipe || []) {
+            if (!seen.has(m.tokenId)) {
+                seen.add(m.tokenId);
+                result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
+            }
+        }
+        return result.sort((a, b) => {
+            const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
+            return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
+        });
+    })();
+
     return (
         <div className={styles.pageContainer}>
             <div className={styles.pageHeader}>
@@ -267,24 +296,7 @@ const DetailsSejour: React.FC = () => {
                         enfants={enfants || []} 
                         sejourId={sejour.id}
                         dateDebutSejour={sejour.dateDebut}
-                        equipe={(() => {
-                            const seen = new Set<string>();
-                            const result: { tokenId: string; nom: string; prenom: string }[] = [];
-                            if (sejour.directeur && !seen.has(sejour.directeur.tokenId)) {
-                                seen.add(sejour.directeur.tokenId);
-                                result.push({ tokenId: sejour.directeur.tokenId, nom: sejour.directeur.nom, prenom: sejour.directeur.prenom });
-                            }
-                            for (const m of sejour.equipe || []) {
-                                if (!seen.has(m.tokenId)) {
-                                    seen.add(m.tokenId);
-                                    result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
-                                }
-                            }
-                            return result.sort((a, b) => {
-                                const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-                                return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
-                            });
-                        })()}
+                        equipe={membresEquipePourActivites}
                         initialExpandedGroupeId={expandedGroupeIdFromState}
                         onGroupRendered={(groupeId) => {
                             requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));
@@ -293,14 +305,19 @@ const DetailsSejour: React.FC = () => {
                 </SejourAccordionItem>
                 <SejourAccordionItem
                     id="5"
-                    title="Plannings"
+                    title={`Activités (${activites?.length ?? 0})`}
                     isOpen={openAccordions.includes("5")}
                     onToggle={() => toggleAccordion("5")}
                     containerRef={(el) => {
                         accordionRefs.current["5"] = el;
                     }}
                 >
-                    <p className={styles.placeholderText}>À venir...</p>
+                    <ListeActivites
+                        activites={activites || []}
+                        sejour={sejour}
+                        groupes={groupes || []}
+                        equipe={membresEquipePourActivites}
+                    />
                 </SejourAccordionItem>
             </div>
         </div>
