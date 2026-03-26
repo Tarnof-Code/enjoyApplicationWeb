@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import { ActiviteDto, CreateActiviteRequest, GroupeDto, SejourDTO } from "../../types/api";
+import { ActiviteDto, CreateActiviteRequest, GroupeDto, SejourDTO, UpdateActiviteRequest } from "../../types/api";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
 import styles from "./ListeActivites.module.scss";
@@ -47,21 +47,39 @@ function sejourDebutToInputDate(value: SejourDTO["dateDebut"]): string {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
+function activiteDateToInputDate(value: ActiviteDto["date"]): string {
+    if (typeof value === "string") {
+        const t = value.trim();
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    }
+    const d = parseDate(value as string);
+    if (d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    return "";
+}
+
 const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe }) => {
     const revalidator = useRevalidator();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [pendingDeleteActiviteId, setPendingDeleteActiviteId] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [editingActiviteId, setEditingActiviteId] = useState<number | null>(null);
+    const [deletingActiviteId, setDeletingActiviteId] = useState<number | null>(null);
     const [formDate, setFormDate] = useState("");
     const [formNom, setFormNom] = useState("");
     const [formDescription, setFormDescription] = useState("");
     const [selectedGroupeIds, setSelectedGroupeIds] = useState<Set<number>>(() => new Set());
     const [selectedTokens, setSelectedTokens] = useState<Set<string>>(() => new Set());
 
-    const groupeById = useMemo(() => new Map(groupes.map((g) => [g.id, g])), [groupes]);
-
     const openModal = () => {
         setErrorMessage(null);
+        setEditingActiviteId(null);
         setFormDate(sejourDebutToInputDate(sejour.dateDebut));
         setFormNom("");
         setFormDescription("");
@@ -71,6 +89,22 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         const initial = new Set<string>();
         if (equipe.length === 1) initial.add(equipe[0].tokenId);
         setSelectedTokens(initial);
+        setModalOpen(true);
+    };
+
+    const showSuccessModal = (message: string) => {
+        setSuccessMessage(message);
+        setSuccessModalOpen(true);
+    };
+
+    const openEditModal = (activite: ActiviteDto) => {
+        setErrorMessage(null);
+        setEditingActiviteId(activite.id);
+        setFormDate(activiteDateToInputDate(activite.date));
+        setFormNom(activite.nom);
+        setFormDescription(activite.description ?? "");
+        setSelectedGroupeIds(new Set(activite.groupeIds ?? []));
+        setSelectedTokens(new Set((activite.membres ?? []).map((m) => m.tokenId)));
         setModalOpen(true);
     };
 
@@ -92,7 +126,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         });
     };
 
-    const handleCreer = async () => {
+    const handleSubmit = async () => {
         setErrorMessage(null);
         if (!formDate.trim()) {
             setErrorMessage("La date est obligatoire.");
@@ -111,7 +145,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
             return;
         }
 
-        const payload: CreateActiviteRequest = {
+        const payload: CreateActiviteRequest | UpdateActiviteRequest = {
             date: formDate,
             nom: formNom.trim(),
             membreTokenIds: [...selectedTokens],
@@ -122,14 +156,49 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
 
         setSubmitting(true);
         try {
-            await sejourActiviteService.creerActivite(sejour.id, payload);
+            if (editingActiviteId == null) {
+                await sejourActiviteService.creerActivite(sejour.id, payload as CreateActiviteRequest);
+                showSuccessModal("Activité créée avec succès.");
+            } else {
+                await sejourActiviteService.modifierActivite(sejour.id, editingActiviteId, payload as UpdateActiviteRequest);
+                showSuccessModal("Activité modifiée avec succès.");
+            }
             setModalOpen(false);
+            setEditingActiviteId(null);
             revalidator.revalidate();
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Impossible de créer l'activité";
+            const msg =
+                e instanceof Error
+                    ? e.message
+                    : editingActiviteId == null
+                      ? "Impossible de créer l'activité"
+                      : "Impossible de modifier l'activité";
             setErrorMessage(msg);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const requestDeleteActivite = (activiteId: number) => {
+        setPendingDeleteActiviteId(activiteId);
+        setDeleteModalOpen(true);
+    };
+
+    const handleSupprimer = async () => {
+        if (pendingDeleteActiviteId == null) return;
+        setErrorMessage(null);
+        setDeletingActiviteId(pendingDeleteActiviteId);
+        try {
+            await sejourActiviteService.supprimerActivite(sejour.id, pendingDeleteActiviteId);
+            setDeleteModalOpen(false);
+            setPendingDeleteActiviteId(null);
+            showSuccessModal("Activité supprimée avec succès.");
+            revalidator.revalidate();
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Impossible de supprimer l'activité";
+            setErrorMessage(msg);
+        } finally {
+            setDeletingActiviteId(null);
         }
     };
 
@@ -173,19 +242,39 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                                 <div className={styles.meta}>
                                     <strong>Groupes :</strong>{" "}
                                     {a.groupeIds
-                                        .map((id) => groupeById.get(id)?.nom)
+                                        .map((id) => groupes.find((g) => g.id === id)?.nom)
                                         .filter(Boolean)
                                         .join(", ") || "—"}
                                 </div>
                             ) : null}
                             {a.description ? <p className={styles.description}>{a.description}</p> : null}
+                            <div className={styles.cardActions}>
+                                <Button
+                                    color="secondary"
+                                    size="sm"
+                                    onClick={() => openEditModal(a)}
+                                    disabled={deletingActiviteId === a.id}
+                                >
+                                    Modifier
+                                </Button>
+                                <Button
+                                    color="danger"
+                                    size="sm"
+                                    onClick={() => requestDeleteActivite(a.id)}
+                                    disabled={deletingActiviteId === a.id}
+                                >
+                                    {deletingActiviteId === a.id ? "Suppression…" : "Supprimer"}
+                                </Button>
+                            </div>
                         </article>
                     ))}
                 </div>
             )}
 
             <Modal isOpen={modalOpen} toggle={() => !submitting && setModalOpen(false)} size="lg">
-                <ModalHeader toggle={() => !submitting && setModalOpen(false)}>Nouvelle activité</ModalHeader>
+                <ModalHeader toggle={() => !submitting && setModalOpen(false)}>
+                    {editingActiviteId == null ? "Nouvelle activité" : "Modifier l'activité"}
+                </ModalHeader>
                 <ModalBody>
                     <FormGroup className={styles.modalField}>
                         <Label for="act-date">Date</Label>
@@ -273,10 +362,46 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                         <Button color="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>
                             Annuler
                         </Button>
-                        <Button color="primary" onClick={handleCreer} disabled={submitting}>
-                            {submitting ? "Enregistrement…" : "Créer"}
+                        <Button color="primary" onClick={handleSubmit} disabled={submitting}>
+                            {submitting ? "Enregistrement…" : editingActiviteId == null ? "Créer" : "Enregistrer"}
                         </Button>
                     </div>
+                </ModalFooter>
+            </Modal>
+
+            <Modal isOpen={deleteModalOpen} toggle={() => !deletingActiviteId && setDeleteModalOpen(false)}>
+                <ModalHeader toggle={() => !deletingActiviteId && setDeleteModalOpen(false)}>
+                    Confirmation de suppression
+                </ModalHeader>
+                <ModalBody>
+                    <p>Voulez-vous vraiment supprimer cette activité ?</p>
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        color="secondary"
+                        onClick={() => {
+                            setDeleteModalOpen(false);
+                            setPendingDeleteActiviteId(null);
+                        }}
+                        disabled={deletingActiviteId != null}
+                    >
+                        Annuler
+                    </Button>
+                    <Button color="danger" onClick={handleSupprimer} disabled={deletingActiviteId != null}>
+                        {deletingActiviteId != null ? "Suppression…" : "Confirmer la suppression"}
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            <Modal isOpen={successModalOpen} toggle={() => setSuccessModalOpen(false)}>
+                <ModalHeader toggle={() => setSuccessModalOpen(false)}>Confirmation</ModalHeader>
+                <ModalBody>
+                    <p>{successMessage}</p>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="primary" onClick={() => setSuccessModalOpen(false)}>
+                        Fermer
+                    </Button>
                 </ModalFooter>
             </Modal>
         </div>

@@ -76,6 +76,13 @@
     white-space: pre-wrap;
 }
 
+.cardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+
 .empty {
     color: #666;
     font-style: italic;
