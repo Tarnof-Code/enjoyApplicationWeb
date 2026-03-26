@@ -247,7 +247,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
     return (
         <div className={styles.container}>
             <div className={styles.actionsContainer}>
-                <Button color="primary" onClick={() => setShowCreateModal(true)}>
+                <Button color="success" onClick={() => setShowCreateModal(true)}>
                     <FontAwesomeIcon icon={faPlus} className={styles.icon} />
                     Créer un groupe
                 </Button>
@@ -289,7 +289,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                     </button>
                                     <div className={styles.groupeHeaderActions}>
                                         <Button
-                                            color="light"
+                                            color="primary"
                                             size="sm"
                                             outline
                                             onClick={(e) => {
@@ -355,7 +355,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                     {enfantsHorsGroupe.length > 0 && (
                                         <div className={styles.addEnfant}>
                                             <Button
-                                                color="primary"
+                                                color="success"
                                                 size="sm"
                                                 className={styles.addEnfantsButton}
                                                 onClick={() => openAddEnfantsPicker(groupe)}
@@ -541,7 +541,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                 Annuler
                             </Button>
                             <Button
-                                color="primary"
+                                color="success"
                                 onClick={confirmAjouterEnfantsSelection}
                                 disabled={isAddingEnfants || pickerSelectedIds.size === 0}
                             >
@@ -550,7 +550,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                         </>
                     ) : (
                         addEnfantsModal?.step === "recap" && (
-                            <Button color="primary" onClick={() => dismissAddEnfantsModal(true)}>
+                            <Button color="secondary" onClick={() => dismissAddEnfantsModal(true)}>
                                 OK
                             </Button>
                         )
@@ -606,7 +606,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                     <Button color="secondary" onClick={() => setAddTrancheModal(null)}>
                         Annuler
                     </Button>
-                    <Button color="primary" onClick={handleAjouterTranche} disabled={isAddingTranche}>
+                    <Button color="success" onClick={handleAjouterTranche} disabled={isAddingTranche}>
                         {isAddingTranche ? "Ajout en cours..." : "Confirmer"}
                     </Button>
                 </ModalFooter>

@@ -257,12 +257,14 @@ function Form({
           {fields.filter((f) => !f.visible || f.visible(formData)).map(renderField)}        
           <div className={styles.buttonContainer}>
             <Button 
+              color="secondary"
               onClick={onClose}
               disabled={loading || isSubmitting}
             >
               {cancelText}
             </Button>
             <Button 
+              color="success"
               onClick={handleSubmit}
               disabled={loading || isSubmitting}
               className="btn_valider"
@@ -282,6 +284,7 @@ function Form({
             </ModalBody>
             <ModalFooter>
               <Button
+                color="secondary"
                 onClick={() => {
                   setModalIsOpen(false);
                   onClose();

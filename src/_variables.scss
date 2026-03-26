@@ -6,6 +6,20 @@ $rouge_principal: #f94a56;
 $vert_principal: #00b894;
 $police_titres: "Dancing Script";
 
+// Palette sémantique des actions UI
+$action-add: #16a34a;
+$action-add-hover: #15803d;
+$action-edit: #2563eb;
+$action-edit-hover: #1d4ed8;
+$action-delete: #dc2626;
+$action-delete-hover: #b91c1c;
+$action-warning: #ea580c;
+$action-warning-hover: #c2410c;
+$action-secondary: #6b7280;
+$action-secondary-hover: #4b5563;
+$action-info: #0891b2;
+$action-info-hover: #0e7490;
+
 @mixin hover-btn($color, $pourcentage) {
   background: $color;
   &:hover {

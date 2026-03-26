@@ -12,11 +12,93 @@ body.no-padding-top {
 }
 
 .btn {
-  background: $rouge_principal;
   border: none;
   min-width: 5em;
   font-weight: 600;
-  @include hover-btn($rouge_principal, 15);
+}
+
+// Harmonisation globale des couleurs par intention (reactstrap/bootstrap)
+.btn-primary {
+  background-color: $action-edit !important;
+  border-color: $action-edit !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $action-edit-hover !important;
+    border-color: $action-edit-hover !important;
+  }
+}
+
+.btn-success {
+  background-color: $action-add !important;
+  border-color: $action-add !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $action-add-hover !important;
+    border-color: $action-add-hover !important;
+  }
+}
+
+.btn-danger {
+  background-color: $action-delete !important;
+  border-color: $action-delete !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $action-delete-hover !important;
+    border-color: $action-delete-hover !important;
+  }
+}
+
+.btn-warning {
+  background-color: $action-warning !important;
+  border-color: $action-warning !important;
+  color: #fff !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $action-warning-hover !important;
+    border-color: $action-warning-hover !important;
+    color: #fff !important;
+  }
+}
+
+.btn-secondary,
+.btn-dark {
+  background-color: $action-secondary !important;
+  border-color: $action-secondary !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $action-secondary-hover !important;
+    border-color: $action-secondary-hover !important;
+  }
+}
+
+.btn-info {
+  background-color: $action-info !important;
+  border-color: $action-info !important;
+  color: #fff !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $action-info-hover !important;
+    border-color: $action-info-hover !important;
+    color: #fff !important;
+  }
+}
+
+.btn-light {
+  border-color: $action-secondary !important;
+  color: $action-secondary !important;
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: rgba($action-secondary, 0.08) !important;
+    border-color: $action-secondary !important;
+    color: $action-secondary-hover !important;
+  }
 }
 
 .errorMessage {
@@ -33,14 +115,29 @@ body.no-padding-top {
   justify-content: center;
   align-items: center;
   &:hover {
-    color: $rouge_principal;
     cursor: pointer;
   }
 }
 
+.icone_crayon_edit:hover {
+  color: $action-edit;
+}
+
+.icone_trash_delete:hover {
+  color: $action-delete;
+}
+
+.icone_oeil_view:hover {
+  color: $action-info;
+}
+
+.icone_dossier:hover {
+  color: $action-warning;
+}
+
 .btn_valider {
-  background: $vert_principal;
-  @include hover-btn($vert_principal, 5);
+  background: $action-add;
+  @include hover-btn($action-add, 5);
 }
 
 .loading-message {

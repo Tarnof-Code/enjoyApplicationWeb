@@ -239,7 +239,7 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                     )}
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="primary" onClick={() => setIsNoticeModalOpen(false)}>
+                    <Button color="secondary" onClick={() => setIsNoticeModalOpen(false)}>
                         Fermer
                     </Button>
                 </ModalFooter>
@@ -305,7 +305,7 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
                     )}
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="primary" onClick={handleCloseModal}>
+                    <Button color="secondary" onClick={handleCloseModal}>
                         Fermer
                     </Button>
                 </ModalFooter>

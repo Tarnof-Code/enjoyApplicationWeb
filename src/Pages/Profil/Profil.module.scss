@@ -63,7 +63,7 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: $vert_principal;
+      background: $action-edit;
       color: white;
       border: 3px solid white;
       display: flex;
@@ -75,7 +75,7 @@
 
       &:hover {
         transform: scale(1.1);
-        background: color.adjust($vert_principal, $lightness: -8%);
+        background: color.adjust($action-edit, $lightness: -8%);
       }
     }
   }
@@ -323,19 +323,19 @@
   }
 
   .btnSave {
-    background-color: rgba($vert_principal, 0.1);
-    color: $vert_principal;
+    background-color: rgba($action-add, 0.12);
+    color: $action-add;
     &:hover {
-      background-color: $vert_principal;
+      background-color: $action-add;
       color: white;
     }
   }
 
   .btnCancel {
-    background-color: rgba($rouge_principal, 0.1);
-    color: $rouge_principal;
+    background-color: rgba($action-secondary, 0.12);
+    color: $action-secondary;
     &:hover {
-      background-color: $rouge_principal;
+      background-color: $action-secondary;
       color: white;
     }
   }

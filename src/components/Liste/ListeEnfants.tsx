@@ -169,7 +169,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
                 </ModalBody>
                 <ModalFooter>
                     <Button 
-                        color="dark" 
+                        color="secondary" 
                         onClick={() => setShowDeleteAllModal(false)}
                         disabled={isDeletingAll}
                         className={styles.cancelButton}

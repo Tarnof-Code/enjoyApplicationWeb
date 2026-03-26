@@ -205,7 +205,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
     return (
         <div>
             <div className={styles.actionsContainer}>
-                <Button color="primary" onClick={openModal} disabled={equipe.length === 0 || groupes.length === 0}>
+                <Button color="success" onClick={openModal} disabled={equipe.length === 0 || groupes.length === 0}>
                     Ajouter une activité
                 </Button>
             </div>
@@ -250,7 +250,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                             {a.description ? <p className={styles.description}>{a.description}</p> : null}
                             <div className={styles.cardActions}>
                                 <Button
-                                    color="secondary"
+                                    color="primary"
                                     size="sm"
                                     onClick={() => openEditModal(a)}
                                     disabled={deletingActiviteId === a.id}
@@ -362,7 +362,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                         <Button color="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>
                             Annuler
                         </Button>
-                        <Button color="primary" onClick={handleSubmit} disabled={submitting}>
+                        <Button
+                            color={editingActiviteId == null ? "success" : "primary"}
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                        >
                             {submitting ? "Enregistrement…" : editingActiviteId == null ? "Créer" : "Enregistrer"}
                         </Button>
                     </div>
@@ -399,7 +403,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                     <p>{successMessage}</p>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="primary" onClick={() => setSuccessModalOpen(false)}>
+                    <Button color="secondary" onClick={() => setSuccessModalOpen(false)}>
                         Fermer
                     </Button>
                 </ModalFooter>

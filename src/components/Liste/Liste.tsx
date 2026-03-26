@@ -366,7 +366,7 @@ const Liste = <T extends Record<string, any>>({
         </Col>
         {canAdd && FormComponent && (
           <Col xs={3} lg={2}>
-            <Button onClick={openAddModal}>
+            <Button color="success" onClick={openAddModal}>
               {addButtonText}
             </Button>
           </Col>
@@ -519,7 +519,7 @@ const Liste = <T extends Record<string, any>>({
           <p>{successModalState.itemName || "L'élément"} a bien été supprimé.</p>
         </ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={closeSuccessModal}>
+          <Button color="secondary" onClick={closeSuccessModal}>
             OK
           </Button>
         </ModalFooter>
