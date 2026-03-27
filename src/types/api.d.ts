@@ -390,3 +390,34 @@ export interface UpdateActiviteRequest {
   membreTokenIds: string[];
   groupeIds: number[];
 }
+
+// ============================================================================
+// Lieux (salle, terrain, etc. rattachés à un séjour)
+// ============================================================================
+
+/** Correspond à EmplacementLieu.java */
+export type EmplacementLieu = 'INTERIEUR' | 'EXTERIEUR' | 'HORS_CENTRE';
+
+/**
+ * Correspond à LieuDto.java
+ */
+export interface LieuDto {
+  id: number;
+  nom: string;
+  emplacement: EmplacementLieu;
+  /** Capacité max optionnelle */
+  nombreMax: number | null;
+  sejourId: number;
+}
+
+/**
+ * Correspond à SaveLieuRequest.java (création et mise à jour)
+ * - nom : obligatoire, max 150
+ * - emplacement : obligatoire
+ * - nombreMax : optionnel ; si renseigné, doit être strictement positif côté API
+ */
+export interface SaveLieuRequest {
+  nom: string;
+  emplacement: EmplacementLieu;
+  nombreMax?: number | null;
+}
