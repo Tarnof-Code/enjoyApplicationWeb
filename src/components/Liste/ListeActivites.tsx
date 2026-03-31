@@ -1,7 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import { ActiviteDto, CreateActiviteRequest, GroupeDto, SejourDTO, UpdateActiviteRequest } from "../../types/api";
+import {
+    ActiviteDto,
+    CreateActiviteRequest,
+    EmplacementLieu,
+    GroupeDto,
+    LieuDto,
+    SejourDTO,
+    UpdateActiviteRequest,
+} from "../../types/api";
+import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
 import styles from "./ListeActivites.module.scss";
@@ -17,6 +26,7 @@ export interface ListeActivitesProps {
     sejour: SejourDTO;
     groupes: GroupeDto[];
     equipe: MembreEquipeSejour[];
+    lieux: LieuDto[];
 }
 
 function formatActiviteDateForDisplay(date: ActiviteDto["date"]): string {
@@ -60,7 +70,20 @@ function activiteDateToInputDate(value: ActiviteDto["date"]): string {
     return "";
 }
 
-const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe }) => {
+function trierLieuxParNom(lieux: LieuDto[]): LieuDto[] {
+    return [...lieux].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" }));
+}
+
+function resumePartageLieu(l: LieuDto): string {
+    if (l.partageableEntreAnimateurs && l.nombreMaxActivitesSimultanees != null) {
+        return `Jusqu'à ${l.nombreMaxActivitesSimultanees} activités.`;
+    }
+    return "Une seule activité à la fois.";
+}
+
+const EMPLACEMENT_FILTRE_TOUS_ACTIVITE = "" as const;
+
+const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe, lieux }) => {
     const revalidator = useRevalidator();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
@@ -76,6 +99,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
     const [formDescription, setFormDescription] = useState("");
     const [selectedGroupeIds, setSelectedGroupeIds] = useState<Set<number>>(() => new Set());
     const [selectedTokens, setSelectedTokens] = useState<Set<string>>(() => new Set());
+    /** Chaîne vide = aucun lieu ; en édition, null est envoyé à l'API pour retirer le lieu */
+    const [formLieuId, setFormLieuId] = useState<number | "">("");
+    const [filtreEmplacementLieu, setFiltreEmplacementLieu] = useState<
+        typeof EMPLACEMENT_FILTRE_TOUS_ACTIVITE | EmplacementLieu
+    >(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
 
     const openModal = () => {
         setErrorMessage(null);
@@ -89,6 +117,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         const initial = new Set<string>();
         if (equipe.length === 1) initial.add(equipe[0].tokenId);
         setSelectedTokens(initial);
+        setFormLieuId("");
+        setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
 
@@ -105,6 +135,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         setFormDescription(activite.description ?? "");
         setSelectedGroupeIds(new Set(activite.groupeIds ?? []));
         setSelectedTokens(new Set((activite.membres ?? []).map((m) => m.tokenId)));
+        setFormLieuId(activite.lieu?.id ?? "");
+        setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
 
@@ -125,6 +157,21 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
             return next;
         });
     };
+
+    const lieuxFiltrésParEmplacement = useMemo(() => {
+        if (filtreEmplacementLieu === EMPLACEMENT_FILTRE_TOUS_ACTIVITE) return lieux;
+        return lieux.filter((l) => l.emplacement === filtreEmplacementLieu);
+    }, [lieux, filtreEmplacementLieu]);
+
+    const lieuxTriés = trierLieuxParNom(lieuxFiltrésParEmplacement);
+    const lieuSélectionnéForm = formLieuId !== "" ? lieux.find((l) => l.id === formLieuId) : undefined;
+
+    useEffect(() => {
+        if (formLieuId === "") return;
+        if (!lieuxFiltrésParEmplacement.some((l) => l.id === formLieuId)) {
+            setFormLieuId("");
+        }
+    }, [lieuxFiltrésParEmplacement, formLieuId]);
 
     const handleSubmit = async () => {
         setErrorMessage(null);
@@ -154,15 +201,34 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         const desc = formDescription.trim();
         if (desc) payload.description = desc;
 
+        if (formLieuId !== "") {
+            payload.lieuId = formLieuId;
+        } else if (editingActiviteId != null) {
+            payload.lieuId = null;
+        }
+
         setSubmitting(true);
         try {
+            let sauvegardee: ActiviteDto;
             if (editingActiviteId == null) {
-                await sejourActiviteService.creerActivite(sejour.id, payload as CreateActiviteRequest);
-                showSuccessModal("Activité créée avec succès.");
+                sauvegardee = await sejourActiviteService.creerActivite(
+                    sejour.id,
+                    payload as CreateActiviteRequest
+                );
             } else {
-                await sejourActiviteService.modifierActivite(sejour.id, editingActiviteId, payload as UpdateActiviteRequest);
-                showSuccessModal("Activité modifiée avec succès.");
+                sauvegardee = await sejourActiviteService.modifierActivite(
+                    sejour.id,
+                    editingActiviteId,
+                    payload as UpdateActiviteRequest
+                );
             }
+            let messageSuccès =
+                editingActiviteId == null ? "Activité créée avec succès." : "Activité modifiée avec succès.";
+            const avertissement = sauvegardee.avertissementLieu?.trim();
+            if (avertissement) {
+                messageSuccès += `\n\n${avertissement}`;
+            }
+            showSuccessModal(messageSuccès);
             setModalOpen(false);
             setEditingActiviteId(null);
             revalidator.revalidate();
@@ -238,6 +304,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                                     ? a.membres.map((m) => `${m.prenom} ${m.nom}`.trim()).join(", ")
                                     : "—"}
                             </div>
+                            {a.lieu ? (
+                                <div className={styles.meta}>
+                                    <strong>Lieu :</strong> {a.lieu.nom} — {resumePartageLieu(a.lieu)}
+                                </div>
+                            ) : null}
                             {a.groupeIds?.length ? (
                                 <div className={styles.meta}>
                                     <strong>Groupes :</strong>{" "}
@@ -310,6 +381,67 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                             disabled={submitting}
                             maxLength={5000}
                         />
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-lieu-emplacement">Filtrer les lieux par emplacement</Label>
+                        <Input
+                            id="act-lieu-emplacement"
+                            type="select"
+                            value={filtreEmplacementLieu}
+                            onChange={(e) =>
+                                setFiltreEmplacementLieu(
+                                    e.target.value === EMPLACEMENT_FILTRE_TOUS_ACTIVITE
+                                        ? EMPLACEMENT_FILTRE_TOUS_ACTIVITE
+                                        : (e.target.value as EmplacementLieu)
+                                )
+                            }
+                            disabled={submitting || lieux.length === 0}
+                        >
+                            <option value={EMPLACEMENT_FILTRE_TOUS_ACTIVITE}>Tous les emplacements</option>
+                            {EmplacementLieuValues.map((v) => (
+                                <option key={v} value={v}>
+                                    {EmplacementLieuLabels[v]}
+                                </option>
+                            ))}
+                        </Input>
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-lieu">Lieu (optionnel)</Label>
+                        <Input
+                            id="act-lieu"
+                            type="select"
+                            value={formLieuId === "" ? "" : String(formLieuId)}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "") {
+                                    setFormLieuId("");
+                                    return;
+                                }
+                                const n = Number.parseInt(v, 10);
+                                setFormLieuId(Number.isNaN(n) ? "" : n);
+                            }}
+                            disabled={submitting || lieux.length === 0 || lieuxTriés.length === 0}
+                        >
+                            <option value="">— Aucun lieu —</option>
+                            {lieuxTriés.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                    {l.nom}
+                                </option>
+                            ))}
+                        </Input>
+                        {lieux.length === 0 ? (
+                            <p className={styles.lieuHint}>
+                                Aucun lieu n&apos;est défini pour ce séjour. Vous pouvez en ajouter dans la section
+                                « Lieux ».
+                            </p>
+                        ) : lieuxTriés.length === 0 ? (
+                            <p className={styles.lieuHint}>
+                                Aucun lieu ne correspond à ce filtre d&apos;emplacement. Choisissez « Tous les
+                                emplacements » ou un autre type.
+                            </p>
+                        ) : lieuSélectionnéForm ? (
+                            <p className={styles.lieuHint}>{resumePartageLieu(lieuSélectionnéForm)}</p>
+                        ) : null}
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
                         <Label>Groupes concernés</Label>
@@ -400,7 +532,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
             <Modal isOpen={successModalOpen} toggle={() => setSuccessModalOpen(false)}>
                 <ModalHeader toggle={() => setSuccessModalOpen(false)}>Confirmation</ModalHeader>
                 <ModalBody>
-                    <p>{successMessage}</p>
+                    <p className={styles.successBody}>{successMessage}</p>
                 </ModalBody>
                 <ModalFooter>
                     <Button color="secondary" onClick={() => setSuccessModalOpen(false)}>

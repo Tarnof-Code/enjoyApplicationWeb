@@ -65,6 +65,8 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
     const [formNom, setFormNom] = useState("");
     const [formEmplacement, setFormEmplacement] = useState<EmplacementLieu>(EmplacementLieuValues[0]);
     const [formNombreMax, setFormNombreMax] = useState("");
+    const [formPartageable, setFormPartageable] = useState(false);
+    const [formMaxActivitesJour, setFormMaxActivitesJour] = useState("");
     const [filterEmplacement, setFilterEmplacement] = useState<typeof EMPLACEMENT_FILTRE_TOUS | EmplacementLieu>(
         EMPLACEMENT_FILTRE_TOUS
     );
@@ -76,6 +78,8 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
         setFormNom("");
         setFormEmplacement(EmplacementLieuValues[0]);
         setFormNombreMax("");
+        setFormPartageable(false);
+        setFormMaxActivitesJour("");
         setModalOpen(true);
     };
 
@@ -90,6 +94,10 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
         setFormNom(lieu.nom);
         setFormEmplacement(lieu.emplacement);
         setFormNombreMax(lieu.nombreMax != null ? String(lieu.nombreMax) : "");
+        setFormPartageable(Boolean(lieu.partageableEntreAnimateurs));
+        setFormMaxActivitesJour(
+            lieu.nombreMaxActivitesSimultanees != null ? String(lieu.nombreMaxActivitesSimultanees) : ""
+        );
         setModalOpen(true);
     };
 
@@ -109,7 +117,29 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
             }
             nombreMax = n;
         }
-        return { nom, emplacement: formEmplacement, nombreMax };
+        let nombreMaxActivitesSimultanees: number | null = null;
+        if (formPartageable) {
+            const rawMaxAct = formMaxActivitesJour.trim();
+            if (!rawMaxAct) {
+                setErrorMessage(
+                    "Nombre max d'activités le même jour obligatoire si le lieu est partageable entre animateurs (minimum 2)."
+                );
+                return null;
+            }
+            const m = Number.parseInt(rawMaxAct, 10);
+            if (Number.isNaN(m) || m < 2) {
+                setErrorMessage("Le nombre max d'activités le même jour doit être un entier supérieur ou égal à 2.");
+                return null;
+            }
+            nombreMaxActivitesSimultanees = m;
+        }
+        return {
+            nom,
+            emplacement: formEmplacement,
+            nombreMax,
+            partageableEntreAnimateurs: formPartageable,
+            nombreMaxActivitesSimultanees,
+        };
     };
 
     const handleSubmit = async () => {
@@ -260,6 +290,12 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
                             <div className={styles.meta}>
                                 <strong>Capacité max :</strong> {lieu.nombreMax != null ? lieu.nombreMax : "—"}
                             </div>
+                            <div className={styles.meta}>
+                                <strong>Partage possible :</strong>{" "}
+                                {lieu.partageableEntreAnimateurs && lieu.nombreMaxActivitesSimultanees != null
+                                    ? `Oui, jusqu'à ${lieu.nombreMaxActivitesSimultanees} activités`
+                                    : "Non"}
+                            </div>
                             <div className={styles.cardActions}>
                                 <Button
                                     color="primary"
@@ -329,6 +365,41 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
                             placeholder="Ex. 40"
                         />
                         <p className={styles.hint}>Laissez vide si la capacité ne s&apos;applique pas.</p>
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <div className={styles.checkboxRow}>
+                            <Input
+                                id="lieu-partage"
+                                type="checkbox"
+                                checked={formPartageable}
+                                onChange={(e) => {
+                                    setFormPartageable(e.target.checked);
+                                    if (!e.target.checked) setFormMaxActivitesJour("");
+                                }}
+                                disabled={submitting}
+                            />
+                            <Label for="lieu-partage" className="mb-0">
+                                Partageable entre animateurs (plusieurs activités le même jour sur ce lieu)
+                            </Label>
+                        </div>
+                        {formPartageable ? (
+                            <>
+                                <Label for="lieu-max-act" className="mt-2">
+                                    Nombre max d&apos;activités le même jour
+                                </Label>
+                                <Input
+                                    id="lieu-max-act"
+                                    type="number"
+                                    min={2}
+                                    step={1}
+                                    value={formMaxActivitesJour}
+                                    onChange={(e) => setFormMaxActivitesJour(e.target.value)}
+                                    disabled={submitting}
+                                    placeholder="Ex. 2"
+                                />
+                                <p className={styles.hint}>Minimum 2. Laissez vide tant que la case ci-dessus n&apos;est pas cochée.</p>
+                            </>
+                        ) : null}
                     </FormGroup>
                 </ModalBody>
                 <ModalFooter className={styles.modalFooter}>

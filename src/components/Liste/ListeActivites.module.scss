@@ -149,3 +149,17 @@
     flex-shrink: 0;
     margin-left: auto;
 }
+
+.successBody {
+    white-space: pre-wrap;
+}
+
+.lieuHint {
+    font-size: 0.85rem;
+    color: #555;
+    margin-top: 0.35rem;
+    padding: 0.5rem 0.65rem;
+    background: #f4f6f8;
+    border-radius: 6px;
+    line-height: 1.4;
+}

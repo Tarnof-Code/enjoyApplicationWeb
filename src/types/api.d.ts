@@ -335,6 +335,44 @@ export interface GroupeDto {
 }
 
 // ============================================================================
+// Lieux (salle, terrain, etc. rattachés à un séjour)
+// ============================================================================
+
+/** Correspond à EmplacementLieu.java */
+export type EmplacementLieu = 'INTERIEUR' | 'EXTERIEUR' | 'HORS_CENTRE';
+
+/**
+ * Correspond à LieuDto.java
+ */
+export interface LieuDto {
+  id: number;
+  nom: string;
+  emplacement: EmplacementLieu;
+  /** Capacité max optionnelle */
+  nombreMax: number | null;
+  sejourId: number;
+  /** Si true : plusieurs activités le même jour possibles jusqu'à nombreMaxActivitesSimultanees */
+  partageableEntreAnimateurs: boolean;
+  /** Max d'activités le même jour sur ce lieu (≥ 2 si partageable) ; null si non partageable */
+  nombreMaxActivitesSimultanees: number | null;
+}
+
+/**
+ * Correspond à SaveLieuRequest.java (création et mise à jour)
+ * - nom : obligatoire, max 150
+ * - emplacement : obligatoire
+ * - nombreMax : optionnel ; si renseigné, doit être strictement positif côté API
+ * - partage : si partageableEntreAnimateurs, nombreMaxActivitesSimultanees obligatoire et ≥ 2 ; sinon null
+ */
+export interface SaveLieuRequest {
+  nom: string;
+  emplacement: EmplacementLieu;
+  nombreMax?: number | null;
+  partageableEntreAnimateurs: boolean;
+  nombreMaxActivitesSimultanees?: number | null;
+}
+
+// ============================================================================
 // Activités
 // ============================================================================
 
@@ -359,6 +397,13 @@ export interface ActiviteDto {
   sejourId: number;
   membres: ActiviteMembreEquipeInfo[];
   groupeIds: number[];
+  /** Lieu rattaché à l'activité (même séjour) ; null si aucun */
+  lieu: LieuDto | null;
+  /**
+   * Renseigné surtout après POST/PUT : avertissement si le lieu était déjà occupé ce jour
+   * mais le partage entre animateurs le permet
+   */
+  avertissementLieu?: string | null;
 }
 
 /**
@@ -368,6 +413,7 @@ export interface ActiviteDto {
  * - description : optionnelle, @Size(max=5000)
  * - membreTokenIds : @NotEmpty, éléments @NotBlank
  * - groupeIds : @NotEmpty, éléments @NotNull
+ * - lieuId : optionnel (lieu du même séjour)
  */
 export interface CreateActiviteRequest {
   /** LocalDate côté API */
@@ -378,6 +424,7 @@ export interface CreateActiviteRequest {
   description?: string | null;
   membreTokenIds: string[];
   groupeIds: number[];
+  lieuId?: number | null;
 }
 
 /**
@@ -389,35 +436,6 @@ export interface UpdateActiviteRequest {
   description?: string | null;
   membreTokenIds: string[];
   groupeIds: number[];
-}
-
-// ============================================================================
-// Lieux (salle, terrain, etc. rattachés à un séjour)
-// ============================================================================
-
-/** Correspond à EmplacementLieu.java */
-export type EmplacementLieu = 'INTERIEUR' | 'EXTERIEUR' | 'HORS_CENTRE';
-
-/**
- * Correspond à LieuDto.java
- */
-export interface LieuDto {
-  id: number;
-  nom: string;
-  emplacement: EmplacementLieu;
-  /** Capacité max optionnelle */
-  nombreMax: number | null;
-  sejourId: number;
-}
-
-/**
- * Correspond à SaveLieuRequest.java (création et mise à jour)
- * - nom : obligatoire, max 150
- * - emplacement : obligatoire
- * - nombreMax : optionnel ; si renseigné, doit être strictement positif côté API
- */
-export interface SaveLieuRequest {
-  nom: string;
-  emplacement: EmplacementLieu;
-  nombreMax?: number | null;
+  /** null retire le lieu */
+  lieuId?: number | null;
 }

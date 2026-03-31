@@ -331,6 +331,7 @@ const DetailsSejour: React.FC = () => {
                         sejour={sejour}
                         groupes={groupes || []}
                         equipe={membresEquipePourActivites}
+                        lieux={lieux ?? []}
                     />
                 </SejourAccordionItem>
             </div>
