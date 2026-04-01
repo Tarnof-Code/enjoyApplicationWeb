@@ -86,16 +86,23 @@
 }
 
 .list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
     gap: 0.75rem;
+    align-items: stretch;
 }
 
 .card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 13rem;
+    height: 100%;
     border: 1px solid #e8e8e8;
     border-radius: 10px;
     padding: 1rem 1.25rem;
     background: #fafbfc;
+    box-sizing: border-box;
 }
 
 .cardHeader {
@@ -131,7 +138,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 0.8rem;
+    margin-top: auto;
+    padding-top: 0.8rem;
 }
 
 .empty {

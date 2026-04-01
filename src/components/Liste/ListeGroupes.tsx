@@ -272,7 +272,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                 key={groupe.id}
                                 ref={ref => { groupeRefs.current[groupe.id] = ref; }}
                                 data-groupe-id={groupe.id}
-                                className={styles.groupeCard}
+                                className={`${styles.groupeCard}${isExpanded ? ` ${styles.groupeCardExpanded}` : ""}`}
                             >
                                 <div className={styles.groupeHeader}>
                                     <button

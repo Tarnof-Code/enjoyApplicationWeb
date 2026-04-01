@@ -1,5 +1,9 @@
 @use "./variables" as *;
 
+html {
+  scrollbar-gutter: stable;
+}
+
 a {
   text-decoration: inherit;
 }
@@ -9,6 +13,10 @@ body {
 
 body.no-padding-top {
   padding-top: 0;
+}
+
+body.modal-open {
+  padding-right: 0 !important;
 }
 
 .btn {

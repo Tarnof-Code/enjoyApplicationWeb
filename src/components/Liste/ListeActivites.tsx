@@ -334,36 +334,53 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                 <div className={styles.list}>
                     {activites.map((a) => (
                         <article key={a.id} className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
-                                <span className={styles.nom}>{a.nom}</span>
+                            <div className={styles.cardBody}>
+                                <div className={styles.cardHeader}>
+                                    <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
+                                    <span className={styles.nom}>{a.nom}</span>
+                                </div>
+                                <div className={styles.metaGrid}>
+                                    {(a.moment || a.lieu) && (
+                                        <>
+                                            <div className={styles.metaCell}>
+                                                {a.moment ? (
+                                                    <div className={styles.meta}>
+                                                        <strong>Moment :</strong> {a.moment.nom}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                            <div className={styles.metaCell}>
+                                                {a.lieu ? (
+                                                    <div className={styles.meta}>
+                                                        <strong>Lieu :</strong> {a.lieu.nom} — {resumePartageLieu(a.lieu)}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className={styles.metaCell}>
+                                        {a.groupeIds?.length ? (
+                                            <div className={styles.meta}>
+                                                <strong>Groupes :</strong>{" "}
+                                                {a.groupeIds
+                                                    .map((id) => groupes.find((g) => g.id === id)?.nom)
+                                                    .filter(Boolean)
+                                                    .join(", ") || "—"}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    <div className={styles.metaCell}>
+                                        <div className={styles.meta}>
+                                            <strong>Animateurs :</strong>{" "}
+                                            {a.membres?.length
+                                                ? a.membres.map((m) => `${m.prenom} ${m.nom}`.trim()).join(", ")
+                                                : "—"}
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                                {a.description ? <p className={styles.description}>{a.description}</p> : null}
                             </div>
-                            {a.moment ? (
-                                <div className={styles.meta}>
-                                    <strong>Moment :</strong> {a.moment.nom}
-                                </div>
-                            ) : null}
-                            <div className={styles.meta}>
-                                <strong>Animateurs :</strong>{" "}
-                                {a.membres?.length
-                                    ? a.membres.map((m) => `${m.prenom} ${m.nom}`.trim()).join(", ")
-                                    : "—"}
-                            </div>
-                            {a.lieu ? (
-                                <div className={styles.meta}>
-                                    <strong>Lieu :</strong> {a.lieu.nom} — {resumePartageLieu(a.lieu)}
-                                </div>
-                            ) : null}
-                            {a.groupeIds?.length ? (
-                                <div className={styles.meta}>
-                                    <strong>Groupes :</strong>{" "}
-                                    {a.groupeIds
-                                        .map((id) => groupes.find((g) => g.id === id)?.nom)
-                                        .filter(Boolean)
-                                        .join(", ") || "—"}
-                                </div>
-                            ) : null}
-                            {a.description ? <p className={styles.description}>{a.description}</p> : null}
                             <div className={styles.cardActions}>
                                 <Button
                                     color="primary"

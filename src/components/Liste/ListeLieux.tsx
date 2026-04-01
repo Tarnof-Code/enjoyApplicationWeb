@@ -215,7 +215,6 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
             </div>
             {lieux.length > 0 ? (
                 <div className={styles.filtersBar}>
-                    <p className={styles.filtersTitle}>Filtrer la liste</p>
                     <div className={styles.filterField}>
                         <Label for="filtre-emplacement" className={styles.filterLabel}>
                             Emplacement
@@ -293,7 +292,7 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
                             <div className={styles.meta}>
                                 <strong>Partage possible :</strong>{" "}
                                 {lieu.partageableEntreAnimateurs && lieu.nombreMaxActivitesSimultanees != null
-                                    ? `Oui, jusqu'à ${lieu.nombreMaxActivitesSimultanees} activités`
+                                    ? `Oui, ${lieu.nombreMaxActivitesSimultanees} activités maximum`
                                     : "Non"}
                             </div>
                             <div className={styles.cardActions}>

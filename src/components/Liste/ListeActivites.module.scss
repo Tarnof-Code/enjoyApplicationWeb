@@ -27,16 +27,26 @@
 }
 
 .list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 0.75rem;
+    align-items: stretch;
 }
 
 .card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    box-sizing: border-box;
     border: 1px solid #e8e8e8;
     border-radius: 10px;
     padding: 1rem 1.25rem;
     background: #fafbfc;
+}
+
+.cardBody {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .cardHeader {
@@ -62,10 +72,33 @@
     color: #1a1a1a;
 }
 
+.metaGrid {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 3rem;
+    row-gap: 0.35rem;
+    margin-top: 0.35rem;
+    align-items: center;
+}
+
+@media (max-width: 520px) {
+    .metaGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.metaCell {
+    min-width: 0;
+}
+
 .meta {
     font-size: 0.9rem;
     color: #555;
-    margin-top: 0.35rem;
+    margin-top: 0;
+}
+
+.metaGrid + .description {
+    margin-top: 0.65rem;
 }
 
 .description {
@@ -80,7 +113,9 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 0.8rem;
+    flex-shrink: 0;
+    margin-top: auto;
+    padding-top: 0.8rem;
 }
 
 .empty {
