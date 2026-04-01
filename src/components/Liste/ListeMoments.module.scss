@@ -1,0 +1,98 @@
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.card {
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    background: #fafbfc;
+    min-width: 0;
+}
+
+.cardHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.35rem;
+}
+
+.nom {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #1a1a1a;
+    word-break: break-word;
+}
+
+.cardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+}
+
+.empty {
+    color: #666;
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+
+.modalField {
+    margin-bottom: 1rem;
+}
+
+.modalFooter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.modalFooterMessage {
+    flex: 1 1 auto;
+    min-width: 12rem;
+    margin-right: auto;
+}
+
+.modalFooterError {
+    display: block;
+    color: #dc3545;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.modalFooterActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}

@@ -373,6 +373,27 @@ export interface SaveLieuRequest {
 }
 
 // ============================================================================
+// Moments (créneaux : matin, après-midi, etc. — un séjour)
+// ============================================================================
+
+/**
+ * Correspond à MomentDto.java
+ */
+export interface MomentDto {
+  id: number;
+  nom: string;
+  sejourId: number;
+}
+
+/**
+ * Correspond à SaveMomentRequest.java (création / mise à jour)
+ */
+export interface SaveMomentRequest {
+  /** @NotBlank, @Size(max=200) */
+  nom: string;
+}
+
+// ============================================================================
 // Activités
 // ============================================================================
 
@@ -395,6 +416,8 @@ export interface ActiviteDto {
   nom: string;
   description: string | null;
   sejourId: number;
+  /** Créneau obligatoire (matin, après-midi, etc.) */
+  moment: MomentDto;
   membres: ActiviteMembreEquipeInfo[];
   groupeIds: number[];
   /** Lieu rattaché à l'activité (même séjour) ; null si aucun */
@@ -414,6 +437,7 @@ export interface ActiviteDto {
  * - membreTokenIds : @NotEmpty, éléments @NotBlank
  * - groupeIds : @NotEmpty, éléments @NotNull
  * - lieuId : optionnel (lieu du même séjour)
+ * - momentId : obligatoire côté service si au moins un moment existe pour le séjour
  */
 export interface CreateActiviteRequest {
   /** LocalDate côté API */
@@ -425,6 +449,7 @@ export interface CreateActiviteRequest {
   membreTokenIds: string[];
   groupeIds: number[];
   lieuId?: number | null;
+  momentId?: number | null;
 }
 
 /**
@@ -438,4 +463,5 @@ export interface UpdateActiviteRequest {
   groupeIds: number[];
   /** null retire le lieu */
   lieuId?: number | null;
+  momentId?: number | null;
 }

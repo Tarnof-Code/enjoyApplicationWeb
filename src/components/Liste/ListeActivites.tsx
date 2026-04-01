@@ -7,6 +7,7 @@ import {
     EmplacementLieu,
     GroupeDto,
     LieuDto,
+    MomentDto,
     SejourDTO,
     UpdateActiviteRequest,
 } from "../../types/api";
@@ -27,6 +28,7 @@ export interface ListeActivitesProps {
     groupes: GroupeDto[];
     equipe: MembreEquipeSejour[];
     lieux: LieuDto[];
+    moments: MomentDto[];
 }
 
 function formatActiviteDateForDisplay(date: ActiviteDto["date"]): string {
@@ -74,6 +76,13 @@ function trierLieuxParNom(lieux: LieuDto[]): LieuDto[] {
     return [...lieux].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" }));
 }
 
+function trierMomentsParNom(moments: MomentDto[]): MomentDto[] {
+    return [...moments].sort((a, b) => {
+        const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
+        return c !== 0 ? c : a.id - b.id;
+    });
+}
+
 function resumePartageLieu(l: LieuDto): string {
     if (l.partageableEntreAnimateurs && l.nombreMaxActivitesSimultanees != null) {
         return `Jusqu'à ${l.nombreMaxActivitesSimultanees} activités.`;
@@ -83,7 +92,7 @@ function resumePartageLieu(l: LieuDto): string {
 
 const EMPLACEMENT_FILTRE_TOUS_ACTIVITE = "" as const;
 
-const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe, lieux }) => {
+const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe, lieux, moments }) => {
     const revalidator = useRevalidator();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
@@ -101,9 +110,13 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
     const [selectedTokens, setSelectedTokens] = useState<Set<string>>(() => new Set());
     /** Chaîne vide = aucun lieu ; en édition, null est envoyé à l'API pour retirer le lieu */
     const [formLieuId, setFormLieuId] = useState<number | "">("");
+    /** Moment obligatoire dès qu'au moins un créneau existe pour le séjour */
+    const [formMomentId, setFormMomentId] = useState<number | "">("");
     const [filtreEmplacementLieu, setFiltreEmplacementLieu] = useState<
         typeof EMPLACEMENT_FILTRE_TOUS_ACTIVITE | EmplacementLieu
     >(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
+
+    const momentsTriés = trierMomentsParNom(moments);
 
     const openModal = () => {
         setErrorMessage(null);
@@ -118,6 +131,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         if (equipe.length === 1) initial.add(equipe[0].tokenId);
         setSelectedTokens(initial);
         setFormLieuId("");
+        if (momentsTriés.length === 1) {
+            setFormMomentId(momentsTriés[0].id);
+        } else {
+            setFormMomentId("");
+        }
         setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
@@ -136,6 +154,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         setSelectedGroupeIds(new Set(activite.groupeIds ?? []));
         setSelectedTokens(new Set((activite.membres ?? []).map((m) => m.tokenId)));
         setFormLieuId(activite.lieu?.id ?? "");
+        setFormMomentId(activite.moment?.id ?? "");
         setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
@@ -191,6 +210,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
             setErrorMessage("Au moins un membre d'équipe est requis.");
             return;
         }
+        if (moments.length > 0) {
+            if (formMomentId === "") {
+                setErrorMessage("Le moment (créneau) est obligatoire.");
+                return;
+            }
+        }
 
         const payload: CreateActiviteRequest | UpdateActiviteRequest = {
             date: formDate,
@@ -205,6 +230,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
             payload.lieuId = formLieuId;
         } else if (editingActiviteId != null) {
             payload.lieuId = null;
+        }
+
+        if (moments.length > 0 && formMomentId !== "") {
+            payload.momentId = formMomentId;
         }
 
         setSubmitting(true);
@@ -271,10 +300,21 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
     return (
         <div>
             <div className={styles.actionsContainer}>
-                <Button color="success" onClick={openModal} disabled={equipe.length === 0 || groupes.length === 0}>
+                <Button
+                    color="success"
+                    onClick={openModal}
+                    disabled={equipe.length === 0 || groupes.length === 0 || moments.length === 0}
+                >
                     Ajouter une activité
                 </Button>
             </div>
+            {moments.length === 0 && (
+                <p className={styles.warningText}>
+                    Aucun moment (matin, après-midi, etc.) n&apos;est défini, il faut en créer au moins un avant
+                    d&apos;ajouter une activité. Demandez à la <strong>direction</strong> d&apos;en configurer pour ce
+                    séjour.
+                </p>
+            )}
             {equipe.length === 0 && (
                 <p className={styles.warningText}>
                     Aucun membre d&apos;équipe n&apos;est défini pour ce séjour. Ajoutez d&apos;abord un directeur et des membres
@@ -298,6 +338,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                                 <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
                                 <span className={styles.nom}>{a.nom}</span>
                             </div>
+                            {a.moment ? (
+                                <div className={styles.meta}>
+                                    <strong>Moment :</strong> {a.moment.nom}
+                                </div>
+                            ) : null}
                             <div className={styles.meta}>
                                 <strong>Animateurs :</strong>{" "}
                                 {a.membres?.length
@@ -348,7 +393,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                 </ModalHeader>
                 <ModalBody>
                     <FormGroup className={styles.modalField}>
-                        <Label for="act-date">Date</Label>
+                        <Label for="act-date">
+                            Date{" "}
+                            <span className={styles.requiredAsterisk} aria-hidden="true">
+                                *
+                            </span>
+                        </Label>
                         <Input
                             id="act-date"
                             type="date"
@@ -359,7 +409,52 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                         />
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
-                        <Label for="act-nom">Nom</Label>
+                        <Label for="act-moment">
+                            Moment (créneau)
+                            {momentsTriés.length > 0 ? (
+                                <span className={styles.requiredAsterisk} aria-hidden="true">
+                                    {" "}
+                                    *
+                                </span>
+                            ) : null}
+                        </Label>
+                        <Input
+                            id="act-moment"
+                            type="select"
+                            value={formMomentId === "" ? "" : String(formMomentId)}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "") {
+                                    setFormMomentId("");
+                                    return;
+                                }
+                                const n = Number.parseInt(v, 10);
+                                setFormMomentId(Number.isNaN(n) ? "" : n);
+                            }}
+                            disabled={submitting || momentsTriés.length === 0}
+                            required={momentsTriés.length > 0}
+                        >
+                            <option value="">— Choisir un moment —</option>
+                            {momentsTriés.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                    {m.nom}
+                                </option>
+                            ))}
+                        </Input>
+                        {momentsTriés.length === 0 ? (
+                            <p className={styles.lieuHint}>
+                                Aucun moment n&apos;existe pour ce séjour. Demandez à la direction d&apos;en créer au
+                                moins un dans la section « Moments » avant de planifier une activité.
+                            </p>
+                        ) : null}
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-nom">
+                            Nom{" "}
+                            <span className={styles.requiredAsterisk} aria-hidden="true">
+                                *
+                            </span>
+                        </Label>
                         <Input
                             id="act-nom"
                             type="text"
@@ -444,7 +539,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                         ) : null}
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
-                        <Label>Groupes concernés</Label>
+                        <Label>
+                            Groupes concernés{" "}
+                            <span className={styles.requiredAsterisk} aria-hidden="true">
+                                *
+                            </span>
+                        </Label>
                         <div className={styles.checkboxGroup}>
                             {groupes.length === 0 ? (
                                 <p className={styles.noGroupes}>Aucun groupe sur ce séjour.</p>
@@ -467,7 +567,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                         </div>
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
-                        <Label>Animateurs (membres de l&apos;équipe du séjour)</Label>
+                        <Label>
+                            Animateurs (membres de l&apos;équipe du séjour){" "}
+                            <span className={styles.requiredAsterisk} aria-hidden="true">
+                                *
+                            </span>
+                        </Label>
                         <div className={styles.checkboxGroup}>
                             {equipe.map((m) => (
                                 <div key={m.tokenId} className={styles.checkboxRow}>

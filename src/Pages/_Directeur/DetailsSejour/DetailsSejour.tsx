@@ -8,12 +8,14 @@ import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { sejourGroupeService } from "../../../services/sejour-groupe.service";
 import { sejourActiviteService } from "../../../services/sejour-activite.service";
 import { sejourLieuService } from "../../../services/sejour-lieu.service";
+import { sejourMomentService } from "../../../services/sejour-moment.service";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
 import ListeLieux from "../../../components/Liste/ListeLieux";
+import ListeMoments from "../../../components/Liste/ListeMoments";
 import ListeActivites from "../../../components/Liste/ListeActivites";
-import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto } from "../../../types/api";
+import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto } from "../../../types/api";
 
 /** Composant stable (hors du parent) : évite de remonter tout le contenu à chaque rendu du détail séjour. */
 function SejourAccordionItem({
@@ -44,14 +46,15 @@ function SejourAccordionItem({
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
     try {
-        const [sejour, enfants, groupes, lieux, activites] = await Promise.all([
+        const [sejour, enfants, groupes, lieux, moments, activites] = await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(parseInt(params.id)),
             sejourGroupeService.getGroupesDuSejour(parseInt(params.id)),
             sejourLieuService.getLieuxDuSejour(parseInt(params.id)),
+            sejourMomentService.getMomentsDuSejour(parseInt(params.id)),
             sejourActiviteService.getActivitesDuSejour(parseInt(params.id)),
         ]);
-        return { sejour, enfants, groupes, lieux, activites };
+        return { sejour, enfants, groupes, lieux, moments, activites };
     } catch (error) {
         console.error("Erreur chargement séjour", error);
         return error;
@@ -60,7 +63,14 @@ export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
 
 const DetailsSejour: React.FC = () => {
     const loaderData = useLoaderData() as
-        | { sejour: SejourDTO; enfants: EnfantDto[]; groupes: GroupeDto[]; lieux: LieuDto[]; activites: ActiviteDto[] }
+        | {
+              sejour: SejourDTO;
+              enfants: EnfantDto[];
+              groupes: GroupeDto[];
+              lieux: LieuDto[];
+              moments: MomentDto[];
+              activites: ActiviteDto[];
+          }
         | Error;
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
@@ -86,7 +96,7 @@ const DetailsSejour: React.FC = () => {
         );
     }
     
-    const { sejour, enfants, groupes, lieux, activites } = loaderData;
+    const { sejour, enfants, groupes, lieux, moments, activites } = loaderData;
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => {
             const isOpening = !prev.includes(id);
@@ -319,11 +329,22 @@ const DetailsSejour: React.FC = () => {
                 </SejourAccordionItem>
                 <SejourAccordionItem
                     id="6"
-                    title={`Activités (${activites?.length ?? 0})`}
+                    title={`Moments (${moments?.length ?? 0})`}
                     isOpen={openAccordions.includes("6")}
                     onToggle={() => toggleAccordion("6")}
                     containerRef={(el) => {
                         accordionRefs.current["6"] = el;
+                    }}
+                >
+                    <ListeMoments moments={moments ?? []} sejourId={sejour.id} />
+                </SejourAccordionItem>
+                <SejourAccordionItem
+                    id="7"
+                    title={`Activités (${activites?.length ?? 0})`}
+                    isOpen={openAccordions.includes("7")}
+                    onToggle={() => toggleAccordion("7")}
+                    containerRef={(el) => {
+                        accordionRefs.current["7"] = el;
                     }}
                 >
                     <ListeActivites
@@ -332,6 +353,7 @@ const DetailsSejour: React.FC = () => {
                         groupes={groupes || []}
                         equipe={membresEquipePourActivites}
                         lieux={lieux ?? []}
+                        moments={moments ?? []}
                     />
                 </SejourAccordionItem>
             </div>
