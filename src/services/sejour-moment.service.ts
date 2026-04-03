@@ -1,6 +1,6 @@
 import Axios from "./caller.service";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
-import { MomentDto, SaveMomentRequest } from "../types/api";
+import { MomentDto, ReorderMomentsRequest, SaveMomentRequest } from "../types/api";
 
 let getMomentsDuSejour = async (sejourId: number): Promise<MomentDto[]> => {
     try {
@@ -63,10 +63,27 @@ let supprimerMoment = async (sejourId: number, momentId: number) => {
     }
 };
 
+let reordonnerMoments = async (
+    sejourId: number,
+    request: ReorderMomentsRequest
+): Promise<MomentDto[]> => {
+    try {
+        const response = await Axios.put(`/sejours/${sejourId}/moments/reorder`, request);
+        validateResponseStatus(response, 200);
+        return response.data;
+    } catch (error: unknown) {
+        adaptAxiosError(error, {
+            defaultMessage: "Erreur lors du réordonnancement des moments",
+            logContext: "Erreur lors du réordonnancement des moments",
+        });
+    }
+};
+
 export const sejourMomentService = {
     getMomentsDuSejour,
     getMomentById,
     creerMoment,
     modifierMoment,
     supprimerMoment,
+    reordonnerMoments,
 };

@@ -1,24 +1,28 @@
 import { useState } from "react";
-import { useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import { MomentDto, SaveMomentRequest } from "../../types/api";
+import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import { sejourMomentService } from "../../services/sejour-moment.service";
 import styles from "./ListeMoments.module.scss";
 
 export interface ListeMomentsProps {
     moments: MomentDto[];
     sejourId: number;
+    /** Mises à jour locales après mutation API : évite de relancer tout le loader (6+ GET). */
+    onMomentsReordered?: (moments: MomentDto[]) => void;
+    onMomentCreated?: (moment: MomentDto) => void;
+    onMomentUpdated?: (moment: MomentDto) => void;
+    onMomentDeleted?: (momentId: number) => void;
 }
 
-function trierMomentsParNom(moments: MomentDto[]): MomentDto[] {
-    return [...moments].sort((a, b) => {
-        const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-        return c !== 0 ? c : a.id - b.id;
-    });
-}
-
-function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
-    const revalidator = useRevalidator();
+function ListeMoments({
+    moments,
+    sejourId,
+    onMomentsReordered,
+    onMomentCreated,
+    onMomentUpdated,
+    onMomentDeleted,
+}: ListeMomentsProps) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -29,6 +33,7 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
     const [editingMomentId, setEditingMomentId] = useState<number | null>(null);
     const [deletingMomentId, setDeletingMomentId] = useState<number | null>(null);
     const [formNom, setFormNom] = useState("");
+    const [reorderLoading, setReorderLoading] = useState(false);
 
     const openModal = () => {
         setErrorMessage(null);
@@ -61,15 +66,16 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
         setSubmitting(true);
         try {
             if (editingMomentId == null) {
-                await sejourMomentService.creerMoment(sejourId, payload);
+                const created = await sejourMomentService.creerMoment(sejourId, payload);
+                onMomentCreated?.(created);
                 showSuccessModal("Moment créé avec succès.");
             } else {
-                await sejourMomentService.modifierMoment(sejourId, editingMomentId, payload);
+                const updated = await sejourMomentService.modifierMoment(sejourId, editingMomentId, payload);
+                onMomentUpdated?.(updated);
                 showSuccessModal("Moment modifié avec succès.");
             }
             setModalOpen(false);
             setEditingMomentId(null);
-            revalidator.revalidate();
         } catch (e: unknown) {
             const msg =
                 e instanceof Error
@@ -90,14 +96,15 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
 
     const handleSupprimer = async () => {
         if (pendingDeleteMomentId == null) return;
+        const momentIdASupprimer = pendingDeleteMomentId;
         setErrorMessage(null);
-        setDeletingMomentId(pendingDeleteMomentId);
+        setDeletingMomentId(momentIdASupprimer);
         try {
-            await sejourMomentService.supprimerMoment(sejourId, pendingDeleteMomentId);
+            await sejourMomentService.supprimerMoment(sejourId, momentIdASupprimer);
             setDeleteModalOpen(false);
             setPendingDeleteMomentId(null);
             showSuccessModal("Moment supprimé avec succès.");
-            revalidator.revalidate();
+            onMomentDeleted?.(momentIdASupprimer);
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Impossible de supprimer le moment";
             setErrorMessage(msg);
@@ -106,7 +113,27 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
         }
     };
 
-    const sorted = trierMomentsParNom(moments);
+    const moveMoment = async (fromIndex: number, toIndex: number) => {
+        const sorted = trierMomentsChronologiquement(moments);
+        if (toIndex < 0 || toIndex >= sorted.length) return;
+        const ids = sorted.map((m) => m.id);
+        const next = [...ids];
+        const [removed] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, removed);
+        setErrorMessage(null);
+        setReorderLoading(true);
+        try {
+            const updated = await sejourMomentService.reordonnerMoments(sejourId, { momentIds: next });
+            onMomentsReordered?.(updated);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Impossible de réordonner les moments";
+            setErrorMessage(msg);
+        } finally {
+            setReorderLoading(false);
+        }
+    };
+
+    const sorted = trierMomentsChronologiquement(moments);
 
     return (
         <div>
@@ -116,8 +143,10 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
                 </Button>
             </div>
             <p className={styles.hint}>
-                Les moments décrivent les créneaux de la journée (ex. matin, après-midi, soir). Chaque activité
-                doit être rattachée à un moment. Les noms sont uniques pour un séjour donné.
+                Les moments décrivent les créneaux de la journée (ex. matin, après-midi, soir). Ils sont affichés
+                dans l&apos;ordre chronologique du séjour. Utilisez Monter / Descendre pour ajuster cet ordre (liste
+                des activités et sélecteurs suivent le même ordre). Chaque activité doit être rattachée à un moment ;
+                les noms sont uniques par séjour.
             </p>
             {errorMessage && !modalOpen && <div className={styles.errorMessage}>{errorMessage}</div>}
 
@@ -127,17 +156,49 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
                 </p>
             ) : (
                 <div className={styles.list}>
-                    {sorted.map((m) => (
+                    {sorted.map((m, index) => (
                         <article key={m.id} className={styles.card}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.nom}>{m.nom}</span>
                             </div>
+                            {sorted.length > 1 && (
+                                <div className={styles.reorderRow}>
+                                    <Button
+                                        color="secondary"
+                                        outline
+                                        size="sm"
+                                        type="button"
+                                        onClick={() => moveMoment(index, index - 1)}
+                                        disabled={
+                                            reorderLoading || deletingMomentId != null || index === 0
+                                        }
+                                        aria-label={`Monter « ${m.nom} »`}
+                                    >
+                                        Monter
+                                    </Button>
+                                    <Button
+                                        color="secondary"
+                                        outline
+                                        size="sm"
+                                        type="button"
+                                        onClick={() => moveMoment(index, index + 1)}
+                                        disabled={
+                                            reorderLoading ||
+                                            deletingMomentId != null ||
+                                            index === sorted.length - 1
+                                        }
+                                        aria-label={`Descendre « ${m.nom} »`}
+                                    >
+                                        Descendre
+                                    </Button>
+                                </div>
+                            )}
                             <div className={styles.cardActions}>
                                 <Button
                                     color="primary"
                                     size="sm"
                                     onClick={() => openEditModal(m)}
-                                    disabled={deletingMomentId === m.id}
+                                    disabled={deletingMomentId === m.id || reorderLoading}
                                 >
                                     Modifier
                                 </Button>
@@ -145,7 +206,7 @@ function ListeMoments({ moments, sejourId }: ListeMomentsProps) {
                                     color="danger"
                                     size="sm"
                                     onClick={() => requestDeleteMoment(m.id)}
-                                    disabled={deletingMomentId === m.id}
+                                    disabled={deletingMomentId === m.id || reorderLoading}
                                 >
                                     {deletingMomentId === m.id ? "Suppression…" : "Supprimer"}
                                 </Button>

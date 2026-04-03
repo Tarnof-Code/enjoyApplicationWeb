@@ -45,6 +45,13 @@
     word-break: break-word;
 }
 
+.reorderRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+}
+
 .cardActions {
     display: flex;
     flex-wrap: wrap;

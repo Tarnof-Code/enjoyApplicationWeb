@@ -383,6 +383,8 @@ export interface MomentDto {
   id: number;
   nom: string;
   sejourId: number;
+  /** Position dans la journée (tri chronologique) ; aligné backend COALESCE(ordre, id) */
+  ordre: number;
 }
 
 /**
@@ -391,6 +393,13 @@ export interface MomentDto {
 export interface SaveMomentRequest {
   /** @NotBlank, @Size(max=200) */
   nom: string;
+}
+
+/**
+ * Correspond à java payload ReorderMomentsRequest — liste complète des ids du séjour dans le nouvel ordre
+ */
+export interface ReorderMomentsRequest {
+  momentIds: number[];
 }
 
 // ============================================================================

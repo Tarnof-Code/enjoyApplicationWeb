@@ -14,6 +14,7 @@ import {
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
+import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import styles from "./ListeActivites.module.scss";
 
 export interface MembreEquipeSejour {
@@ -76,13 +77,6 @@ function trierLieuxParNom(lieux: LieuDto[]): LieuDto[] {
     return [...lieux].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" }));
 }
 
-function trierMomentsParNom(moments: MomentDto[]): MomentDto[] {
-    return [...moments].sort((a, b) => {
-        const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-        return c !== 0 ? c : a.id - b.id;
-    });
-}
-
 function resumePartageLieu(l: LieuDto): string {
     if (l.partageableEntreAnimateurs && l.nombreMaxActivitesSimultanees != null) {
         return `Jusqu'à ${l.nombreMaxActivitesSimultanees} activités.`;
@@ -116,7 +110,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         typeof EMPLACEMENT_FILTRE_TOUS_ACTIVITE | EmplacementLieu
     >(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
 
-    const momentsTriés = trierMomentsParNom(moments);
+    const momentsTriés = trierMomentsChronologiquement(moments);
 
     const openModal = () => {
         setErrorMessage(null);

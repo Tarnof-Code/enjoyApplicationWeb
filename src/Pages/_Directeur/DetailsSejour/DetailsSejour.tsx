@@ -16,6 +16,7 @@ import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
 import ListeActivites from "../../../components/Liste/ListeActivites";
 import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto } from "../../../types/api";
+import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 
 /** Composant stable (hors du parent) : évite de remonter tout le contenu à chaque rendu du détail séjour. */
 function SejourAccordionItem({
@@ -96,7 +97,30 @@ const DetailsSejour: React.FC = () => {
         );
     }
     
-    const { sejour, enfants, groupes, lieux, moments, activites } = loaderData;
+    const {
+        sejour,
+        enfants,
+        groupes,
+        lieux,
+        moments: momentsFromLoader,
+        activites: activitesFromLoader,
+    } = loaderData;
+    const [moments, setMoments] = useState<MomentDto[]>(momentsFromLoader);
+    const [activites, setActivites] = useState<ActiviteDto[]>(activitesFromLoader);
+    useEffect(() => {
+        setMoments(momentsFromLoader);
+        setActivites(activitesFromLoader);
+    }, [momentsFromLoader, activitesFromLoader, sejour.id]);
+
+    const synchroniserMomentsDansActivites = (listeMoments: MomentDto[]) => {
+        const parId = new Map(listeMoments.map((mo) => [mo.id, mo]));
+        setActivites((prev) =>
+            prev.map((a) => {
+                const mo = parId.get(a.moment.id);
+                return mo ? { ...a, moment: mo } : a;
+            })
+        );
+    };
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => {
             const isOpening = !prev.includes(id);
@@ -329,18 +353,39 @@ const DetailsSejour: React.FC = () => {
                 </SejourAccordionItem>
                 <SejourAccordionItem
                     id="6"
-                    title={`Moments (${moments?.length ?? 0})`}
+                    title={`Moments (${moments.length})`}
                     isOpen={openAccordions.includes("6")}
                     onToggle={() => toggleAccordion("6")}
                     containerRef={(el) => {
                         accordionRefs.current["6"] = el;
                     }}
                 >
-                    <ListeMoments moments={moments ?? []} sejourId={sejour.id} />
+                    <ListeMoments
+                        moments={moments}
+                        sejourId={sejour.id}
+                        onMomentsReordered={(ordered) => {
+                            setMoments(ordered);
+                            synchroniserMomentsDansActivites(ordered);
+                        }}
+                        onMomentCreated={(m) =>
+                            setMoments((prev) => trierMomentsChronologiquement([...prev, m]))
+                        }
+                        onMomentUpdated={(m) => {
+                            setMoments((prev) =>
+                                trierMomentsChronologiquement(
+                                    prev.map((x) => (x.id === m.id ? m : x))
+                                )
+                            );
+                            setActivites((prev) =>
+                                prev.map((a) => (a.moment.id === m.id ? { ...a, moment: m } : a))
+                            );
+                        }}
+                        onMomentDeleted={(id) => setMoments((prev) => prev.filter((x) => x.id !== id))}
+                    />
                 </SejourAccordionItem>
                 <SejourAccordionItem
                     id="7"
-                    title={`Activités (${activites?.length ?? 0})`}
+                    title={`Activités (${activites.length})`}
                     isOpen={openAccordions.includes("7")}
                     onToggle={() => toggleAccordion("7")}
                     containerRef={(el) => {
@@ -348,12 +393,12 @@ const DetailsSejour: React.FC = () => {
                     }}
                 >
                     <ListeActivites
-                        activites={activites || []}
+                        activites={activites}
                         sejour={sejour}
                         groupes={groupes || []}
                         equipe={membresEquipePourActivites}
                         lieux={lieux ?? []}
-                        moments={moments ?? []}
+                        moments={moments}
                     />
                 </SejourAccordionItem>
             </div>
