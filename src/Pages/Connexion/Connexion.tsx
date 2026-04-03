@@ -2,6 +2,7 @@ import { FormGroup, Input, Button } from "reactstrap";
 import { Form as RouterForm, redirect, useActionData, useNavigation, Navigate, ActionFunctionArgs } from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
+import { getApiErrorMessage } from "../../helpers/axiosError";
 import { AxiosError } from "axios";
 
 export async function loginAction({ request }: ActionFunctionArgs) {
@@ -22,11 +23,16 @@ export async function loginAction({ request }: ActionFunctionArgs) {
     return redirect("/profil");
   } catch (error) {
     console.error("Erreur lors de la connexion", error);
-    if (error instanceof AxiosError && error.response?.status === 401) {
-      return "Email ou mot de passe incorrect";
-    } else {
-      return "Une erreur s'est produite lors de la connexion";
+    if (error instanceof AxiosError && error.response) {
+      const fromBackend = getApiErrorMessage(error.response.data, "");
+      if (fromBackend) {
+        return fromBackend;
+      }
+      if (error.response.status === 401) {
+        return "Email ou mot de passe incorrect";
+      }
     }
+    return "Une erreur s'est produite lors de la connexion";
   }
 }
 

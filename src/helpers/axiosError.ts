@@ -23,6 +23,14 @@ export interface AdaptedError extends Error {
  * Extrait le message d'erreur d'une réponse Axios.
  * Gère les erreurs de validation (400) avec format objet { champ: "message" }.
  */
+/** Message utilisateur à partir du corps d’erreur API (`error`, `message`, ou validation). */
+export function getApiErrorMessage(
+  errorData: unknown,
+  whenUnknown: string
+): string {
+  return extractErrorMessage(errorData, whenUnknown, whenUnknown);
+}
+
 function extractErrorMessage(
   errorData: unknown,
   defaultMessage: string,
