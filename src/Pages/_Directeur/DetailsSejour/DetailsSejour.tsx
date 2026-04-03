@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, type ReactNode } from "react";
 import { LoaderFunctionArgs, useLoaderData, useNavigate, useLocation } from "react-router-dom";
+import { FaGripVertical } from "react-icons/fa";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
@@ -18,6 +19,50 @@ import ListeActivites from "../../../components/Liste/ListeActivites";
 import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto } from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 
+const DEFAULT_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "7"] as const;
+const DEFAULT_ACCORDION_ID_LIST = [...DEFAULT_ACCORDION_IDS];
+const ACCORDION_ID_SET = new Set<string>(DEFAULT_ACCORDION_ID_LIST);
+
+function accordionOrderStorageKey(sejourId: number) {
+    return `enjoy.detailsSejour.accordionOrder.${sejourId}`;
+}
+
+function readAccordionOrder(sejourId: number): string[] {
+    try {
+        const raw = localStorage.getItem(accordionOrderStorageKey(sejourId));
+        if (!raw) return [...DEFAULT_ACCORDION_IDS];
+        const parsed = JSON.parse(raw) as unknown;
+        if (!Array.isArray(parsed)) return [...DEFAULT_ACCORDION_IDS];
+        return normalizeAccordionOrder(parsed as string[]);
+    } catch {
+        return [...DEFAULT_ACCORDION_IDS];
+    }
+}
+
+function normalizeAccordionOrder(stored: string[]): string[] {
+    const result: string[] = [];
+    const seen = new Set<string>();
+    for (const id of stored) {
+        if (ACCORDION_ID_SET.has(id) && !seen.has(id)) {
+            seen.add(id);
+            result.push(id);
+        }
+    }
+    for (const id of DEFAULT_ACCORDION_IDS) {
+        if (!seen.has(id)) result.push(id);
+    }
+    return result;
+}
+
+function reorderAccordionIds(order: string[], draggedId: string, targetId: string): string[] {
+    if (draggedId === targetId) return order;
+    const next = order.filter((x) => x !== draggedId);
+    const idx = next.indexOf(targetId);
+    if (idx === -1) return order;
+    next.splice(idx, 0, draggedId);
+    return next;
+}
+
 /** Composant stable (hors du parent) : évite de remonter tout le contenu à chaque rendu du détail séjour. */
 function SejourAccordionItem({
     id,
@@ -26,6 +71,12 @@ function SejourAccordionItem({
     onToggle,
     containerRef,
     children,
+    isDragging,
+    isDropTarget,
+    onDragHandleStart,
+    onDragHandleEnd,
+    onItemDragOver,
+    onReorderDrop,
 }: {
     id: string;
     title: string;
@@ -33,12 +84,56 @@ function SejourAccordionItem({
     onToggle: () => void;
     containerRef: (el: HTMLDivElement | null) => void;
     children: ReactNode;
+    isDragging: boolean;
+    isDropTarget: boolean;
+    onDragHandleStart: () => void;
+    onDragHandleEnd: () => void;
+    onItemDragOver: () => void;
+    onReorderDrop: (draggedId: string, targetId: string) => void;
 }) {
+    const itemClass = [
+        styles.accordionItem,
+        isDragging ? styles.accordionItemDragging : "",
+        isDropTarget ? styles.accordionItemDropTarget : "",
+    ]
+        .filter(Boolean)
+        .join(" ");
+
     return (
-        <div ref={containerRef} data-accordion-id={id} className={styles.accordionItem}>
-            <button type="button" className={`${styles.accordionHeader} ${isOpen ? styles.active : ""}`} onClick={onToggle}>
-                {title}
-            </button>
+        <div
+            ref={containerRef}
+            data-accordion-id={id}
+            className={itemClass}
+            onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                onItemDragOver();
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                const dragged = e.dataTransfer.getData("text/plain");
+                if (dragged) onReorderDrop(dragged, id);
+            }}
+        >
+            <div className={styles.accordionHeaderRow}>
+                <div
+                    className={styles.dragHandle}
+                    aria-label="Glisser pour réorganiser les blocs"
+                    title="Réorganiser"
+                    draggable
+                    onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", id);
+                        e.dataTransfer.effectAllowed = "move";
+                        onDragHandleStart();
+                    }}
+                    onDragEnd={onDragHandleEnd}
+                >
+                    <FaGripVertical aria-hidden size={18} />
+                </div>
+                <button type="button" className={`${styles.accordionHeader} ${isOpen ? styles.active : ""}`} onClick={onToggle}>
+                    {title}
+                </button>
+            </div>
             {isOpen && <div className={styles.accordionBody}>{children}</div>}
         </div>
     );
@@ -84,7 +179,29 @@ const DetailsSejour: React.FC = () => {
     const lastOpenedAccordion = useRef<string | null>(null);
     const hasScrolledFromReturn = useRef(false);
     const scrollToGroupeRef = useRef<((groupeId: number) => void) | null>(null);
-    
+    const sejourIdForStorage = loaderData instanceof Error ? undefined : loaderData.sejour.id;
+    const [accordionOrder, setAccordionOrder] = useState<string[]>(() => [...DEFAULT_ACCORDION_IDS]);
+    const [draggingAccordionId, setDraggingAccordionId] = useState<string | null>(null);
+    const [dropTargetAccordionId, setDropTargetAccordionId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (sejourIdForStorage === undefined) return;
+        setAccordionOrder(readAccordionOrder(sejourIdForStorage));
+    }, [sejourIdForStorage]);
+
+    const handleAccordionReorder = useCallback(
+        (draggedId: string, targetId: string) => {
+            if (sejourIdForStorage === undefined || draggedId === targetId) return;
+            if (!ACCORDION_ID_SET.has(draggedId) || !ACCORDION_ID_SET.has(targetId)) return;
+            setAccordionOrder((prev) => {
+                const next = reorderAccordionIds(prev, draggedId, targetId);
+                localStorage.setItem(accordionOrderStorageKey(sejourIdForStorage), JSON.stringify(next));
+                return next;
+            });
+        },
+        [sejourIdForStorage]
+    );
+
     // Gérer le cas où loaderData est une erreur
     if (loaderData instanceof Error) {
         return (
@@ -245,28 +362,31 @@ const DetailsSejour: React.FC = () => {
         });
     })();
 
-    return (
-        <div className={styles.pageContainer}>
-            <div className={styles.pageHeader}>
-                <button onClick={handleRetour} className={styles.backButton}>
-                    ← Retour
-                </button>
-                <h1 className={styles.pageTitle}>
-                    Nom du séjour : <span className={styles.sejourNameBadge}>{sejour.nom}</span>
-                </h1>
-            </div>
+    const accordionPanelTitle = (panelId: string): string => {
+        switch (panelId) {
+            case "1":
+                return "Informations générales";
+            case "2":
+                return "Équipe";
+            case "3":
+                return `Liste des enfants (${enfants?.length || 0})`;
+            case "4":
+                return `Groupes (${groupes?.length || 0})`;
+            case "5":
+                return `Lieux (${lieux?.length ?? 0})`;
+            case "6":
+                return `Moments (${moments.length})`;
+            case "7":
+                return `Activités (${activites.length})`;
+            default:
+                return "";
+        }
+    };
 
-            <div className={styles.accordion}>
-                {/* Informations générales */}
-                <SejourAccordionItem
-                    id="1"
-                    title="Informations générales"
-                    isOpen={openAccordions.includes("1")}
-                    onToggle={() => toggleAccordion("1")}
-                    containerRef={(el) => {
-                        accordionRefs.current["1"] = el;
-                    }}
-                >
+    const accordionPanelBody = (panelId: string): ReactNode => {
+        switch (panelId) {
+            case "1":
+                return (
                     <div className={styles.singleRow}>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Description</span>
@@ -286,51 +406,27 @@ const DetailsSejour: React.FC = () => {
                         </div>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Durée</span>
-                            <span className={styles.value}>{duree} jour{duree > 1 ? 's' : ''}</span>
+                            <span className={styles.value}>
+                                {duree} jour{duree > 1 ? "s" : ""}
+                            </span>
                         </div>
                     </div>
-                </SejourAccordionItem>
-                <SejourAccordionItem
-                    id="2"
-                    title="Équipe"
-                    isOpen={openAccordions.includes("2")}
-                    onToggle={() => toggleAccordion("2")}
-                    containerRef={(el) => {
-                        accordionRefs.current["2"] = el;
-                    }}
-                >
-                    <Equipe 
-                        membres={sejour.equipe || []} 
-                        sejourId={sejour.id}
-                    />
-                </SejourAccordionItem>
-                <SejourAccordionItem
-                    id="3"
-                    title={`Liste des enfants (${enfants?.length || 0})`}
-                    isOpen={openAccordions.includes("3")}
-                    onToggle={() => toggleAccordion("3")}
-                    containerRef={(el) => {
-                        accordionRefs.current["3"] = el;
-                    }}
-                >
-                    <ListeEnfants 
-                        enfants={enfants || []} 
+                );
+            case "2":
+                return <Equipe membres={sejour.equipe || []} sejourId={sejour.id} />;
+            case "3":
+                return (
+                    <ListeEnfants
+                        enfants={enfants || []}
                         groupes={groupes || []}
                         sejourId={sejour.id}
                     />
-                </SejourAccordionItem>
-                <SejourAccordionItem
-                    id="4"
-                    title={`Groupes (${groupes?.length || 0})`}
-                    isOpen={openAccordions.includes("4")}
-                    onToggle={() => toggleAccordion("4")}
-                    containerRef={(el) => {
-                        accordionRefs.current["4"] = el;
-                    }}
-                >
-                    <ListeGroupes 
-                        groupes={groupes || []} 
-                        enfants={enfants || []} 
+                );
+            case "4":
+                return (
+                    <ListeGroupes
+                        groupes={groupes || []}
+                        enfants={enfants || []}
                         sejourId={sejour.id}
                         dateDebutSejour={sejour.dateDebut}
                         equipe={membresEquipePourActivites}
@@ -339,27 +435,11 @@ const DetailsSejour: React.FC = () => {
                             requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));
                         }}
                     />
-                </SejourAccordionItem>
-                <SejourAccordionItem
-                    id="5"
-                    title={`Lieux (${lieux?.length ?? 0})`}
-                    isOpen={openAccordions.includes("5")}
-                    onToggle={() => toggleAccordion("5")}
-                    containerRef={(el) => {
-                        accordionRefs.current["5"] = el;
-                    }}
-                >
-                    <ListeLieux lieux={lieux ?? []} sejourId={sejour.id} />
-                </SejourAccordionItem>
-                <SejourAccordionItem
-                    id="6"
-                    title={`Moments (${moments.length})`}
-                    isOpen={openAccordions.includes("6")}
-                    onToggle={() => toggleAccordion("6")}
-                    containerRef={(el) => {
-                        accordionRefs.current["6"] = el;
-                    }}
-                >
+                );
+            case "5":
+                return <ListeLieux lieux={lieux ?? []} sejourId={sejour.id} />;
+            case "6":
+                return (
                     <ListeMoments
                         moments={moments}
                         sejourId={sejour.id}
@@ -372,9 +452,7 @@ const DetailsSejour: React.FC = () => {
                         }
                         onMomentUpdated={(m) => {
                             setMoments((prev) =>
-                                trierMomentsChronologiquement(
-                                    prev.map((x) => (x.id === m.id ? m : x))
-                                )
+                                trierMomentsChronologiquement(prev.map((x) => (x.id === m.id ? m : x)))
                             );
                             setActivites((prev) =>
                                 prev.map((a) => (a.moment.id === m.id ? { ...a, moment: m } : a))
@@ -382,16 +460,9 @@ const DetailsSejour: React.FC = () => {
                         }}
                         onMomentDeleted={(id) => setMoments((prev) => prev.filter((x) => x.id !== id))}
                     />
-                </SejourAccordionItem>
-                <SejourAccordionItem
-                    id="7"
-                    title={`Activités (${activites.length})`}
-                    isOpen={openAccordions.includes("7")}
-                    onToggle={() => toggleAccordion("7")}
-                    containerRef={(el) => {
-                        accordionRefs.current["7"] = el;
-                    }}
-                >
+                );
+            case "7":
+                return (
                     <ListeActivites
                         activites={activites}
                         sejour={sejour}
@@ -400,7 +471,51 @@ const DetailsSejour: React.FC = () => {
                         lieux={lieux ?? []}
                         moments={moments}
                     />
-                </SejourAccordionItem>
+                );
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className={styles.pageContainer}>
+            <div className={styles.pageHeader}>
+                <button onClick={handleRetour} className={styles.backButton}>
+                    ← Retour
+                </button>
+                <h1 className={styles.pageTitle}>
+                    Nom du séjour : <span className={styles.sejourNameBadge}>{sejour.nom}</span>
+                </h1>
+            </div>
+
+            <div className={styles.accordion}>
+                {accordionOrder.map((panelId) => (
+                    <SejourAccordionItem
+                        key={panelId}
+                        id={panelId}
+                        title={accordionPanelTitle(panelId)}
+                        isOpen={openAccordions.includes(panelId)}
+                        onToggle={() => toggleAccordion(panelId)}
+                        containerRef={(el) => {
+                            accordionRefs.current[panelId] = el;
+                        }}
+                        isDragging={draggingAccordionId === panelId}
+                        isDropTarget={
+                            dropTargetAccordionId === panelId &&
+                            draggingAccordionId !== null &&
+                            draggingAccordionId !== panelId
+                        }
+                        onDragHandleStart={() => setDraggingAccordionId(panelId)}
+                        onDragHandleEnd={() => {
+                            setDraggingAccordionId(null);
+                            setDropTargetAccordionId(null);
+                        }}
+                        onItemDragOver={() => setDropTargetAccordionId(panelId)}
+                        onReorderDrop={handleAccordionReorder}
+                    >
+                        {accordionPanelBody(panelId)}
+                    </SejourAccordionItem>
+                ))}
             </div>
         </div>
     );
