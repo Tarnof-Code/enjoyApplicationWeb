@@ -20,6 +20,14 @@ $action-secondary-hover: #4b5563;
 $action-info: #0891b2;
 $action-info-hover: #0e7490;
 
+$accordion_header_bg: color.mix(#ffffff, $bleu_principal, 82%);
+$accordion_header_text: $bleu_principal;
+$accordion_header_bg_hover: color.adjust($accordion_header_bg, $lightness: -4%);
+
+$accordion_reorder_grip_bg: $bleu_principal;
+$accordion_reorder_grip_bg_hover: color.adjust($bleu_principal, $lightness: -6%);
+$accordion_reorder_grip_icon: #ffffff;
+
 @mixin hover-btn($color, $pourcentage) {
   background: $color;
   &:hover {
