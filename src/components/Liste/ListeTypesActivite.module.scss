@@ -1,0 +1,182 @@
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.hint {
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    margin-bottom: 1rem;
+}
+
+.deleteModalError {
+    color: #dc3545;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.45;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.accordionBlock {
+    margin-bottom: 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.accordionToggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: #f4f6f8;
+    font-weight: 600;
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+    color: #1a1a1a;
+
+    &:hover {
+        background: #eceff2;
+    }
+}
+
+.accordionToggleMeta {
+    font-weight: 400;
+    font-size: 0.88rem;
+    color: #555;
+}
+
+.chevron {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.accordionBodyInner {
+    padding: 0.85rem 1rem 1rem;
+    border-top: 1px solid #e8e8e8;
+    background: #fafbfc;
+}
+
+.sectionActions {
+    margin-bottom: 0.85rem;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+}
+
+/** Cartes « types par défaut » : colonnes plus étroites qu’avec `.list` */
+.listPredefinis {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.25rem, 9.25rem));
+    gap: 0.65rem;
+    align-items: start;
+}
+
+.card {
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    background: #fff;
+    min-width: 0;
+}
+
+.cardReadonly {
+    border-style: dashed;
+    background: #f9fafb;
+    text-align: center;
+}
+
+.cardHeader {
+    margin-bottom: 0.35rem;
+}
+
+.nom {
+    font-weight: 600;
+    font-size: 1.02rem;
+    color: #1a1a1a;
+    word-break: break-word;
+}
+
+.badgeDefault {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #495057;
+    background: #e9ecef;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+}
+
+.readonlyNote {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    color: #666;
+    font-style: italic;
+}
+
+.cardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+}
+
+.empty {
+    color: #666;
+    font-style: italic;
+    padding: 0.35rem 0;
+    margin: 0;
+}
+
+.modalField {
+    margin-bottom: 1rem;
+}
+
+.modalFooter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.modalFooterMessage {
+    flex: 1;
+    min-width: 140px;
+}
+
+.modalFooterError {
+    color: #dc3545;
+    font-size: 0.9rem;
+}
+
+.modalFooterActions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}

@@ -9,6 +9,7 @@ import {
     LieuDto,
     MomentDto,
     SejourDTO,
+    TypeActiviteDto,
     UpdateActiviteRequest,
 } from "../../types/api";
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
@@ -30,6 +31,7 @@ export interface ListeActivitesProps {
     equipe: MembreEquipeSejour[];
     lieux: LieuDto[];
     moments: MomentDto[];
+    typesActivite: TypeActiviteDto[];
 }
 
 function formatActiviteDateForDisplay(date: ActiviteDto["date"]): string {
@@ -86,7 +88,19 @@ function resumePartageLieu(l: LieuDto): string {
 
 const EMPLACEMENT_FILTRE_TOUS_ACTIVITE = "" as const;
 
-const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, groupes, equipe, lieux, moments }) => {
+function trierTypesParLibelle(a: TypeActiviteDto, b: TypeActiviteDto): number {
+    return a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" });
+}
+
+const ListeActivites: React.FC<ListeActivitesProps> = ({
+    activites,
+    sejour,
+    groupes,
+    equipe,
+    lieux,
+    moments,
+    typesActivite,
+}) => {
     const revalidator = useRevalidator();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
@@ -106,11 +120,21 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
     const [formLieuId, setFormLieuId] = useState<number | "">("");
     /** Moment obligatoire dès qu'au moins un créneau existe pour le séjour */
     const [formMomentId, setFormMomentId] = useState<number | "">("");
+    /** Obligatoire côté API pour toute activité */
+    const [formTypeActiviteId, setFormTypeActiviteId] = useState<number | "">("");
     const [filtreEmplacementLieu, setFiltreEmplacementLieu] = useState<
         typeof EMPLACEMENT_FILTRE_TOUS_ACTIVITE | EmplacementLieu
     >(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
 
     const momentsTriés = trierMomentsChronologiquement(moments);
+    const typesPredefinisSelect = useMemo(
+        () => typesActivite.filter((t) => t.predefini).sort(trierTypesParLibelle),
+        [typesActivite]
+    );
+    const typesPersoSelect = useMemo(
+        () => typesActivite.filter((t) => !t.predefini).sort(trierTypesParLibelle),
+        [typesActivite]
+    );
 
     const openModal = () => {
         setErrorMessage(null);
@@ -129,6 +153,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
             setFormMomentId(momentsTriés[0].id);
         } else {
             setFormMomentId("");
+        }
+        const typesOrdonnes = [...typesPredefinisSelect, ...typesPersoSelect];
+        if (typesOrdonnes.length === 1) {
+            setFormTypeActiviteId(typesOrdonnes[0].id);
+        } else {
+            setFormTypeActiviteId("");
         }
         setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
@@ -149,6 +179,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
         setSelectedTokens(new Set((activite.membres ?? []).map((m) => m.tokenId)));
         setFormLieuId(activite.lieu?.id ?? "");
         setFormMomentId(activite.moment?.id ?? "");
+        setFormTypeActiviteId(activite.typeActivite?.id ?? "");
         setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
@@ -210,12 +241,17 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                 return;
             }
         }
+        if (formTypeActiviteId === "") {
+            setErrorMessage("Le type d'activité est obligatoire.");
+            return;
+        }
 
         const payload: CreateActiviteRequest | UpdateActiviteRequest = {
             date: formDate,
             nom: formNom.trim(),
             membreTokenIds: [...selectedTokens],
             groupeIds: [...selectedGroupeIds].sort((x, y) => x - y),
+            typeActiviteId: formTypeActiviteId,
         };
         const desc = formDescription.trim();
         if (desc) payload.description = desc;
@@ -297,11 +333,22 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                 <Button
                     color="success"
                     onClick={openModal}
-                    disabled={equipe.length === 0 || groupes.length === 0 || moments.length === 0}
+                    disabled={
+                        equipe.length === 0 ||
+                        groupes.length === 0 ||
+                        moments.length === 0 ||
+                        typesActivite.length === 0
+                    }
                 >
                     Ajouter une activité
                 </Button>
             </div>
+            {typesActivite.length === 0 && (
+                <p className={styles.warningText}>
+                    Aucun type d&apos;activité n&apos;est disponible pour ce séjour. Ils sont normalement créés
+                    automatiquement ; contactez l&apos;administrateur si cette liste reste vide.
+                </p>
+            )}
             {moments.length === 0 && (
                 <p className={styles.warningText}>
                     Aucun moment (matin, après-midi, etc.) n&apos;est défini, il faut en créer au moins un avant
@@ -334,26 +381,22 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                                     <span className={styles.nom}>{a.nom}</span>
                                 </div>
                                 <div className={styles.metaGrid}>
-                                    {(a.moment || a.lieu) && (
-                                        <>
-                                            <div className={styles.metaCell}>
-                                                {a.moment ? (
-                                                    <div className={styles.meta}>
-                                                        <strong>Moment :</strong> {a.moment.nom}
-                                                    </div>
-                                                ) : null}
+                                    {a.moment ? (
+                                        <div className={styles.metaCell}>
+                                            <div className={styles.meta}>
+                                                <strong>Moment :</strong> {a.moment.nom}
                                             </div>
-                                            <div className={styles.metaCell}>
-                                                {a.lieu ? (
-                                                    <div className={styles.meta}>
-                                                        <strong>Lieu :</strong> {a.lieu.nom} — {resumePartageLieu(a.lieu)}
-                                                    </div>
-                                                ) : null}
+                                        </div>
+                                    ) : null}
+                                    {a.lieu ? (
+                                        <div className={styles.metaCell}>
+                                            <div className={styles.meta}>
+                                                <strong>Lieu :</strong> {a.lieu.nom} — {resumePartageLieu(a.lieu)}
                                             </div>
-                                        </>
-                                    )}
-                                    <div className={styles.metaCell}>
-                                        {a.groupeIds?.length ? (
+                                        </div>
+                                    ) : null}
+                                    {a.groupeIds?.length ? (
+                                        <div className={styles.metaCell}>
                                             <div className={styles.meta}>
                                                 <strong>Groupes :</strong>{" "}
                                                 {a.groupeIds
@@ -361,8 +404,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                                                     .filter(Boolean)
                                                     .join(", ") || "—"}
                                             </div>
-                                        ) : null}
-                                    </div>
+                                        </div>
+                                    ) : null}
                                     <div className={styles.metaCell}>
                                         <div className={styles.meta}>
                                             <strong>Animateurs :</strong>{" "}
@@ -371,7 +414,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                                                 : "—"}
                                         </div>
                                     </div>
-                                    
+                                    <div className={styles.metaCell}>
+                                        <div className={styles.meta}>
+                                            <strong>Type :</strong> {a.typeActivite?.libelle ?? "—"}
+                                        </div>
+                                    </div>
                                 </div>
                                 {a.description ? <p className={styles.description}>{a.description}</p> : null}
                             </div>
@@ -456,6 +503,55 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({ activites, sejour, grou
                             <p className={styles.lieuHint}>
                                 Aucun moment n&apos;existe pour ce séjour. Demandez à la direction d&apos;en créer au
                                 moins un dans la section « Moments » avant de planifier une activité.
+                            </p>
+                        ) : null}
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
+                        <Label for="act-type">
+                            Type d&apos;activité{" "}
+                            <span className={styles.requiredAsterisk} aria-hidden="true">
+                                *
+                            </span>
+                        </Label>
+                        <Input
+                            id="act-type"
+                            type="select"
+                            value={formTypeActiviteId === "" ? "" : String(formTypeActiviteId)}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "") {
+                                    setFormTypeActiviteId("");
+                                    return;
+                                }
+                                const n = Number.parseInt(v, 10);
+                                setFormTypeActiviteId(Number.isNaN(n) ? "" : n);
+                            }}
+                            disabled={submitting || typesActivite.length === 0}
+                            required
+                        >
+                            <option value="">— Choisir un type —</option>
+                            {typesPredefinisSelect.length > 0 ? (
+                                <optgroup label="Types par défaut">
+                                    {typesPredefinisSelect.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.libelle}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            ) : null}
+                            {typesPersoSelect.length > 0 ? (
+                                <optgroup label="Types du séjour">
+                                    {typesPersoSelect.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.libelle}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            ) : null}
+                        </Input>
+                        {typesActivite.length === 0 ? (
+                            <p className={styles.lieuHint}>
+                                Aucun type chargé. Utilisez la section « Types d&apos;activité » du détail séjour.
                             </p>
                         ) : null}
                     </FormGroup>

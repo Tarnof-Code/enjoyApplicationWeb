@@ -10,16 +10,18 @@ import { sejourGroupeService } from "../../../services/sejour-groupe.service";
 import { sejourActiviteService } from "../../../services/sejour-activite.service";
 import { sejourLieuService } from "../../../services/sejour-lieu.service";
 import { sejourMomentService } from "../../../services/sejour-moment.service";
+import { sejourTypeActiviteService } from "../../../services/sejour-type-activite.service";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
 import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
+import ListeTypesActivite from "../../../components/Liste/ListeTypesActivite";
 import ListeActivites from "../../../components/Liste/ListeActivites";
-import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto } from "../../../types/api";
+import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto, TypeActiviteDto } from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 
-const DEFAULT_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "7"] as const;
+const DEFAULT_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 const DEFAULT_ACCORDION_ID_LIST = [...DEFAULT_ACCORDION_IDS];
 const ACCORDION_ID_SET = new Set<string>(DEFAULT_ACCORDION_ID_LIST);
 
@@ -142,15 +144,16 @@ function SejourAccordionItem({
 export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
     try {
-        const [sejour, enfants, groupes, lieux, moments, activites] = await Promise.all([
+        const [sejour, enfants, groupes, lieux, moments, activites, typesActivite] = await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(parseInt(params.id)),
             sejourGroupeService.getGroupesDuSejour(parseInt(params.id)),
             sejourLieuService.getLieuxDuSejour(parseInt(params.id)),
             sejourMomentService.getMomentsDuSejour(parseInt(params.id)),
             sejourActiviteService.getActivitesDuSejour(parseInt(params.id)),
+            sejourTypeActiviteService.getTypesActiviteDuSejour(parseInt(params.id)),
         ]);
-        return { sejour, enfants, groupes, lieux, moments, activites };
+        return { sejour, enfants, groupes, lieux, moments, activites, typesActivite };
     } catch (error) {
         console.error("Erreur chargement séjour", error);
         return error;
@@ -166,6 +169,7 @@ const DetailsSejour: React.FC = () => {
               lieux: LieuDto[];
               moments: MomentDto[];
               activites: ActiviteDto[];
+              typesActivite: TypeActiviteDto[];
           }
         | Error;
     const location = useLocation();
@@ -221,13 +225,16 @@ const DetailsSejour: React.FC = () => {
         lieux,
         moments: momentsFromLoader,
         activites: activitesFromLoader,
+        typesActivite: typesActiviteFromLoader,
     } = loaderData;
     const [moments, setMoments] = useState<MomentDto[]>(momentsFromLoader);
     const [activites, setActivites] = useState<ActiviteDto[]>(activitesFromLoader);
+    const [typesActivite, setTypesActivite] = useState<TypeActiviteDto[]>(typesActiviteFromLoader);
     useEffect(() => {
         setMoments(momentsFromLoader);
         setActivites(activitesFromLoader);
-    }, [momentsFromLoader, activitesFromLoader, sejour.id]);
+        setTypesActivite(typesActiviteFromLoader);
+    }, [momentsFromLoader, activitesFromLoader, typesActiviteFromLoader, sejour.id]);
 
     const synchroniserMomentsDansActivites = (listeMoments: MomentDto[]) => {
         const parId = new Map(listeMoments.map((mo) => [mo.id, mo]));
@@ -238,6 +245,7 @@ const DetailsSejour: React.FC = () => {
             })
         );
     };
+
     const toggleAccordion = (id: string) => {
         setOpenAccordions(prev => {
             const isOpening = !prev.includes(id);
@@ -378,6 +386,8 @@ const DetailsSejour: React.FC = () => {
                 return `Moments (${moments.length})`;
             case "7":
                 return `Activités (${activites.length})`;
+            case "8":
+                return `Types d'activité (${typesActivite.length})`;
             default:
                 return "";
         }
@@ -470,6 +480,34 @@ const DetailsSejour: React.FC = () => {
                         equipe={membresEquipePourActivites}
                         lieux={lieux ?? []}
                         moments={moments}
+                        typesActivite={typesActivite}
+                    />
+                );
+            case "8":
+                return (
+                    <ListeTypesActivite
+                        typesActivite={typesActivite}
+                        sejourId={sejour.id}
+                        onTypeCreated={(t) => {
+                            setTypesActivite((prev) => [...prev, t].sort((a, b) => a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" })));
+                        }}
+                        onTypeUpdated={(t) => {
+                            setTypesActivite((prev) =>
+                                prev
+                                    .map((x) => (x.id === t.id ? t : x))
+                                    .sort((a, b) =>
+                                        a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" })
+                                    )
+                            );
+                            setActivites((prev) =>
+                                prev.map((a) =>
+                                    a.typeActivite.id === t.id ? { ...a, typeActivite: t } : a
+                                )
+                            );
+                        }}
+                        onTypeDeleted={(id) => {
+                            setTypesActivite((prev) => prev.filter((x) => x.id !== id));
+                        }}
                     />
                 );
             default:

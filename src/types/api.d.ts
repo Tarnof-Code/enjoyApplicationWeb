@@ -403,6 +403,30 @@ export interface ReorderMomentsRequest {
 }
 
 // ============================================================================
+// Types d'activité (par séjour)
+// ============================================================================
+
+/**
+ * Correspond à TypeActiviteDto.java
+ */
+export interface TypeActiviteDto {
+  id: number;
+  /** @Size max 100 côté API */
+  libelle: string;
+  /** true : types système (Sport, Manuel, …) non modifiables / non supprimables */
+  predefini: boolean;
+  sejourId: number;
+}
+
+/**
+ * Correspond à SaveTypeActiviteRequest.java
+ */
+export interface SaveTypeActiviteRequest {
+  /** @NotBlank, @Size(max=100) après trim côté service */
+  libelle: string;
+}
+
+// ============================================================================
 // Activités
 // ============================================================================
 
@@ -427,6 +451,8 @@ export interface ActiviteDto {
   sejourId: number;
   /** Créneau obligatoire (matin, après-midi, etc.) */
   moment: MomentDto;
+  /** Type d'activité du même séjour (obligatoire en base cohérente) */
+  typeActivite: TypeActiviteDto;
   membres: ActiviteMembreEquipeInfo[];
   groupeIds: number[];
   /** Lieu rattaché à l'activité (même séjour) ; null si aucun */
@@ -447,6 +473,7 @@ export interface ActiviteDto {
  * - groupeIds : @NotEmpty, éléments @NotNull
  * - lieuId : optionnel (lieu du même séjour)
  * - momentId : obligatoire côté service si au moins un moment existe pour le séjour
+ * - typeActiviteId : obligatoire (@NotNull)
  */
 export interface CreateActiviteRequest {
   /** LocalDate côté API */
@@ -459,6 +486,7 @@ export interface CreateActiviteRequest {
   groupeIds: number[];
   lieuId?: number | null;
   momentId?: number | null;
+  typeActiviteId: number;
 }
 
 /**
@@ -473,4 +501,5 @@ export interface UpdateActiviteRequest {
   /** null retire le lieu */
   lieuId?: number | null;
   momentId?: number | null;
+  typeActiviteId: number;
 }

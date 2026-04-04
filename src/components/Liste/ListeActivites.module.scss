@@ -73,28 +73,26 @@
 }
 
 .metaGrid {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: 3rem;
-    row-gap: 0.35rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 1.25rem;
     margin-top: 0.35rem;
-    align-items: center;
-}
-
-@media (max-width: 520px) {
-    .metaGrid {
-        grid-template-columns: 1fr;
-    }
+    max-width: 100%;
 }
 
 .metaCell {
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 100%;
 }
 
 .meta {
     font-size: 0.9rem;
     color: #555;
     margin-top: 0;
+    word-break: break-word;
 }
 
 .metaGrid + .description {
