@@ -45,10 +45,15 @@ function formatActiviteDateForDisplay(date: ActiviteDto["date"]): string {
     return parsed ? formaterDate(parsed) : String(date);
 }
 
+function dateDuJourVersInputDate(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 /**
- * SejourDto.dateDebut est un java.util.Date : JSON = chaîne ISO (AI_MEMORY) ou nombre (timestamp ms).
+ * Champ date d’un séjour (dateDebut / dateFin) : JSON = chaîne ISO ou nombre (timestamp ms).
  */
-function sejourDebutToInputDate(value: SejourDTO["dateDebut"]): string {
+function sejourChampDateVersInput(value: string | number): string {
     if (typeof value === "string") {
         const t = value.trim();
         const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
@@ -58,8 +63,76 @@ function sejourDebutToInputDate(value: SejourDTO["dateDebut"]): string {
     if (d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return dateDuJourVersInputDate();
+}
+
+function sejourDebutToInputDate(value: SejourDTO["dateDebut"]): string {
+    return sejourChampDateVersInput(value);
+}
+
+const JOURS_COURTS_FR: readonly string[] = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+/** Abréviations courantes des mois (janv. → déc.) pour les boutons jour */
+const MOIS_COURTS_FR: readonly string[] = [
+    "janv.",
+    "févr.",
+    "mars",
+    "avr.",
+    "mai",
+    "juin",
+    "juil.",
+    "août",
+    "sept.",
+    "oct.",
+    "nov.",
+    "déc.",
+];
+
+function parseYmdVersDateLocale(ymd: string): Date | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt;
+}
+
+function libelleJourCourtPourBouton(d: Date): string {
+    const mois = MOIS_COURTS_FR[d.getMonth()] ?? "";
+    return `${JOURS_COURTS_FR[d.getDay()]} ${d.getDate()} ${mois}`.trim();
+}
+
+/** Tous les jours calendaires du séjour (début → fin inclus), pour les boutons de filtre. */
+function enumererJoursDuSejour(sejour: SejourDTO): { ymd: string; label: string }[] {
+    const debutStr = sejourChampDateVersInput(sejour.dateDebut);
+    const finStr = sejourChampDateVersInput(sejour.dateFin);
+    const debut = parseYmdVersDateLocale(debutStr);
+    const fin = parseYmdVersDateLocale(finStr);
+    if (!debut || !fin) {
+        const d = debut ?? fin ?? new Date();
+        const y = d.getFullYear();
+        const mo = d.getMonth() + 1;
+        const day = d.getDate();
+        const ymd = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return [{ ymd: debut ? debutStr : fin ? finStr : ymd, label: libelleJourCourtPourBouton(debut ?? fin ?? d) }];
+    }
+    if (fin < debut) {
+        return [{ ymd: debutStr, label: libelleJourCourtPourBouton(debut) }];
+    }
+    const out: { ymd: string; label: string }[] = [];
+    const cur = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate());
+    const finCl = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate());
+    while (cur <= finCl) {
+        const y = cur.getFullYear();
+        const mo = cur.getMonth() + 1;
+        const day = cur.getDate();
+        const ymd = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        out.push({ ymd, label: libelleJourCourtPourBouton(cur) });
+        cur.setDate(cur.getDate() + 1);
+    }
+    return out;
 }
 
 function activiteDateToInputDate(value: ActiviteDto["date"]): string {
@@ -87,6 +160,19 @@ function resumePartageLieu(l: LieuDto): string {
 }
 
 const EMPLACEMENT_FILTRE_TOUS_ACTIVITE = "" as const;
+
+/** Valeur du select « lieu » pour n’afficher que les activités sans lieu */
+const FILTRE_LISTE_LIEU_SANS = "__sans_lieu__";
+
+function activiteDateToFilterKey(value: ActiviteDto["date"]): string {
+    if (Array.isArray(value)) {
+        const [y, m, d] = value as unknown as number[];
+        if (y != null && m != null && d != null) {
+            return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        }
+    }
+    return activiteDateToInputDate(value as string);
+}
 
 function trierTypesParLibelle(a: TypeActiviteDto, b: TypeActiviteDto): number {
     return a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" });
@@ -125,6 +211,13 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const [filtreEmplacementLieu, setFiltreEmplacementLieu] = useState<
         typeof EMPLACEMENT_FILTRE_TOUS_ACTIVITE | EmplacementLieu
     >(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
+
+    /** Filtres sur la liste (cumulables, ET logique) ; date = yyyy-MM-dd ou vide (toutes les dates) */
+    const [filtreListeDate, setFiltreListeDate] = useState(() => sejourChampDateVersInput(sejour.dateDebut));
+    const [filtreListeLieu, setFiltreListeLieu] = useState("");
+    const [filtreListeGroupe, setFiltreListeGroupe] = useState("");
+    const [filtreListeAnimateur, setFiltreListeAnimateur] = useState("");
+    const [filtreListeType, setFiltreListeType] = useState("");
 
     const momentsTriés = trierMomentsChronologiquement(moments);
     const typesPredefinisSelect = useMemo(
@@ -216,6 +309,87 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             setFormLieuId("");
         }
     }, [lieuxFiltrésParEmplacement, formLieuId]);
+
+    const groupesTriésFiltre = useMemo(
+        () => [...groupes].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" })),
+        [groupes]
+    );
+    const equipeTriéeFiltre = useMemo(
+        () =>
+            [...equipe].sort((a, b) => {
+                const pa = `${a.prenom} ${a.nom}`.trim();
+                const pb = `${b.prenom} ${b.nom}`.trim();
+                return pa.localeCompare(pb, undefined, { sensitivity: "base" });
+            }),
+        [equipe]
+    );
+    const typesTriésFiltre = useMemo(
+        () => [...typesActivite].sort(trierTypesParLibelle),
+        [typesActivite]
+    );
+    const lieuxTriésListe = useMemo(() => trierLieuxParNom(lieux), [lieux]);
+
+    const joursDuSejourPourFiltre = useMemo(() => enumererJoursDuSejour(sejour), [sejour.dateDebut, sejour.dateFin]);
+
+    useEffect(() => {
+        const jours = enumererJoursDuSejour(sejour);
+        setFiltreListeDate(jours[0]?.ymd ?? sejourChampDateVersInput(sejour.dateDebut));
+        setFiltreListeLieu("");
+        setFiltreListeGroupe("");
+        setFiltreListeAnimateur("");
+        setFiltreListeType("");
+    }, [sejour.id, sejour.dateDebut, sejour.dateFin]);
+
+    /** Dès qu’une date est renseignée, elle compte comme filtre (lien « voir toutes les activités », compteur). */
+    const filtresListeActifs =
+        filtreListeDate !== "" ||
+        filtreListeLieu !== "" ||
+        filtreListeGroupe !== "" ||
+        filtreListeAnimateur !== "" ||
+        filtreListeType !== "";
+
+    const activitesFiltrees = useMemo(() => {
+        return activites.filter((a) => {
+            if (filtreListeDate !== "") {
+                if (activiteDateToFilterKey(a.date) !== filtreListeDate) return false;
+            }
+            if (filtreListeLieu !== "") {
+                if (filtreListeLieu === FILTRE_LISTE_LIEU_SANS) {
+                    if (a.lieu != null) return false;
+                } else {
+                    const id = Number.parseInt(filtreListeLieu, 10);
+                    if (Number.isNaN(id) || a.lieu?.id !== id) return false;
+                }
+            }
+            if (filtreListeGroupe !== "") {
+                const gid = Number.parseInt(filtreListeGroupe, 10);
+                if (Number.isNaN(gid) || !a.groupeIds?.includes(gid)) return false;
+            }
+            if (filtreListeAnimateur !== "") {
+                if (!a.membres?.some((m) => m.tokenId === filtreListeAnimateur)) return false;
+            }
+            if (filtreListeType !== "") {
+                const tid = Number.parseInt(filtreListeType, 10);
+                if (Number.isNaN(tid) || a.typeActivite?.id !== tid) return false;
+            }
+            return true;
+        });
+    }, [
+        activites,
+        filtreListeDate,
+        filtreListeLieu,
+        filtreListeGroupe,
+        filtreListeAnimateur,
+        filtreListeType,
+    ]);
+
+    const voirToutesLesActivites = () => {
+        setFiltreListeDate("");
+        setFiltreListeLieu("");
+        setFiltreListeGroupe("");
+        setFiltreListeAnimateur("");
+        setFiltreListeType("");
+    };
 
     const handleSubmit = async () => {
         setErrorMessage(null);
@@ -329,7 +503,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
     return (
         <div>
-            <div className={styles.actionsContainer}>
+            <div className={styles.addActiviteRow}>
                 <Button
                     color="success"
                     onClick={openModal}
@@ -343,6 +517,135 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     Ajouter une activité
                 </Button>
             </div>
+            {activites.length > 0 ? (
+                <div className={styles.filterBlock}>
+                    <div
+                        className={styles.joursFiltreRow}
+                        role="group"
+                        aria-label="Filtrer par jour du séjour"
+                    >
+                        {joursDuSejourPourFiltre.map(({ ymd, label }) => (
+                            <button
+                                key={ymd}
+                                type="button"
+                                className={`${styles.jourFiltreBtn} ${
+                                    filtreListeDate === ymd ? styles.jourFiltreBtnSelected : ""
+                                }`}
+                                onClick={() => setFiltreListeDate(ymd)}
+                                aria-pressed={filtreListeDate === ymd}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className={styles.filtersRow}>
+                        <div className={styles.filtersRowInputs}>
+                    <div className={styles.filterField}>
+                        <Label for="liste-act-filtre-lieu" className={styles.filterLabel}>
+                            Lieu
+                        </Label>
+                        <Input
+                            id="liste-act-filtre-lieu"
+                            type="select"
+                            bsSize="sm"
+                            className={styles.filterInput}
+                            value={filtreListeLieu}
+                            onChange={(e) => setFiltreListeLieu(e.target.value)}
+                            disabled={lieux.length === 0}
+                        >
+                            <option value="">Tous les lieux</option>
+                            <option value={FILTRE_LISTE_LIEU_SANS}>Sans lieu</option>
+                            {lieuxTriésListe.map((l) => (
+                                <option key={l.id} value={String(l.id)}>
+                                    {l.nom}
+                                </option>
+                            ))}
+                        </Input>
+                    </div>
+                    <div className={styles.filterField}>
+                        <Label for="liste-act-filtre-groupe" className={styles.filterLabel}>
+                            Groupe
+                        </Label>
+                        <Input
+                            id="liste-act-filtre-groupe"
+                            type="select"
+                            bsSize="sm"
+                            className={styles.filterInput}
+                            value={filtreListeGroupe}
+                            onChange={(e) => setFiltreListeGroupe(e.target.value)}
+                            disabled={groupes.length === 0}
+                        >
+                            <option value="">Tous les groupes</option>
+                            {groupesTriésFiltre.map((g) => (
+                                <option key={g.id} value={String(g.id)}>
+                                    {g.nom}
+                                </option>
+                            ))}
+                        </Input>
+                    </div>
+                    <div className={styles.filterField}>
+                        <Label for="liste-act-filtre-anim" className={styles.filterLabel}>
+                            Animateur
+                        </Label>
+                        <Input
+                            id="liste-act-filtre-anim"
+                            type="select"
+                            bsSize="sm"
+                            className={styles.filterInput}
+                            value={filtreListeAnimateur}
+                            onChange={(e) => setFiltreListeAnimateur(e.target.value)}
+                            disabled={equipe.length === 0}
+                        >
+                            <option value="">Tous les animateurs</option>
+                            {equipeTriéeFiltre.map((m) => (
+                                <option key={m.tokenId} value={m.tokenId}>
+                                    {m.prenom} {m.nom}
+                                </option>
+                            ))}
+                        </Input>
+                    </div>
+                    <div className={styles.filterField}>
+                        <Label for="liste-act-filtre-type" className={styles.filterLabel}>
+                            Type
+                        </Label>
+                        <Input
+                            id="liste-act-filtre-type"
+                            type="select"
+                            bsSize="sm"
+                            className={styles.filterInput}
+                            value={filtreListeType}
+                            onChange={(e) => setFiltreListeType(e.target.value)}
+                            disabled={typesActivite.length === 0}
+                        >
+                            <option value="">Tous les types</option>
+                            {typesTriésFiltre.map((t) => (
+                                <option key={t.id} value={String(t.id)}>
+                                    {t.libelle}
+                                </option>
+                            ))}
+                        </Input>
+                    </div>
+                        </div>
+                    {filtresListeActifs ? (
+                        <div className={styles.filterActions}>
+                            <Button
+                                type="button"
+                                color="link"
+                                size="sm"
+                                className={styles.filterReset}
+                                onClick={voirToutesLesActivites}
+                            >
+                                Voir toutes les activités
+                            </Button>
+                            <p className={styles.filterMeta}>
+                                {activitesFiltrees.length} activité{activitesFiltrees.length !== 1 ? "s" : ""} sur{" "}
+                                {activites.length} (filtres combinés)
+                            </p>
+                        </div>
+                    ) : null}
+                    </div>
+                </div>
+            ) : null}
             {typesActivite.length === 0 && (
                 <p className={styles.warningText}>
                     Aucun type d&apos;activité n&apos;est disponible pour ce séjour. Ils sont normalement créés
@@ -371,9 +674,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
             {activites.length === 0 ? (
                 <p className={styles.empty}>Aucune activité planifiée pour ce séjour.</p>
+            ) : activitesFiltrees.length === 0 ? (
+                <p className={styles.empty}>Aucune activité ne correspond aux filtres sélectionnés.</p>
             ) : (
                 <div className={styles.list}>
-                    {activites.map((a) => (
+                    {activitesFiltrees.map((a) => (
                         <article key={a.id} className={styles.card}>
                             <div className={styles.cardBody}>
                                 <div className={styles.cardHeader}>

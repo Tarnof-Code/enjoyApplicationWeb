@@ -1,11 +1,108 @@
 @use "../../_variables" as *;
 
-.actionsContainer {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
+/** Bouton « Ajouter une activité » au-dessus du bloc filtres */
+.addActiviteRow {
     margin-bottom: 1rem;
+}
+
+/** Bloc filtres : jours du séjour, puis critères (lieu, groupe, etc.) */
+.filterBlock {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    background: #f4f6f8;
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+}
+
+.joursFiltreRow {
+    display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.45rem;
+    margin-bottom: 0.75rem;
+}
+
+.jourFiltreBtn {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.28rem 0.55rem;
+    line-height: 1.2;
+    border: 1px solid #c5cdd4;
+    border-radius: 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font-family: inherit;
+
+    &:hover {
+        background: #f0f3f6;
+        border-color: $bleu_principal;
+    }
+}
+
+.jourFiltreBtnSelected {
+    background: rgba($bleu_principal, 0.18);
+    border-color: $bleu_principal;
+    color: $bleu_principal;
+}
+
+/** Ligne des filtres lieu / groupe / … + actions à droite */
+.filtersRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1.25rem;
+    width: 100%;
+}
+
+.filtersRowInputs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1.25rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.filterField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 9rem;
+}
+
+.filterLabel {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.filterInput {
+    font-size: 0.95rem;
+}
+
+/** « Voir toutes les activités » + compteur, à droite de la ligne des filtres */
+.filterActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 0.35rem 1rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.filterReset {
+    flex-shrink: 0;
+    padding-bottom: 0.15rem;
+}
+
+.filterMeta {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.3;
+    padding-bottom: 0.2rem;
 }
 
 .errorMessage {
