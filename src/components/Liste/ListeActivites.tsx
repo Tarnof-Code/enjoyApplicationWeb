@@ -518,7 +518,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                 </Button>
             </div>
             {activites.length > 0 ? (
-                <div className={styles.filterBlock}>
+                <div className={styles.stickyFiltersSection}>
+                    <div className={styles.filterBlock}>
                     <div
                         className={styles.joursFiltreRow}
                         role="group"
@@ -541,14 +542,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     <div className={styles.filtersRow}>
                         <div className={styles.filtersRowInputs}>
                     <div className={styles.filterField}>
-                        <Label for="liste-act-filtre-lieu" className={styles.filterLabel}>
-                            Lieu
-                        </Label>
                         <Input
                             id="liste-act-filtre-lieu"
                             type="select"
                             bsSize="sm"
                             className={styles.filterInput}
+                            aria-label="Filtrer par lieu"
                             value={filtreListeLieu}
                             onChange={(e) => setFiltreListeLieu(e.target.value)}
                             disabled={lieux.length === 0}
@@ -563,14 +562,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         </Input>
                     </div>
                     <div className={styles.filterField}>
-                        <Label for="liste-act-filtre-groupe" className={styles.filterLabel}>
-                            Groupe
-                        </Label>
                         <Input
                             id="liste-act-filtre-groupe"
                             type="select"
                             bsSize="sm"
                             className={styles.filterInput}
+                            aria-label="Filtrer par groupe"
                             value={filtreListeGroupe}
                             onChange={(e) => setFiltreListeGroupe(e.target.value)}
                             disabled={groupes.length === 0}
@@ -584,14 +581,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         </Input>
                     </div>
                     <div className={styles.filterField}>
-                        <Label for="liste-act-filtre-anim" className={styles.filterLabel}>
-                            Animateur
-                        </Label>
                         <Input
                             id="liste-act-filtre-anim"
                             type="select"
                             bsSize="sm"
                             className={styles.filterInput}
+                            aria-label="Filtrer par animateur"
                             value={filtreListeAnimateur}
                             onChange={(e) => setFiltreListeAnimateur(e.target.value)}
                             disabled={equipe.length === 0}
@@ -605,14 +600,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         </Input>
                     </div>
                     <div className={styles.filterField}>
-                        <Label for="liste-act-filtre-type" className={styles.filterLabel}>
-                            Type
-                        </Label>
                         <Input
                             id="liste-act-filtre-type"
                             type="select"
                             bsSize="sm"
                             className={styles.filterInput}
+                            aria-label="Filtrer par type d'activité"
                             value={filtreListeType}
                             onChange={(e) => setFiltreListeType(e.target.value)}
                             disabled={typesActivite.length === 0}
@@ -643,6 +636,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             </p>
                         </div>
                     ) : null}
+                    </div>
                     </div>
                 </div>
             ) : null}

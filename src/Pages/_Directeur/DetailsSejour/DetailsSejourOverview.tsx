@@ -1,62 +1,67 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, type ReactNode } from "react";
-import { LoaderFunctionArgs, useLoaderData, useNavigate, useLocation } from "react-router-dom";
+import { useRouteLoaderData, useNavigate, useLocation } from "react-router-dom";
 import { FaGripVertical } from "react-icons/fa";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
-import { sejourService } from "../../../services/sejour.service";
-import { sejourEnfantService } from "../../../services/sejour-enfant.service";
-import { sejourGroupeService } from "../../../services/sejour-groupe.service";
-import { sejourActiviteService } from "../../../services/sejour-activite.service";
-import { sejourLieuService } from "../../../services/sejour-lieu.service";
-import { sejourMomentService } from "../../../services/sejour-moment.service";
-import { sejourTypeActiviteService } from "../../../services/sejour-type-activite.service";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
 import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
 import ListeTypesActivite from "../../../components/Liste/ListeTypesActivite";
-import ListeActivites from "../../../components/Liste/ListeActivites";
 import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto, TypeActiviteDto } from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 
-const DEFAULT_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
-const DEFAULT_ACCORDION_ID_LIST = [...DEFAULT_ACCORDION_IDS];
-const ACCORDION_ID_SET = new Set<string>(DEFAULT_ACCORDION_ID_LIST);
+/** Accordéons sur la vue générale (hors activités — onglet dédié). */
+const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "8"] as const;
+const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
+const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
-function accordionOrderStorageKey(sejourId: number) {
-    return `enjoy.detailsSejour.accordionOrder.${sejourId}`;
+const LEGACY_FULL_STORAGE_PREFIX = "enjoy.detailsSejour.accordionOrder.";
+
+function overviewAccordionOrderStorageKey(sejourId: number) {
+    return `enjoy.detailsSejour.overviewAccordionOrder.${sejourId}`;
 }
 
-function readAccordionOrder(sejourId: number): string[] {
+function readOverviewAccordionOrder(sejourId: number): string[] {
     try {
-        const raw = localStorage.getItem(accordionOrderStorageKey(sejourId));
-        if (!raw) return [...DEFAULT_ACCORDION_IDS];
-        const parsed = JSON.parse(raw) as unknown;
-        if (!Array.isArray(parsed)) return [...DEFAULT_ACCORDION_IDS];
-        return normalizeAccordionOrder(parsed as string[]);
+        const raw = localStorage.getItem(overviewAccordionOrderStorageKey(sejourId));
+        if (raw) {
+            const parsed = JSON.parse(raw) as unknown;
+            if (Array.isArray(parsed)) return normalizeOverviewAccordionOrder(parsed as string[]);
+        }
+        const legacyRaw = localStorage.getItem(`${LEGACY_FULL_STORAGE_PREFIX}${sejourId}`);
+        if (legacyRaw) {
+            const parsed = JSON.parse(legacyRaw) as unknown;
+            if (Array.isArray(parsed)) {
+                return normalizeOverviewAccordionOrder(
+                    (parsed as string[]).filter((id) => id !== "7")
+                );
+            }
+        }
+        return [...OVERVIEW_ACCORDION_IDS];
     } catch {
-        return [...DEFAULT_ACCORDION_IDS];
+        return [...OVERVIEW_ACCORDION_IDS];
     }
 }
 
-function normalizeAccordionOrder(stored: string[]): string[] {
+function normalizeOverviewAccordionOrder(stored: string[]): string[] {
     const result: string[] = [];
     const seen = new Set<string>();
     for (const id of stored) {
-        if (ACCORDION_ID_SET.has(id) && !seen.has(id)) {
+        if (OVERVIEW_ACCORDION_ID_SET.has(id) && !seen.has(id)) {
             seen.add(id);
             result.push(id);
         }
     }
-    for (const id of DEFAULT_ACCORDION_IDS) {
+    for (const id of OVERVIEW_ACCORDION_IDS) {
         if (!seen.has(id)) result.push(id);
     }
     return result;
 }
 
-function reorderAccordionIds(order: string[], draggedId: string, targetId: string): string[] {
+function reorderOverviewAccordionIds(order: string[], draggedId: string, targetId: string): string[] {
     if (draggedId === targetId) return order;
     const next = order.filter((x) => x !== draggedId);
     const idx = next.indexOf(targetId);
@@ -65,7 +70,6 @@ function reorderAccordionIds(order: string[], draggedId: string, targetId: strin
     return next;
 }
 
-/** Composant stable (hors du parent) : évite de remonter tout le contenu à chaque rendu du détail séjour. */
 function SejourAccordionItem({
     id,
     title,
@@ -141,41 +145,23 @@ function SejourAccordionItem({
     );
 }
 
-export async function detailsSejourLoader({params}: LoaderFunctionArgs) {
-    if (!params.id) throw new Error("ID du séjour manquant");
-    try {
-        const [sejour, enfants, groupes, lieux, moments, activites, typesActivite] = await Promise.all([
-            sejourService.getSejourById(params.id),
-            sejourEnfantService.getEnfantsDuSejour(parseInt(params.id)),
-            sejourGroupeService.getGroupesDuSejour(parseInt(params.id)),
-            sejourLieuService.getLieuxDuSejour(parseInt(params.id)),
-            sejourMomentService.getMomentsDuSejour(parseInt(params.id)),
-            sejourActiviteService.getActivitesDuSejour(parseInt(params.id)),
-            sejourTypeActiviteService.getTypesActiviteDuSejour(parseInt(params.id)),
-        ]);
-        return { sejour, enfants, groupes, lieux, moments, activites, typesActivite };
-    } catch (error) {
-        console.error("Erreur chargement séjour", error);
-        return error;
-    }
-}
+type SejourDetailLoaderSuccess = {
+    sejour: SejourDTO;
+    enfants: EnfantDto[];
+    groupes: GroupeDto[];
+    lieux: LieuDto[];
+    moments: MomentDto[];
+    activites: ActiviteDto[];
+    typesActivite: TypeActiviteDto[];
+};
 
-const DetailsSejour: React.FC = () => {
-    const loaderData = useLoaderData() as
-        | {
-              sejour: SejourDTO;
-              enfants: EnfantDto[];
-              groupes: GroupeDto[];
-              lieux: LieuDto[];
-              moments: MomentDto[];
-              activites: ActiviteDto[];
-              typesActivite: TypeActiviteDto[];
-          }
-        | Error;
+const DetailsSejourOverview: React.FC = () => {
+    /** Route index sans loader : données sur la route parent `sejour-detail`. */
+    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
         const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
-        return state?.openAccordion ? [state.openAccordion] : ['1'];
+        return state?.openAccordion ? [state.openAccordion] : ["1"];
     });
     const expandedGroupeIdFromState = (location.state as { expandedGroupeId?: number } | null)?.expandedGroupeId;
     const navigate = useNavigate();
@@ -183,41 +169,52 @@ const DetailsSejour: React.FC = () => {
     const lastOpenedAccordion = useRef<string | null>(null);
     const hasScrolledFromReturn = useRef(false);
     const scrollToGroupeRef = useRef<((groupeId: number) => void) | null>(null);
-    const sejourIdForStorage = loaderData instanceof Error ? undefined : loaderData.sejour.id;
-    const [accordionOrder, setAccordionOrder] = useState<string[]>(() => [...DEFAULT_ACCORDION_IDS]);
+    const sejourIdForStorage =
+        loaderData && !(loaderData instanceof Error) ? loaderData.sejour.id : undefined;
+    const [accordionOrder, setAccordionOrder] = useState<string[]>(() => [...OVERVIEW_ACCORDION_IDS]);
     const [draggingAccordionId, setDraggingAccordionId] = useState<string | null>(null);
     const [dropTargetAccordionId, setDropTargetAccordionId] = useState<string | null>(null);
 
     useEffect(() => {
         if (sejourIdForStorage === undefined) return;
-        setAccordionOrder(readAccordionOrder(sejourIdForStorage));
+        setAccordionOrder(readOverviewAccordionOrder(sejourIdForStorage));
     }, [sejourIdForStorage]);
 
     const handleAccordionReorder = useCallback(
         (draggedId: string, targetId: string) => {
             if (sejourIdForStorage === undefined || draggedId === targetId) return;
-            if (!ACCORDION_ID_SET.has(draggedId) || !ACCORDION_ID_SET.has(targetId)) return;
+            if (!OVERVIEW_ACCORDION_ID_SET.has(draggedId) || !OVERVIEW_ACCORDION_ID_SET.has(targetId)) return;
             setAccordionOrder((prev) => {
-                const next = reorderAccordionIds(prev, draggedId, targetId);
-                localStorage.setItem(accordionOrderStorageKey(sejourIdForStorage), JSON.stringify(next));
+                const next = reorderOverviewAccordionIds(prev, draggedId, targetId);
+                localStorage.setItem(overviewAccordionOrderStorageKey(sejourIdForStorage), JSON.stringify(next));
                 return next;
             });
         },
         [sejourIdForStorage]
     );
 
-    // Gérer le cas où loaderData est une erreur
+    if (loaderData === undefined) {
+        return (
+            <div className={styles.pageContainer}>
+                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                    ← Retour à la liste
+                </button>
+                <p className={styles.error}>Chargement du séjour…</p>
+            </div>
+        );
+    }
+
     if (loaderData instanceof Error) {
         return (
-            <div className={styles.pageContainer}>              
-                <button onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+            <div className={styles.pageContainer}>
+                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Erreur lors du chargement du séjour</p>
             </div>
         );
     }
-    
+
     const {
         sejour,
         enfants,
@@ -228,7 +225,7 @@ const DetailsSejour: React.FC = () => {
         typesActivite: typesActiviteFromLoader,
     } = loaderData;
     const [moments, setMoments] = useState<MomentDto[]>(momentsFromLoader);
-    const [activites, setActivites] = useState<ActiviteDto[]>(activitesFromLoader);
+    const [, setActivites] = useState<ActiviteDto[]>(activitesFromLoader);
     const [typesActivite, setTypesActivite] = useState<TypeActiviteDto[]>(typesActiviteFromLoader);
     useEffect(() => {
         setMoments(momentsFromLoader);
@@ -247,11 +244,10 @@ const DetailsSejour: React.FC = () => {
     };
 
     const toggleAccordion = (id: string) => {
-        setOpenAccordions(prev => {
+        setOpenAccordions((prev) => {
             const isOpening = !prev.includes(id);
             if (isOpening) lastOpenedAccordion.current = id;
-            // Un seul accordéon ouvert à la fois
-            return isOpening ? [id] : prev.filter(item => item !== id);
+            return isOpening ? [id] : prev.filter((item) => item !== id);
         });
     };
     useEffect(() => {
@@ -260,15 +256,14 @@ const DetailsSejour: React.FC = () => {
         const el = accordionRefs.current[id];
         if (el) {
             requestAnimationFrame(() => {
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
             });
         }
         lastOpenedAccordion.current = null;
     }, [openAccordions]);
 
-    // Quand l'accordéon Groupes est fermé, réinitialiser le state pour que les groupes soient fermés à la réouverture
     useEffect(() => {
-        if (!openAccordions.includes('4')) {
+        if (!openAccordions.includes("4")) {
             const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
             if (state?.expandedGroupeId) {
                 const { expandedGroupeId: _, ...rest } = state;
@@ -277,7 +272,6 @@ const DetailsSejour: React.FC = () => {
         }
     }, [openAccordions, location.pathname, location.state, navigate]);
 
-    // Scroll vers l'accordéon ou le groupe au retour depuis le dossier enfant
     useLayoutEffect(() => {
         const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
         const accordionId = state?.openAccordion;
@@ -290,19 +284,20 @@ const DetailsSejour: React.FC = () => {
 
         const scrollToGroupe = (el: HTMLElement) => {
             const elementTop = el.getBoundingClientRect().top + window.scrollY;
-            window.scrollTo({ top: elementTop - headerOffset, behavior: 'smooth' });
+            window.scrollTo({ top: elementTop - headerOffset, behavior: "smooth" });
         };
 
         const scrollToAccordion = () => {
-            const el = accordionRefs.current[accordionId] ?? document.querySelector(`[data-accordion-id="${accordionId}"]`) as HTMLElement | null;
+            const el =
+                accordionRefs.current[accordionId] ??
+                (document.querySelector(`[data-accordion-id="${accordionId}"]`) as HTMLElement | null);
             if (el) {
                 const elementTop = el.getBoundingClientRect().top + window.scrollY;
-                window.scrollTo({ top: elementTop - headerOffset, behavior: 'smooth' });
+                window.scrollTo({ top: elementTop - headerOffset, behavior: "smooth" });
             }
         };
 
         if (expandedGroupeId) {
-            // Priorité au groupe : ListeGroupes notifiera via onGroupRendered, sinon polling
             scrollToGroupeRef.current = (groupeId: number) => {
                 const el = document.querySelector(`[data-groupe-id="${groupeId}"]`) as HTMLElement | null;
                 if (el) scrollToGroupe(el);
@@ -317,7 +312,7 @@ const DetailsSejour: React.FC = () => {
                     return;
                 }
                 if (++attempts < 40) setTimeout(tryScrollToGroupe, 80);
-                else scrollToAccordion(); // fallback si groupe introuvable
+                else scrollToAccordion();
             };
             setTimeout(tryScrollToGroupe, 150);
             const timer2 = setTimeout(tryScrollToGroupe, 600);
@@ -332,12 +327,14 @@ const DetailsSejour: React.FC = () => {
         const timer = setTimeout(scrollToAccordion, 400);
         return () => clearTimeout(timer);
     }, [location.state, location.key, openAccordions]);
+
     const handleRetour = () => {
         navigate("/directeur/sejours");
     };
-    if(!sejour) {
+
+    if (!sejour) {
         return (
-            <div className={styles.pageContainer}>              
+            <div className={styles.pageContainer}>
                 <button onClick={handleRetour} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
@@ -345,6 +342,7 @@ const DetailsSejour: React.FC = () => {
             </div>
         );
     }
+
     const duree = calculerDureeEnJours(sejour.dateDebut, sejour.dateFin);
 
     const membresEquipePourActivites = (() => {
@@ -384,8 +382,6 @@ const DetailsSejour: React.FC = () => {
                 return `Lieux (${lieux?.length ?? 0})`;
             case "6":
                 return `Moments (${moments.length})`;
-            case "7":
-                return `Activités (${activites.length})`;
             case "8":
                 return `Types d'activité (${typesActivite.length})`;
             default:
@@ -425,13 +421,7 @@ const DetailsSejour: React.FC = () => {
             case "2":
                 return <Equipe membres={sejour.equipe || []} sejourId={sejour.id} />;
             case "3":
-                return (
-                    <ListeEnfants
-                        enfants={enfants || []}
-                        groupes={groupes || []}
-                        sejourId={sejour.id}
-                    />
-                );
+                return <ListeEnfants enfants={enfants || []} groupes={groupes || []} sejourId={sejour.id} />;
             case "4":
                 return (
                     <ListeGroupes
@@ -457,9 +447,7 @@ const DetailsSejour: React.FC = () => {
                             setMoments(ordered);
                             synchroniserMomentsDansActivites(ordered);
                         }}
-                        onMomentCreated={(m) =>
-                            setMoments((prev) => trierMomentsChronologiquement([...prev, m]))
-                        }
+                        onMomentCreated={(m) => setMoments((prev) => trierMomentsChronologiquement([...prev, m]))}
                         onMomentUpdated={(m) => {
                             setMoments((prev) =>
                                 trierMomentsChronologiquement(prev.map((x) => (x.id === m.id ? m : x)))
@@ -471,25 +459,17 @@ const DetailsSejour: React.FC = () => {
                         onMomentDeleted={(id) => setMoments((prev) => prev.filter((x) => x.id !== id))}
                     />
                 );
-            case "7":
-                return (
-                    <ListeActivites
-                        activites={activites}
-                        sejour={sejour}
-                        groupes={groupes || []}
-                        equipe={membresEquipePourActivites}
-                        lieux={lieux ?? []}
-                        moments={moments}
-                        typesActivite={typesActivite}
-                    />
-                );
             case "8":
                 return (
                     <ListeTypesActivite
                         typesActivite={typesActivite}
                         sejourId={sejour.id}
                         onTypeCreated={(t) => {
-                            setTypesActivite((prev) => [...prev, t].sort((a, b) => a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" })));
+                            setTypesActivite((prev) =>
+                                [...prev, t].sort((a, b) =>
+                                    a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" })
+                                )
+                            );
                         }}
                         onTypeUpdated={(t) => {
                             setTypesActivite((prev) =>
@@ -500,9 +480,7 @@ const DetailsSejour: React.FC = () => {
                                     )
                             );
                             setActivites((prev) =>
-                                prev.map((a) =>
-                                    a.typeActivite.id === t.id ? { ...a, typeActivite: t } : a
-                                )
+                                prev.map((a) => (a.typeActivite.id === t.id ? { ...a, typeActivite: t } : a))
                             );
                         }}
                         onTypeDeleted={(id) => {
@@ -518,12 +496,9 @@ const DetailsSejour: React.FC = () => {
     return (
         <div className={styles.pageContainer}>
             <div className={styles.pageHeader}>
-                <button onClick={handleRetour} className={styles.backButton}>
-                    ← Retour
+                <button type="button" onClick={handleRetour} className={styles.backButton}>
+                    ← Retour vers tous mes séjours
                 </button>
-                <h1 className={styles.pageTitle}>
-                    Nom du séjour : <span className={styles.sejourNameBadge}>{sejour.nom}</span>
-                </h1>
             </div>
 
             <div className={styles.accordion}>
@@ -559,4 +534,4 @@ const DetailsSejour: React.FC = () => {
     );
 };
 
-export default DetailsSejour;
+export default DetailsSejourOverview;

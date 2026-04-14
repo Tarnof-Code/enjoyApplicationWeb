@@ -10,7 +10,10 @@ import ListeSejoursAdmin, { sejoursAdminLoader } from "./Pages/_Admin/ListeSejou
 import ListeUtilisateurs, { utilisateursLoader } from "./Pages/_Admin/ListeUtilisateurs/ListeUtilisateurs.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ListeSejoursDirecteur, { listeSejoursDirecteurLoader } from "./Pages/_Directeur/ListeSejoursDirecteur/ListeSejoursDirecteur.tsx";
-import DetailsSejour, { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/DetailsSejour.tsx";
+import { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/detailsSejourLoader";
+import SejourDetailOutlet from "./Pages/_Directeur/DetailsSejour/SejourDetailOutlet";
+import DetailsSejourOverview from "./Pages/_Directeur/DetailsSejour/DetailsSejourOverview";
+import DetailsSejourActivites from "./Pages/_Directeur/DetailsSejour/DetailsSejourActivites";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Directeur/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 
@@ -61,12 +64,23 @@ const App: React.FC = () => {
         },
         {
           path: "/directeur/sejours/:id",
+          id: "sejour-detail",
           loader: detailsSejourLoader,
           element: (
             <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
-              <DetailsSejour />
+              <SejourDetailOutlet />
             </ProtectedRoute>
           ),
+          children: [
+            {
+              index: true,
+              element: <DetailsSejourOverview />,
+            },
+            {
+              path: "activites",
+              element: <DetailsSejourActivites />,
+            },
+          ],
         },
         {
           path: "/directeur/sejours/:sejourId/enfants/:enfantId/dossier",

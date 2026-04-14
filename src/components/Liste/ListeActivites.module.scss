@@ -1,5 +1,17 @@
 @use "../../_variables" as *;
 
+/**
+ * Bloc filtres seul : reste sous le header fixe (voir body { padding-top } dans styles.scss).
+ */
+.stickyFiltersSection {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 50;
+    padding-bottom: 0.25rem;
+    background: #fff;
+    box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.18);
+}
+
 /** Bouton « Ajouter une activité » au-dessus du bloc filtres */
 .addActiviteRow {
     margin-bottom: 1rem;
@@ -7,7 +19,6 @@
 
 /** Bloc filtres : jours du séjour, puis critères (lieu, groupe, etc.) */
 .filterBlock {
-    margin-bottom: 1rem;
     padding: 0.85rem 1rem;
     background: #f4f6f8;
     border: 1px solid #e2e6ea;
@@ -67,14 +78,7 @@
 .filterField {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     min-width: 9rem;
-}
-
-.filterLabel {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #444;
 }
 
 .filterInput {

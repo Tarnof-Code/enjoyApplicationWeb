@@ -65,3 +65,153 @@
   color: black;
   font-weight: 400;
 }
+
+/** Navigation direction : liste séjours + contexte séjour (style type barre d’app / onglets segmentés). */
+.directorNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  row-gap: 0.65rem;
+}
+
+.directorNavItem {
+  margin-right: 0;
+}
+
+.directorContextItem {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.directorRootLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem !important;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+.directorRootLinkActive {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff !important;
+}
+
+.directorContextRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  min-width: 0;
+}
+
+.directorBreadcrumbChevron {
+  flex-shrink: 0;
+  opacity: 0.45;
+  font-size: 0.65rem;
+}
+
+.directorSejourPill {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.32rem 0.75rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+}
+
+.directorSegmented {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 3px;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.directorSegment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.95rem !important;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88) !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 1px;
+  }
+}
+
+.directorSegmentActive {
+  background: #fff !important;
+  color: $bleu_principal !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+
+  &:hover {
+    color: $bleu_principal !important;
+    background: #fff !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .directorContextRow {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .directorBreadcrumbChevron {
+    display: none;
+  }
+
+  .directorSejourPill {
+    max-width: none;
+  }
+
+  .directorSegmented {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .directorSegment {
+    flex: 1 1 0;
+    padding-inline: 0.5rem;
+    font-size: 0.78rem;
+  }
+}
