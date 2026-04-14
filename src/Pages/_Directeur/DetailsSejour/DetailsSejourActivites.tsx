@@ -80,11 +80,6 @@ const DetailsSejourActivites: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            <div className={styles.pageHeader}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
-                    ← Retour vers tous mes séjours
-                </button>
-            </div>
             <ListeActivites
                 activites={activites}
                 sejour={sejour}

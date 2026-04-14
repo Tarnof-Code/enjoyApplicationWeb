@@ -328,14 +328,10 @@ const DetailsSejourOverview: React.FC = () => {
         return () => clearTimeout(timer);
     }, [location.state, location.key, openAccordions]);
 
-    const handleRetour = () => {
-        navigate("/directeur/sejours");
-    };
-
     if (!sejour) {
         return (
             <div className={styles.pageContainer}>
-                <button onClick={handleRetour} className={styles.backButton}>
+                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Séjour introuvable</p>
@@ -495,12 +491,6 @@ const DetailsSejourOverview: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            <div className={styles.pageHeader}>
-                <button type="button" onClick={handleRetour} className={styles.backButton}>
-                    ← Retour vers tous mes séjours
-                </button>
-            </div>
-
             <div className={styles.accordion}>
                 {accordionOrder.map((panelId) => (
                     <SejourAccordionItem
