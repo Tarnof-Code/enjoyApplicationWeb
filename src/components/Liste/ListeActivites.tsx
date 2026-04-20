@@ -1,182 +1,47 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import {
-    ActiviteDto,
-    CreateActiviteRequest,
-    EmplacementLieu,
-    GroupeDto,
-    LieuDto,
-    MomentDto,
-    SejourDTO,
-    TypeActiviteDto,
-    UpdateActiviteRequest,
-} from "../../types/api";
+import { ActiviteDto, CreateActiviteRequest, EmplacementLieu, UpdateActiviteRequest } from "../../types/api";
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
-import formaterDate, { parseDate } from "../../helpers/formaterDate";
+import formaterDate from "../../helpers/formaterDate";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import styles from "./ListeActivites.module.scss";
+import {
+    CalendrierFiltresPlanning,
+    CalendrierNavigationPeriode,
+    CalendrierPlanning,
+} from "./ListeActivitesCalendrier";
+import { ListeActivitesListeFiltres, ListeActivitesListeResultat } from "./ListeActivitesListe";
+import {
+    CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN,
+    CALENDRIER_FILTRE_AUCUN_GROUPE_ID,
+    type ListeActivitesProps,
+} from "./listeActivitesTypes";
+import {
+    EMPLACEMENT_FILTRE_TOUS_ACTIVITE,
+    FILTRE_LISTE_LIEU_SANS,
+    NB_JOURS_VUE_CALENDRIER,
+    activiteDateToFilterKey,
+    activiteDateToInputDate,
+    addDaysToYmd,
+    bornesDebutFenetreCalendrier,
+    groupeIdsReferentsPourToken,
+    clampYmdEntre,
+    enumererJoursDuSejour,
+    libelleJourCourtPourBouton,
+    parseYmdVersDateLocale,
+    resumePartageLieu,
+    sejourChampDateVersInput,
+    sejourDebutToInputDate,
+    tokensEquipePourFiltreGroupesCalendrier,
+    trierLieuxParNom,
+    trierTypesParLibelle,
+} from "./listeActivitesUtils";
 
-export interface MembreEquipeSejour {
-    tokenId: string;
-    nom: string;
-    prenom: string;
-}
+export type { ListeActivitesProps, MembreEquipeSejour } from "./listeActivitesTypes";
 
-export interface ListeActivitesProps {
-    activites: ActiviteDto[];
-    sejour: SejourDTO;
-    groupes: GroupeDto[];
-    equipe: MembreEquipeSejour[];
-    lieux: LieuDto[];
-    moments: MomentDto[];
-    typesActivite: TypeActiviteDto[];
-}
-
-function formatActiviteDateForDisplay(date: ActiviteDto["date"]): string {
-    if (Array.isArray(date)) {
-        const [y, m, d] = date as unknown as number[];
-        if (y != null && m != null && d != null) {
-            return formaterDate(new Date(y, m - 1, d));
-        }
-    }
-    const parsed = parseDate(date as string);
-    return parsed ? formaterDate(parsed) : String(date);
-}
-
-function dateDuJourVersInputDate(): string {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
-/**
- * Champ date d’un séjour (dateDebut / dateFin) : JSON = chaîne ISO ou nombre (timestamp ms).
- */
-function sejourChampDateVersInput(value: string | number): string {
-    if (typeof value === "string") {
-        const t = value.trim();
-        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
-        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-    }
-    const d = parseDate(value);
-    if (d) {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-    return dateDuJourVersInputDate();
-}
-
-function sejourDebutToInputDate(value: SejourDTO["dateDebut"]): string {
-    return sejourChampDateVersInput(value);
-}
-
-const JOURS_COURTS_FR: readonly string[] = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-
-/** Abréviations courantes des mois (janv. → déc.) pour les boutons jour */
-const MOIS_COURTS_FR: readonly string[] = [
-    "janv.",
-    "févr.",
-    "mars",
-    "avr.",
-    "mai",
-    "juin",
-    "juil.",
-    "août",
-    "sept.",
-    "oct.",
-    "nov.",
-    "déc.",
-];
-
-function parseYmdVersDateLocale(ymd: string): Date | null {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
-    if (!m) return null;
-    const y = Number(m[1]);
-    const mo = Number(m[2]);
-    const d = Number(m[3]);
-    const dt = new Date(y, mo - 1, d);
-    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
-    return dt;
-}
-
-function libelleJourCourtPourBouton(d: Date): string {
-    const mois = MOIS_COURTS_FR[d.getMonth()] ?? "";
-    return `${JOURS_COURTS_FR[d.getDay()]} ${d.getDate()} ${mois}`.trim();
-}
-
-/** Tous les jours calendaires du séjour (début → fin inclus), pour les boutons de filtre. */
-function enumererJoursDuSejour(sejour: SejourDTO): { ymd: string; label: string }[] {
-    const debutStr = sejourChampDateVersInput(sejour.dateDebut);
-    const finStr = sejourChampDateVersInput(sejour.dateFin);
-    const debut = parseYmdVersDateLocale(debutStr);
-    const fin = parseYmdVersDateLocale(finStr);
-    if (!debut || !fin) {
-        const d = debut ?? fin ?? new Date();
-        const y = d.getFullYear();
-        const mo = d.getMonth() + 1;
-        const day = d.getDate();
-        const ymd = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        return [{ ymd: debut ? debutStr : fin ? finStr : ymd, label: libelleJourCourtPourBouton(debut ?? fin ?? d) }];
-    }
-    if (fin < debut) {
-        return [{ ymd: debutStr, label: libelleJourCourtPourBouton(debut) }];
-    }
-    const out: { ymd: string; label: string }[] = [];
-    const cur = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate());
-    const finCl = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate());
-    while (cur <= finCl) {
-        const y = cur.getFullYear();
-        const mo = cur.getMonth() + 1;
-        const day = cur.getDate();
-        const ymd = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        out.push({ ymd, label: libelleJourCourtPourBouton(cur) });
-        cur.setDate(cur.getDate() + 1);
-    }
-    return out;
-}
-
-function activiteDateToInputDate(value: ActiviteDto["date"]): string {
-    if (typeof value === "string") {
-        const t = value.trim();
-        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
-        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-    }
-    const d = parseDate(value as string);
-    if (d) {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-    return "";
-}
-
-function trierLieuxParNom(lieux: LieuDto[]): LieuDto[] {
-    return [...lieux].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" }));
-}
-
-function resumePartageLieu(l: LieuDto): string {
-    if (l.partageableEntreAnimateurs && l.nombreMaxActivitesSimultanees != null) {
-        return `Jusqu'à ${l.nombreMaxActivitesSimultanees} activités.`;
-    }
-    return "Une seule activité à la fois.";
-}
-
-const EMPLACEMENT_FILTRE_TOUS_ACTIVITE = "" as const;
-
-/** Valeur du select « lieu » pour n’afficher que les activités sans lieu */
-const FILTRE_LISTE_LIEU_SANS = "__sans_lieu__";
-
-function activiteDateToFilterKey(value: ActiviteDto["date"]): string {
-    if (Array.isArray(value)) {
-        const [y, m, d] = value as unknown as number[];
-        if (y != null && m != null && d != null) {
-            return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        }
-    }
-    return activiteDateToInputDate(value as string);
-}
-
-function trierTypesParLibelle(a: TypeActiviteDto, b: TypeActiviteDto): number {
-    return a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" });
-}
+type VueActivites = "liste" | "calendrier";
 
 const ListeActivites: React.FC<ListeActivitesProps> = ({
     activites,
@@ -218,6 +83,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const [filtreListeGroupe, setFiltreListeGroupe] = useState("");
     const [filtreListeAnimateur, setFiltreListeAnimateur] = useState("");
     const [filtreListeType, setFiltreListeType] = useState("");
+    const [vueActivites, setVueActivites] = useState<VueActivites>("calendrier");
+    const [calendrierDebutYmd, setCalendrierDebutYmd] = useState("");
+    /** Filtres vue calendrier : ensemble vide = tout afficher (animateurs / groupes d’activité). */
+    const [filtreCalendrierTokens, setFiltreCalendrierTokens] = useState<Set<string>>(() => new Set());
+    const [filtreCalendrierGroupeIds, setFiltreCalendrierGroupeIds] = useState<Set<number>>(() => new Set());
 
     const momentsTriés = trierMomentsChronologiquement(moments);
     const typesPredefinisSelect = useMemo(
@@ -229,17 +99,35 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         [typesActivite]
     );
 
-    const openModal = () => {
+    /** Nouvelle activité ; depuis le calendrier on peut préremplir le jour et l’animateur de la case. */
+    const openModalNouvelleActivite = (opts?: { dateYmd?: string; animateurTokenId?: string }) => {
         setErrorMessage(null);
         setEditingActiviteId(null);
-        setFormDate(sejourDebutToInputDate(sejour.dateDebut));
+        setFormDate(opts?.dateYmd ?? sejourDebutToInputDate(sejour.dateDebut));
         setFormNom("");
         setFormDescription("");
         const initialGroupes = new Set<number>();
-        if (groupes.length === 1) initialGroupes.add(groupes[0].id);
+        if (
+            opts?.animateurTokenId != null &&
+            equipe.some((m) => m.tokenId === opts.animateurTokenId)
+        ) {
+            groupeIdsReferentsPourToken(groupes, opts.animateurTokenId).forEach((id) =>
+                initialGroupes.add(id)
+            );
+        }
+        if (initialGroupes.size === 0 && groupes.length === 1) {
+            initialGroupes.add(groupes[0].id);
+        }
         setSelectedGroupeIds(initialGroupes);
         const initial = new Set<string>();
-        if (equipe.length === 1) initial.add(equipe[0].tokenId);
+        if (
+            opts?.animateurTokenId != null &&
+            equipe.some((m) => m.tokenId === opts.animateurTokenId)
+        ) {
+            initial.add(opts.animateurTokenId);
+        } else if (equipe.length === 1) {
+            initial.add(equipe[0].tokenId);
+        }
         setSelectedTokens(initial);
         setFormLieuId("");
         if (momentsTriés.length === 1) {
@@ -256,6 +144,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
+
+    const openModal = () => openModalNouvelleActivite();
 
     const showSuccessModal = (message: string) => {
         setSuccessMessage(message);
@@ -323,6 +213,160 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             }),
         [equipe]
     );
+
+    const toggleFiltreCalendrierToken = useCallback((tokenId: string) => {
+        setFiltreCalendrierTokens((prev) => {
+            const allIds = new Set(equipe.map((m) => m.tokenId));
+            if (prev.size === 1 && prev.has(CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN)) {
+                return new Set([tokenId]);
+            }
+            if (prev.size === 0) {
+                const next = new Set(allIds);
+                next.delete(tokenId);
+                return next;
+            }
+            const next = new Set(prev);
+            next.delete(CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN);
+            if (next.has(tokenId)) next.delete(tokenId);
+            else next.add(tokenId);
+            if (next.size === 0) return new Set([CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN]);
+            if (next.size === allIds.size && [...allIds].every((id) => next.has(id))) return new Set();
+            return next;
+        });
+    }, [equipe]);
+
+    const toggleFiltreCalendrierGroupe = useCallback((groupeId: number) => {
+        setFiltreCalendrierGroupeIds((prev) => {
+            const allIds = new Set(groupes.map((g) => g.id));
+            if (prev.size === 1 && prev.has(CALENDRIER_FILTRE_AUCUN_GROUPE_ID)) {
+                return new Set([groupeId]);
+            }
+            if (prev.size === 0) {
+                const next = new Set(allIds);
+                next.delete(groupeId);
+                return next;
+            }
+            const next = new Set(prev);
+            next.delete(CALENDRIER_FILTRE_AUCUN_GROUPE_ID);
+            if (next.has(groupeId)) next.delete(groupeId);
+            else next.add(groupeId);
+            if (next.size === 0) return new Set([CALENDRIER_FILTRE_AUCUN_GROUPE_ID]);
+            if (next.size === allIds.size && [...allIds].every((id) => next.has(id))) return new Set();
+            return next;
+        });
+    }, [groupes]);
+
+    const toutSelectionnerFiltreCalendrierAnim = useCallback(() => {
+        setFiltreCalendrierTokens(new Set());
+    }, []);
+
+    const rienSelectionnerFiltreCalendrierAnim = useCallback(() => {
+        setFiltreCalendrierTokens(new Set([CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN]));
+    }, []);
+
+    const toutSelectionnerFiltreCalendrierGroupes = useCallback(() => {
+        setFiltreCalendrierGroupeIds(new Set());
+    }, []);
+
+    const rienSelectionnerFiltreCalendrierGroupes = useCallback(() => {
+        setFiltreCalendrierGroupeIds(new Set([CALENDRIER_FILTRE_AUCUN_GROUPE_ID]));
+    }, []);
+
+    const reinitialiserFiltresCalendrier = useCallback(() => {
+        setFiltreCalendrierTokens(new Set());
+        setFiltreCalendrierGroupeIds(new Set());
+    }, []);
+
+    const filtresCalendrierActifs =
+        filtreCalendrierTokens.size > 0 || filtreCalendrierGroupeIds.size > 0;
+
+    const libelleResumeFiltreCalendrierAnim = useMemo(() => {
+        if (filtreCalendrierTokens.size === 0) return "Tous les animateurs";
+        if (
+            filtreCalendrierTokens.size === 1 &&
+            filtreCalendrierTokens.has(CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN)
+        ) {
+            return "Aucun animateur";
+        }
+        const noms = [...filtreCalendrierTokens]
+            .filter((tid) => tid !== CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN)
+            .map((tid) => {
+                const m = equipeTriéeFiltre.find((x) => x.tokenId === tid);
+                return m ? `${m.prenom} ${m.nom}`.trim() : null;
+            })
+            .filter((x): x is string => Boolean(x));
+        if (noms.length <= 2) return noms.join(", ");
+        return `${noms.length} animateurs`;
+    }, [filtreCalendrierTokens, equipeTriéeFiltre]);
+
+    const libelleResumeFiltreCalendrierGroupes = useMemo(() => {
+        if (filtreCalendrierGroupeIds.size === 0) return "Tous les groupes";
+        if (
+            filtreCalendrierGroupeIds.size === 1 &&
+            filtreCalendrierGroupeIds.has(CALENDRIER_FILTRE_AUCUN_GROUPE_ID)
+        ) {
+            return "Aucun groupe";
+        }
+        const noms = [...filtreCalendrierGroupeIds]
+            .filter((id) => id !== CALENDRIER_FILTRE_AUCUN_GROUPE_ID)
+            .map((id) => groupesTriésFiltre.find((g) => g.id === id)?.nom)
+            .filter((x): x is string => Boolean(x));
+        if (noms.length <= 2) return noms.join(", ");
+        return `${noms.length} groupes`;
+    }, [filtreCalendrierGroupeIds, groupesTriésFiltre]);
+
+    /** Lignes du tableau calendrier : filtre animateurs ∩ membres concernés par les groupes sélectionnés (référents + activités). */
+    const equipePourCalendrier = useMemo(() => {
+        let lignes =
+            filtreCalendrierTokens.size === 0
+                ? equipeTriéeFiltre
+                : equipeTriéeFiltre.filter((m) => filtreCalendrierTokens.has(m.tokenId));
+
+        const idsGroupesEfficaces = new Set(
+            [...filtreCalendrierGroupeIds].filter((id) => id !== CALENDRIER_FILTRE_AUCUN_GROUPE_ID)
+        );
+        if (idsGroupesEfficaces.size === 0) return lignes;
+
+        const tokensDuFiltreGroupe = tokensEquipePourFiltreGroupesCalendrier(
+            groupes,
+            idsGroupesEfficaces,
+            activites
+        );
+        return lignes.filter((m) => tokensDuFiltreGroupe.has(m.tokenId));
+    }, [
+        activites,
+        equipeTriéeFiltre,
+        filtreCalendrierGroupeIds,
+        filtreCalendrierTokens,
+        groupes,
+    ]);
+
+    /** Filtre « aucun groupe » : aucune activité ne peut correspondre — pas de grille (évite cases vides « cliquer pour ajouter »). */
+    const calendrierFiltreExclutTousLesGroupes =
+        groupes.length > 0 &&
+        filtreCalendrierGroupeIds.size === 1 &&
+        filtreCalendrierGroupeIds.has(CALENDRIER_FILTRE_AUCUN_GROUPE_ID);
+
+    /** Noms des groupes dont la personne est référent (pour la colonne animateur du calendrier). */
+    const libellesGroupesReferentParToken = useMemo(() => {
+        const nomsParToken = new Map<string, Set<string>>();
+        for (const g of groupes) {
+            for (const r of g.referents ?? []) {
+                let set = nomsParToken.get(r.tokenId);
+                if (!set) {
+                    set = new Set();
+                    nomsParToken.set(r.tokenId, set);
+                }
+                set.add(g.nom);
+            }
+        }
+        const lignes = new Map<string, string>();
+        for (const [tokenId, set] of nomsParToken) {
+            const triés = [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+            lignes.set(tokenId, triés.join(" · "));
+        }
+        return lignes;
+    }, [groupes]);
     const typesTriésFiltre = useMemo(
         () => [...typesActivite].sort(trierTypesParLibelle),
         [typesActivite]
@@ -330,6 +374,18 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const lieuxTriésListe = useMemo(() => trierLieuxParNom(lieux), [lieux]);
 
     const joursDuSejourPourFiltre = useMemo(() => enumererJoursDuSejour(sejour), [sejour.dateDebut, sejour.dateFin]);
+
+    useEffect(() => {
+        const bornes = bornesDebutFenetreCalendrier(joursDuSejourPourFiltre);
+        if (!bornes) {
+            setCalendrierDebutYmd("");
+            return;
+        }
+        setCalendrierDebutYmd((prev) => {
+            if (!prev) return bornes.minStartYmd;
+            return clampYmdEntre(prev, bornes.minStartYmd, bornes.maxStartYmd);
+        });
+    }, [joursDuSejourPourFiltre]);
 
     useEffect(() => {
         const jours = enumererJoursDuSejour(sejour);
@@ -382,6 +438,86 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         filtreListeAnimateur,
         filtreListeType,
     ]);
+
+    const activitesParAnimateurEtDate = useMemo(() => {
+        const map = new Map<string, Map<string, ActiviteDto[]>>();
+        for (const membre of equipeTriéeFiltre) {
+            map.set(membre.tokenId, new Map());
+        }
+        for (const a of activites) {
+            const ymd = activiteDateToFilterKey(a.date);
+            for (const m of a.membres ?? []) {
+                let inner = map.get(m.tokenId);
+                if (!inner) {
+                    inner = new Map();
+                    map.set(m.tokenId, inner);
+                }
+                const prev = inner.get(ymd) ?? [];
+                inner.set(ymd, [...prev, a]);
+            }
+        }
+        return map;
+    }, [activites, equipeTriéeFiltre]);
+
+    const bornesFenetreCalendrier = useMemo(
+        () => bornesDebutFenetreCalendrier(joursDuSejourPourFiltre),
+        [joursDuSejourPourFiltre]
+    );
+
+    const debutCalendrierEffectif = useMemo(() => {
+        const b = bornesFenetreCalendrier;
+        if (!b) return "";
+        if (!calendrierDebutYmd) return b.minStartYmd;
+        return clampYmdEntre(calendrierDebutYmd, b.minStartYmd, b.maxStartYmd);
+    }, [bornesFenetreCalendrier, calendrierDebutYmd]);
+
+    const joursFenetreCalendrier = useMemo(() => {
+        if (!debutCalendrierEffectif) return [];
+        const sejourSet = new Set(joursDuSejourPourFiltre.map((j) => j.ymd));
+        const out: { ymd: string; label: string; dansSejour: boolean }[] = [];
+        let ymd: string | null = debutCalendrierEffectif;
+        for (let i = 0; i < NB_JOURS_VUE_CALENDRIER; i++) {
+            if (!ymd) break;
+            const d = parseYmdVersDateLocale(ymd);
+            if (!d) break;
+            out.push({
+                ymd,
+                label: libelleJourCourtPourBouton(d),
+                dansSejour: sejourSet.has(ymd),
+            });
+            ymd = addDaysToYmd(ymd, 1);
+        }
+        return out;
+    }, [debutCalendrierEffectif, joursDuSejourPourFiltre]);
+
+    const peutDefilerCalendrierVersPasse =
+        bornesFenetreCalendrier != null && debutCalendrierEffectif > bornesFenetreCalendrier.minStartYmd;
+    const peutDefilerCalendrierVersFutur =
+        bornesFenetreCalendrier != null && debutCalendrierEffectif < bornesFenetreCalendrier.maxStartYmd;
+
+    const libellePlageCalendrier = useMemo(() => {
+        if (joursFenetreCalendrier.length === 0) return "";
+        const debut = parseYmdVersDateLocale(joursFenetreCalendrier[0].ymd);
+        const fin = parseYmdVersDateLocale(
+            joursFenetreCalendrier[joursFenetreCalendrier.length - 1].ymd
+        );
+        if (!debut || !fin) return "";
+        return `${formaterDate(debut)} — ${formaterDate(fin)}`;
+    }, [joursFenetreCalendrier]);
+
+    const decalageFenetreCalendrier = (delta: number) => {
+        if (!bornesFenetreCalendrier) return;
+        const b = bornesFenetreCalendrier;
+        setCalendrierDebutYmd((prev) => {
+            const base = prev ? clampYmdEntre(prev, b.minStartYmd, b.maxStartYmd) : b.minStartYmd;
+            const next = addDaysToYmd(base, delta);
+            if (!next) return base;
+            return clampYmdEntre(next, b.minStartYmd, b.maxStartYmd);
+        });
+    };
+
+    const peutAjouterActivite =
+        equipe.length > 0 && groupes.length > 0 && moments.length > 0 && typesActivite.length > 0;
 
     const voirToutesLesActivites = () => {
         setFiltreListeDate("");
@@ -501,145 +637,168 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         }
     };
 
+    const listeActivitesRootRef = useRef<HTMLDivElement>(null);
+    const topPinnedStackRef = useRef<HTMLDivElement>(null);
+
+    /**
+     * Hauteur du header du site + géométrie du bloc épinglé (boutons ± filtres) :
+     * aligne la barre fixe et l’en-tête du tableau calendrier au scroll.
+     */
+    useLayoutEffect(() => {
+        const root = listeActivitesRootRef.current;
+        const stack = topPinnedStackRef.current;
+        if (!root || !stack) return;
+
+        let rafId: number | null = null;
+
+        const apply = () => {
+            const hdr = document.querySelector("header");
+            const headerH = hdr?.getBoundingClientRect().height ?? 0;
+            /** floor : évite une fente d’un pixel où le contenu défile entre le header fixe et la barre (ceil créait un écart). */
+            if (headerH > 0) {
+                root.style.setProperty("--liste-act-site-header", `${Math.floor(headerH)}px`);
+            }
+            const rootRect = root.getBoundingClientRect();
+            root.style.setProperty("--liste-act-pinned-left", `${Math.round(rootRect.left)}px`);
+            root.style.setProperty("--liste-act-pinned-width", `${Math.round(rootRect.width)}px`);
+            const stackH = stack.getBoundingClientRect().height;
+            root.style.setProperty("--liste-act-top-pinned-height", `${Math.ceil(stackH)}px`);
+        };
+
+        const scheduleApply = () => {
+            if (rafId !== null) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                apply();
+            });
+        };
+
+        apply();
+        const roStack = new ResizeObserver(scheduleApply);
+        roStack.observe(stack);
+        const roRoot = new ResizeObserver(scheduleApply);
+        roRoot.observe(root);
+        const hdr = document.querySelector("header");
+        const roHdr = hdr ? new ResizeObserver(scheduleApply) : null;
+        if (hdr && roHdr) roHdr.observe(hdr);
+        window.addEventListener("resize", scheduleApply);
+        window.addEventListener("scroll", scheduleApply, true);
+        return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            roStack.disconnect();
+            roRoot.disconnect();
+            roHdr?.disconnect();
+            window.removeEventListener("resize", scheduleApply);
+            window.removeEventListener("scroll", scheduleApply, true);
+        };
+    }, [
+        vueActivites,
+        equipe.length,
+        joursDuSejourPourFiltre.length,
+        joursFenetreCalendrier,
+        equipePourCalendrier.length,
+        activites.length,
+    ]);
+
     return (
-        <div>
+        <div ref={listeActivitesRootRef} className={styles.listeActivitesRoot}>
+            <div ref={topPinnedStackRef} className={styles.topPinnedStack}>
             <div className={styles.addActiviteRow}>
-                <Button
-                    color="success"
-                    onClick={openModal}
-                    disabled={
-                        equipe.length === 0 ||
-                        groupes.length === 0 ||
-                        moments.length === 0 ||
-                        typesActivite.length === 0
-                    }
-                >
-                    Ajouter une activité
-                </Button>
-            </div>
-            {activites.length > 0 ? (
-                <div className={styles.stickyFiltersSection}>
-                    <div className={styles.filterBlock}>
-                    <div
-                        className={styles.joursFiltreRow}
-                        role="group"
-                        aria-label="Filtrer par jour du séjour"
-                    >
-                        {joursDuSejourPourFiltre.map(({ ymd, label }) => (
+                <div className={styles.addActiviteRowInner}>
+                    {vueActivites !== "calendrier" ? (
+                        <Button color="success" onClick={openModal} disabled={!peutAjouterActivite}>
+                            Ajouter une activité
+                        </Button>
+                    ) : null}
+                    {equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
+                        <div
+                            className={styles.vueToggle}
+                            role="tablist"
+                            aria-label="Mode d'affichage des activités"
+                        >
                             <button
-                                key={ymd}
                                 type="button"
-                                className={`${styles.jourFiltreBtn} ${
-                                    filtreListeDate === ymd ? styles.jourFiltreBtnSelected : ""
+                                role="tab"
+                                className={`${styles.vueToggleBtn} ${
+                                    vueActivites === "calendrier" ? styles.vueToggleBtnActive : ""
                                 }`}
-                                onClick={() => setFiltreListeDate(ymd)}
-                                aria-pressed={filtreListeDate === ymd}
+                                aria-selected={vueActivites === "calendrier"}
+                                onClick={() => setVueActivites("calendrier")}
                             >
-                                {label}
+                                Calendrier
                             </button>
-                        ))}
-                    </div>
-                    <div className={styles.filtersRow}>
-                        <div className={styles.filtersRowInputs}>
-                    <div className={styles.filterField}>
-                        <Input
-                            id="liste-act-filtre-lieu"
-                            type="select"
-                            bsSize="sm"
-                            className={styles.filterInput}
-                            aria-label="Filtrer par lieu"
-                            value={filtreListeLieu}
-                            onChange={(e) => setFiltreListeLieu(e.target.value)}
-                            disabled={lieux.length === 0}
-                        >
-                            <option value="">Tous les lieux</option>
-                            <option value={FILTRE_LISTE_LIEU_SANS}>Sans lieu</option>
-                            {lieuxTriésListe.map((l) => (
-                                <option key={l.id} value={String(l.id)}>
-                                    {l.nom}
-                                </option>
-                            ))}
-                        </Input>
-                    </div>
-                    <div className={styles.filterField}>
-                        <Input
-                            id="liste-act-filtre-groupe"
-                            type="select"
-                            bsSize="sm"
-                            className={styles.filterInput}
-                            aria-label="Filtrer par groupe"
-                            value={filtreListeGroupe}
-                            onChange={(e) => setFiltreListeGroupe(e.target.value)}
-                            disabled={groupes.length === 0}
-                        >
-                            <option value="">Tous les groupes</option>
-                            {groupesTriésFiltre.map((g) => (
-                                <option key={g.id} value={String(g.id)}>
-                                    {g.nom}
-                                </option>
-                            ))}
-                        </Input>
-                    </div>
-                    <div className={styles.filterField}>
-                        <Input
-                            id="liste-act-filtre-anim"
-                            type="select"
-                            bsSize="sm"
-                            className={styles.filterInput}
-                            aria-label="Filtrer par animateur"
-                            value={filtreListeAnimateur}
-                            onChange={(e) => setFiltreListeAnimateur(e.target.value)}
-                            disabled={equipe.length === 0}
-                        >
-                            <option value="">Tous les animateurs</option>
-                            {equipeTriéeFiltre.map((m) => (
-                                <option key={m.tokenId} value={m.tokenId}>
-                                    {m.prenom} {m.nom}
-                                </option>
-                            ))}
-                        </Input>
-                    </div>
-                    <div className={styles.filterField}>
-                        <Input
-                            id="liste-act-filtre-type"
-                            type="select"
-                            bsSize="sm"
-                            className={styles.filterInput}
-                            aria-label="Filtrer par type d'activité"
-                            value={filtreListeType}
-                            onChange={(e) => setFiltreListeType(e.target.value)}
-                            disabled={typesActivite.length === 0}
-                        >
-                            <option value="">Tous les types</option>
-                            {typesTriésFiltre.map((t) => (
-                                <option key={t.id} value={String(t.id)}>
-                                    {t.libelle}
-                                </option>
-                            ))}
-                        </Input>
-                    </div>
-                        </div>
-                    {filtresListeActifs ? (
-                        <div className={styles.filterActions}>
-                            <Button
+                            <button
                                 type="button"
-                                color="link"
-                                size="sm"
-                                className={styles.filterReset}
-                                onClick={voirToutesLesActivites}
+                                role="tab"
+                                className={`${styles.vueToggleBtn} ${
+                                    vueActivites === "liste" ? styles.vueToggleBtnActive : ""
+                                }`}
+                                aria-selected={vueActivites === "liste"}
+                                onClick={() => setVueActivites("liste")}
                             >
-                                Voir toutes les activités
-                            </Button>
-                            <p className={styles.filterMeta}>
-                                {activitesFiltrees.length} activité{activitesFiltrees.length !== 1 ? "s" : ""} sur{" "}
-                                {activites.length} (filtres combinés)
-                            </p>
+                                Liste
+                            </button>
                         </div>
                     ) : null}
-                    </div>
-                    </div>
+                    {vueActivites === "calendrier" && joursFenetreCalendrier.length > 0 ? (
+                        <CalendrierNavigationPeriode
+                            libellePlage={libellePlageCalendrier}
+                            peutReculer={peutDefilerCalendrierVersPasse}
+                            peutAvancer={peutDefilerCalendrierVersFutur}
+                            onReculer={() => decalageFenetreCalendrier(-1)}
+                            onAvancer={() => decalageFenetreCalendrier(1)}
+                        />
+                    ) : null}
                 </div>
+            </div>
+            {vueActivites === "calendrier" && equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
+                <CalendrierFiltresPlanning
+                    equipeTriéeFiltre={equipeTriéeFiltre}
+                    groupesTriésFiltre={groupesTriésFiltre}
+                    groupes={groupes}
+                    filtreCalendrierTokens={filtreCalendrierTokens}
+                    filtreCalendrierGroupeIds={filtreCalendrierGroupeIds}
+                    filtresCalendrierActifs={filtresCalendrierActifs}
+                    libelleResumeFiltreCalendrierAnim={libelleResumeFiltreCalendrierAnim}
+                    libelleResumeFiltreCalendrierGroupes={libelleResumeFiltreCalendrierGroupes}
+                    onToggleFiltreCalendrierToken={toggleFiltreCalendrierToken}
+                    onToggleFiltreCalendrierGroupe={toggleFiltreCalendrierGroupe}
+                    onToutSelectionnerFiltreCalendrierAnim={toutSelectionnerFiltreCalendrierAnim}
+                    onRienSelectionnerFiltreCalendrierAnim={rienSelectionnerFiltreCalendrierAnim}
+                    onToutSelectionnerFiltreCalendrierGroupes={toutSelectionnerFiltreCalendrierGroupes}
+                    onRienSelectionnerFiltreCalendrierGroupes={rienSelectionnerFiltreCalendrierGroupes}
+                    onReinitialiserFiltresCalendrier={reinitialiserFiltresCalendrier}
+                />
             ) : null}
+            {activites.length > 0 && vueActivites === "liste" ? (
+                <ListeActivitesListeFiltres
+                    joursDuSejourPourFiltre={joursDuSejourPourFiltre}
+                    filtreListeDate={filtreListeDate}
+                    setFiltreListeDate={setFiltreListeDate}
+                    filtreListeLieu={filtreListeLieu}
+                    setFiltreListeLieu={setFiltreListeLieu}
+                    filtreListeGroupe={filtreListeGroupe}
+                    setFiltreListeGroupe={setFiltreListeGroupe}
+                    filtreListeAnimateur={filtreListeAnimateur}
+                    setFiltreListeAnimateur={setFiltreListeAnimateur}
+                    filtreListeType={filtreListeType}
+                    setFiltreListeType={setFiltreListeType}
+                    lieuxTriésListe={lieuxTriésListe}
+                    groupesTriésFiltre={groupesTriésFiltre}
+                    equipeTriéeFiltre={equipeTriéeFiltre}
+                    typesTriésFiltre={typesTriésFiltre}
+                    lieux={lieux}
+                    groupes={groupes}
+                    equipe={equipe}
+                    typesActivite={typesActivite}
+                    filtresListeActifs={filtresListeActifs}
+                    voirToutesLesActivites={voirToutesLesActivites}
+                    activitesFiltreesCount={activitesFiltrees.length}
+                    activitesTotal={activites.length}
+                />
+            ) : null}
+            </div>
+            <div className={styles.topPinnedStackSpacer} aria-hidden />
             {typesActivite.length === 0 && (
                 <p className={styles.warningText}>
                     Aucun type d&apos;activité n&apos;est disponible pour ce séjour. Ils sont normalement créés
@@ -666,82 +825,31 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             )}
             {errorMessage && !modalOpen && <div className={styles.errorMessage}>{errorMessage}</div>}
 
-            {activites.length === 0 ? (
-                <p className={styles.empty}>Aucune activité planifiée pour ce séjour.</p>
-            ) : activitesFiltrees.length === 0 ? (
-                <p className={styles.empty}>Aucune activité ne correspond aux filtres sélectionnés.</p>
+            {vueActivites === "calendrier" && equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
+                <CalendrierPlanning
+                    joursFenetreCalendrier={joursFenetreCalendrier}
+                    equipePourCalendrier={equipePourCalendrier}
+                    activitesParAnimateurEtDate={activitesParAnimateurEtDate}
+                    libellesGroupesReferentParToken={libellesGroupesReferentParToken}
+                    filtreCalendrierGroupeIds={filtreCalendrierGroupeIds}
+                    calendrierFiltreExclutTousLesGroupes={calendrierFiltreExclutTousLesGroupes}
+                    momentsTriés={momentsTriés}
+                    groupes={groupes}
+                    peutAjouterActivite={peutAjouterActivite}
+                    activitesCount={activites.length}
+                    onOpenNouvelleActivite={openModalNouvelleActivite}
+                    onOpenEdit={openEditModal}
+                    deletingActiviteId={deletingActiviteId}
+                />
             ) : (
-                <div className={styles.list}>
-                    {activitesFiltrees.map((a) => (
-                        <article key={a.id} className={styles.card}>
-                            <div className={styles.cardBody}>
-                                <div className={styles.cardHeader}>
-                                    <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
-                                    <span className={styles.nom}>{a.nom}</span>
-                                </div>
-                                <div className={styles.metaGrid}>
-                                    {a.moment ? (
-                                        <div className={styles.metaCell}>
-                                            <div className={styles.meta}>
-                                                <strong>Moment :</strong> {a.moment.nom}
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                    {a.lieu ? (
-                                        <div className={styles.metaCell}>
-                                            <div className={styles.meta}>
-                                                <strong>Lieu :</strong> {a.lieu.nom} — {resumePartageLieu(a.lieu)}
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                    {a.groupeIds?.length ? (
-                                        <div className={styles.metaCell}>
-                                            <div className={styles.meta}>
-                                                <strong>Groupes :</strong>{" "}
-                                                {a.groupeIds
-                                                    .map((id) => groupes.find((g) => g.id === id)?.nom)
-                                                    .filter(Boolean)
-                                                    .join(", ") || "—"}
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                    <div className={styles.metaCell}>
-                                        <div className={styles.meta}>
-                                            <strong>Animateurs :</strong>{" "}
-                                            {a.membres?.length
-                                                ? a.membres.map((m) => `${m.prenom} ${m.nom}`.trim()).join(", ")
-                                                : "—"}
-                                        </div>
-                                    </div>
-                                    <div className={styles.metaCell}>
-                                        <div className={styles.meta}>
-                                            <strong>Type :</strong> {a.typeActivite?.libelle ?? "—"}
-                                        </div>
-                                    </div>
-                                </div>
-                                {a.description ? <p className={styles.description}>{a.description}</p> : null}
-                            </div>
-                            <div className={styles.cardActions}>
-                                <Button
-                                    color="primary"
-                                    size="sm"
-                                    onClick={() => openEditModal(a)}
-                                    disabled={deletingActiviteId === a.id}
-                                >
-                                    Modifier
-                                </Button>
-                                <Button
-                                    color="danger"
-                                    size="sm"
-                                    onClick={() => requestDeleteActivite(a.id)}
-                                    disabled={deletingActiviteId === a.id}
-                                >
-                                    {deletingActiviteId === a.id ? "Suppression…" : "Supprimer"}
-                                </Button>
-                            </div>
-                        </article>
-                    ))}
-                </div>
+                <ListeActivitesListeResultat
+                    activites={activites}
+                    activitesFiltrees={activitesFiltrees}
+                    groupes={groupes}
+                    deletingActiviteId={deletingActiviteId}
+                    onEdit={openEditModal}
+                    onDelete={requestDeleteActivite}
+                />
             )}
 
             <Modal isOpen={modalOpen} toggle={() => !submitting && setModalOpen(false)} size="lg">
