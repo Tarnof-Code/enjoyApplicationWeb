@@ -1,0 +1,165 @@
+# Contexte du projet
+Tu es un assistant de développement expert. Ce projet utilise React 19, TypeScript, Vite, Node.js. Gestion des paquets : **pnpm** (`pnpm install`, `pnpm add`) — pas npm par défaut. Tu vérifieras systématiquement sur le web pour être à jour lorsque c’est pertinent.
+
+# Langue
+L'assistant doit répondre exclusivement en français.
+**Exception : Les messages de commit Git doivent être générés en anglais.**
+
+# Contexte automatique
+- Analyse le package.json pour identifier la stack technique exacte (versions de React, Node, frameworks, etc.)
+- Adapte tes réponses en fonction des dépendances installées
+- Respecte la configuration ESLint, Prettier et tsconfig.json du projet
+
+# Principes de développement
+- Utilise les fonctionnalités modernes de la stack détectée
+- Code en TypeScript strict si configuré
+- Respecte l'architecture et les patterns déjà présents dans le projet
+- Privilégie la cohérence avec le code existant
+
+# Règles React 19 & Optimisations
+- **Babel Plugin React Compiler** : Le projet utilise `babel-plugin-react-compiler` pour l'optimisation automatique.
+- **Hooks d'optimisation** : NE PAS utiliser manuellement `useMemo` ou `useCallback` sauf cas très spécifique non géré par le compilateur. Le compilateur s'occupe de la mémoïsation automatique.
+- **Exceptions documentées** (voir aussi `AI_MEMORY.md`) : `ListeActivites.tsx` (`useMemo` / `useEffect` pour filtre lieu par emplacement) ; `DetailsSejourActivites.tsx` (`useMemo` pour la liste animateurs) ; `DetailsSejourOverview.tsx` (`useCallback` pour le réordonnancement des accordéons par glisser-déposer).
+- **Chargement de données** : 
+  - Privilégier les `loaders` de React Router (`useLoaderData`) plutôt que `useEffect` pour le fetching initial des pages.
+  - **Route parent avec données partagées** : utiliser `useRouteLoaderData("sejour-detail")` sur les sous-pages du détail séjour (loader sur la route parent `id: "sejour-detail"` dans `App.tsx`).
+  - Pattern standard : exporter `async function [pageName]Loader({params}: LoaderFunctionArgs)` depuis chaque page ou module dédié (ex. `detailsSejourLoader.ts`).
+  - Les loaders doivent gérer les erreurs avec try/catch et retourner les données ou `null`.
+  - Utiliser `useRevalidator` pour rafraîchir les données après mutations (ex: après soumission de formulaire).
+- **Actions React Router** : Utiliser les actions pour les formulaires (ex: `loginAction`) avec `ActionFunctionArgs`.
+- **Ref** : Utiliser les Refs "clean" (sans `forwardRef` si possible en React 19).
+- **Functional components** : Utiliser les hooks modernes (useState, useEffect, useRef, useDeferredValue, useNavigate...).
+- **Imports** : Pas d'import React inutile (React 19 auto-import).
+
+# Règles TypeScript (si détecté)
+- Respecte le tsconfig.json
+- Type explicitement les props et retours de fonctions
+- Évite 'any', préfère 'unknown' si besoin
+- Utilise les types centralisés de `types/api.d.ts` (SejourDTO, ProfilUtilisateurDTO, CreateSejourRequest, DossierEnfantDto, GroupeDto, CreateGroupeRequest, LieuDto, MomentDto, TypeActiviteDto, ActiviteDto, ReorderMomentsRequest, etc.) plutôt que de créer des types locaux
+- Les dates sont typées comme `string` (format ISO 8601) car sérialisées par Jackson depuis Java
+
+# Conventions de nommage
+- camelCase pour variables/fonctions
+- PascalCase pour composants/types
+- SCREAMING_SNAKE_CASE pour constantes
+- Fichiers de composants : PascalCase (ex: `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`)
+- Fichiers de styles : `[ComponentName].module.scss` (ex: `DetailsSejour.module.scss`)
+- Loaders : `[pageName]Loader` (ex: `detailsSejourLoader`)
+
+# Qualité
+- Early returns pour améliorer la lisibilité
+- Gestion d'erreurs avec try/catch dans les loaders et services
+- **Gestion d'erreurs API** : Utiliser le helper centralisé `helpers/axiosError.ts` :
+  - `validateResponseStatus(response, expectedStatus)` : Vérifie le code HTTP attendu avant de traiter la réponse
+  - `adaptAxiosError(error, options)` : Adapte les erreurs Axios dans les blocs catch. Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`
+  - Gère automatiquement les formats standard (`error`/`message`) et validation 400 (`{ champ: "msg" }` ou `{ champ: ["msg"] }`)
+  - Exemple :
+    ```typescript
+    try {
+      const response = await Axios.post(...);
+      validateResponseStatus(response, 201);
+      return response.data;
+    } catch (error: unknown) {
+      adaptAxiosError(error, {
+        defaultMessage: "Erreur lors de l'opération",
+        logContext: "Contexte pour console.error",
+        preserveResponseData: true, // pour erreurs de validation 400
+      });
+    }
+    ```
+- Code commenté en français uniquement si complexe
+- Accessibilité (a11y) : attributs ARIA, navigation clavier, contraste
+- Validation des données côté client avant envoi API
+- Gestion des états de chargement et d'erreur dans l'UI
+- **Authentification** : 
+  - Utiliser `X-Skip-Token-Refresh` header pour désactiver le refresh automatique sur login/inscription/updateUser
+  - Redux Persist pour la persistance de l'état auth (localStorage)
+  - Intercepteur Axios gère automatiquement le refresh token sur 401
+  - Tokens chiffrés dans localStorage avec CryptoJS (clé secrète via `VITE_SECRET_KEY`)
+  - Layout récupère automatiquement le profil utilisateur si connecté mais rôle manquant dans Redux
+
+# Style de réponse
+- Explications concises en français
+- Signale les problèmes de perf/sécurité/accessibilité
+- Propose des alternatives quand pertinent
+- Respecte l'architecture existante (Form générique, loaders, SCSS Modules)
+- Utilise les composants existants (`Form.tsx`, `Liste.tsx`, `Equipe.tsx`, `ListeEnfants.tsx`, `ListeGroupes.tsx`, `CreateGroupeForm.tsx`, `ListeLieux`, `ListeMoments`, `ListeTypesActivite`, `ListeActivites`, `Acces_non_autorise`) plutôt que de créer de nouveaux patterns
+- **Liste.tsx** : Supporte les props `canDossier`/`onDossier` pour afficher une icône dossier (faFolder) ; utiliser pour naviguer vers la page dossier d'un enfant. Depuis ListeEnfants : `state: { from: 'enfants', openAccordion: '3' }`. Depuis ListeGroupes : `state: { from: 'groupes', openAccordion: '4', expandedGroupeId }` (retour vers `/directeur/sejours/:id`, vue générale).
+- **Formulaires** : 
+  - Utiliser le composant générique `Form.tsx` avec configuration via `fields` (FormField[])
+  - Validation via fonction `validation` dans chaque FormField (retourne `string | null`)
+  - Validation automatique des champs requis et des règles personnalisées
+  - Validation croisée : si `dateDebut` change, revalide automatiquement `dateFin`
+  - Utiliser `useRevalidator` après soumission pour rafraîchir les données
+  - Le composant Form gère automatiquement la validation, les erreurs, et les modals de succès
+  - Support des champs personnalisés via `customComponent` dans FormField
+  - Messages de succès configurables via props (`successMessage` peut être une fonction)
+- **Services** : 
+  - Centraliser les appels API dans `services/` avec gestion d'erreurs via `helpers/axiosError.ts` (`validateResponseStatus`, `adaptAxiosError`)
+  - Services séjour modulaires : `sejour.service.ts` (CRUD), `sejour-equipe.service.ts`, `sejour-enfant.service.ts`, `sejour-groupe.service.ts` (export `sejourGroupeService`), `sejour-lieu.service.ts` (`sejourLieuService`), `sejour-moment.service.ts` (`sejourMomentService`, incl. `reordonnerMoments`), `sejour-type-activite.service.ts` (`sejourTypeActiviteService`), `sejour-activite.service.ts` (`sejourActiviteService`)
+  - Utiliser l'instance Axios exportée par `caller.service.ts` (pas `axios` directement)
+  - Tri automatique des utilisateurs par nom (`trierUtilisateursParNom`), des enfants par nom puis prénom (`trierEnfantsParNom` dans `getEnfantsDuSejour`)
+  - `getDossierEnfant(sejourId, enfantId)` dans `sejour-enfant.service.ts` : Contrôle d'accès participant du séjour requis (403 sinon)
+  - `getExcelImportSpec(sejourId)` : Notice d'import Excel (colonnes, mots-clés) pour `ImportExcelEnfants` — icône info à côté du bouton d'import
+  - Utiliser `X-Skip-Token-Refresh` header pour login, inscription, et updateUser
+  - `getUserByEmail()` retourne `null` si 404, throw Error si 400
+- **Redux** : Utiliser Redux Toolkit avec Redux Persist pour l'état global (auth uniquement actuellement)
+  - Store configuré avec middleware Redux Persist (actions FLUSH, REHYDRATE, etc. ignorées dans serializableCheck)
+  - Types `RootState` et `AppDispatch` exportés pour le typage TypeScript
+- **Groupes** : `ListeGroupes`, `CreateGroupeForm`, `sejour-groupe.service.ts` (export `sejourGroupeService`). Types `GroupeDto`, `CreateGroupeRequest`, `TypeGroupe`. Pour AGE/NIVEAU_SCOLAIRE : `getEnfantsMatchingTranche()` et `calculerAge(..., dateDebutSejour)` pour l'âge au début du séjour.
+- **Types** : Toujours utiliser les types de `types/api.d.ts` pour les DTOs et payloads API (éviter les types locaux)
+- **Formatage des enums** : Pour l'affichage dans l'UI, toujours utiliser les objets `Labels` (ex: `NiveauScolaireLabels`, `RoleSejourLabels`, `RoleSystemeLabels`, `EmplacementLieuLabels`) plutôt que d'afficher directement les valeurs enum brutes. Exemple : utiliser `NiveauScolaireLabels[niveau]` pour afficher "5ème" au lieu de "CINQUIEME"
+- **Variables d'environnement** : 
+  - `VITE_API_URL` : URL de base de l'API (défaut: `http://localhost:8080/api/v1`)
+  - `VITE_SECRET_KEY` : Clé secrète pour le chiffrement des tokens (requis)
+  - `VITE_APP_NAME` : Nom de l'application affiché dans Header/Footer
+  - Définies dans `src/types/vite-env.d.ts` pour le typage TypeScript
+- **Navigation & Routes** : 
+  - Routes définies dans `App.tsx` avec `createBrowserRouter`
+  - Routes principales : `/` (connexion, redirige vers `/profil` si connecté), `/profil`, `/utilisateurs` (ADMIN, affiche `Acces_non_autorise` si non-ADMIN), `/sejours` (ADMIN), `/directeur/sejours` (DIRECTION), `/directeur/sejours/:id` (DIRECTION, **index** = vue générale `DetailsSejourOverview`), `/directeur/sejours/:id/activites` (DIRECTION, `DetailsSejourActivites` / `ListeActivites`), `/directeur/sejours/:sejourId/enfants/:enfantId/dossier` (DIRECTION, page dossier enfant)
+  - Détail séjour : route parent avec `id: "sejour-detail"` + `detailsSejourLoader` ; conteneur `SejourDetailOutlet` ; le Header directeur propose les onglets Vue générale / Activités
+  - Routes protégées via `ProtectedRoute.tsx` avec vérification du rôle Redux
+  - Layout (`Layout.tsx`) gère l'affichage conditionnel du Header (uniquement si `pathname !== "/"` et `role !== null`)
+  - Layout récupère automatiquement le profil utilisateur si connecté mais rôle manquant dans Redux (gestion 401 → logout)
+  - Utiliser `useNavigate` pour la navigation programmatique
+  - Actions React Router pour les formulaires (ex: `loginAction` dans `Connexion.tsx`)
+
+# Messages de commit
+- Les messages de commit Git doivent toujours être générés en anglais
+- Format détaillé multi-lignes obligatoire :
+  1. Première ligne : type(scope): description courte (ex: "feat: add user authentication", "refactor: restructure components")
+  2. Ligne vide
+  3. Liste à puces détaillant chaque changement significatif avec "- " au début de chaque ligne
+  4. Ligne vide
+  5. Paragraphe final (1-3 phrases) expliquant les bénéfices, le contexte et l'impact des changements
+- Analyser tous les fichiers modifiés pour créer une liste exhaustive des changements
+- Grouper les changements par catégorie logique (components, services, helpers, etc.)
+- Exemple de format attendu :
+  refactor: restructure components and improve code organization
+
+  - Rename Formulaire_ajout_modif_utilisateur to User_form for better naming
+  - Extract Liste component from Liste_utilisateurs for reusability
+  - Add generic Form component for reusable form handling across the application
+  - Refactor User_form to use the new generic Form component
+  - Update imports and references across affected components
+
+  This refactoring improves code maintainability and component reusability while reducing code duplication in the admin user management section.
+
+# Post-commit / Post-push
+- **Quand un commit est fait ET qu'un push est fait** : mettre à jour `AI_MEMORY.md` et `.cursorrules` si besoin.
+- Vérifier si les changements poussés justifient une mise à jour de la mémoire (nouveaux patterns, décisions architecturales, tâches accomplies, etc.).
+- Vérifier si les changements poussés justifient une mise à jour des règles (nouvelles conventions, nouveaux composants à documenter, etc.).
+
+# AI MEMORY BANK PROTOCOL
+
+1. **LECTURE SYSTÉMATIQUE :** 
+   - Au début de chaque session ou nouvelle tâche, lis `AI_MEMORY.md` (frontend) pour charger le contexte.
+   - **IMPORTANT :** Lis également le fichier `../enjoyApi/AI_MEMORY.md` (backend Java) pour comprendre l'architecture backend, les DTOs, les patterns d'API et la synchronisation frontend-backend.
+
+2. **MISE À JOUR OBLIGATOIRE :**
+   - **Fin de tâche :** Quand une tâche est terminée, mets à jour la section "Contexte Actif" et coche la case dans "Liste des Tâches" du `AI_MEMORY.md`.
+   - **Changement d'architecture :** Si nous créons un nouveau pattern (ex: nouveau hook, nouveau service générique), documente-le immédiatement dans "Décisions Architecturales".
+   - **Roadmap :** Ajoute les futures étapes identifiées dans "Liste des Tâches".
+   - **Synchronisation Backend :** Si des changements backend affectent les types API ou les contrats, vérifie et mets à jour `types/api.d.ts` en référence au `AI_MEMORY.md` du backend.
+
+3. **REFLEXIVITÉ :** Si le code contredit la Memory Bank, signale-le : soit le code est faux, soit la mémoire doit être mise à jour.

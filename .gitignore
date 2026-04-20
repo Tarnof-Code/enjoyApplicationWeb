@@ -34,8 +34,6 @@ config.local.js
 # Ignore Bash crash dumps
 *.stackdump
 
-# Cursor rules
-.cursorrules
-
 # Fichiers Markdown (tous les fichiers .md)
 *.md
+!AI_MEMORY.md
