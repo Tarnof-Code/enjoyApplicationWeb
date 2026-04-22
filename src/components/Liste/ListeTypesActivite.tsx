@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useRevalidator } from "react-router-dom";
 import {
     Button,
     Collapse,
@@ -46,6 +47,7 @@ function ListeTypesActivite({
     onTypeUpdated,
     onTypeDeleted,
 }: ListeTypesActiviteProps) {
+    const { revalidate } = useRevalidator();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -112,10 +114,12 @@ function ListeTypesActivite({
             if (editingId == null) {
                 const created = await sejourTypeActiviteService.creerTypeActivite(sejourId, payload);
                 onTypeCreated?.(created);
+                revalidate();
                 showSuccessModal("Type d'activité créé avec succès.");
             } else {
                 const updated = await sejourTypeActiviteService.modifierTypeActivite(sejourId, editingId, payload);
                 onTypeUpdated?.(updated);
+                revalidate();
                 showSuccessModal("Type d'activité modifié avec succès.");
             }
             setModalOpen(false);
@@ -151,6 +155,7 @@ function ListeTypesActivite({
             fermerModalSuppression();
             showSuccessModal("Type d'activité supprimé avec succès.");
             onTypeDeleted?.(idASupprimer);
+            revalidate();
         } catch (e: unknown) {
             if (estErreurTypeUtiliseParDesActivites(e)) {
                 setSuppressionBloqueeParActivites(true);
