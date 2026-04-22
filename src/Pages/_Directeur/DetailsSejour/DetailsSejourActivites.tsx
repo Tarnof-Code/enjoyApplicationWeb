@@ -2,7 +2,16 @@ import { useMemo } from "react";
 import { useRouteLoaderData, useNavigate } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import ListeActivites from "../../../components/Liste/ListeActivites";
-import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto, TypeActiviteDto } from "../../../types/api";
+import {
+    SejourDTO,
+    EnfantDto,
+    GroupeDto,
+    ActiviteDto,
+    LieuDto,
+    MomentDto,
+    HoraireDto,
+    TypeActiviteDto,
+} from "../../../types/api";
 
 type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
@@ -10,6 +19,7 @@ type SejourDetailLoaderSuccess = {
     groupes: GroupeDto[];
     lieux: LieuDto[];
     moments: MomentDto[];
+    horaires: HoraireDto[];
     activites: ActiviteDto[];
     typesActivite: TypeActiviteDto[];
 };

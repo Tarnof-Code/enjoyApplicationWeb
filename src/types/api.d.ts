@@ -403,6 +403,27 @@ export interface ReorderMomentsRequest {
 }
 
 // ============================================================================
+// Horaires (libellés d'heure par séjour, ex. 8h30 — aligné Horaire.java)
+// ============================================================================
+
+/**
+ * Correspond à HoraireDto.java
+ */
+export interface HoraireDto {
+  id: number;
+  /** Format API : 6h00 … 23h59 (pattern backend) */
+  libelle: string;
+  sejourId: number;
+}
+
+/**
+ * Correspond à SaveHoraireRequest.java
+ */
+export interface SaveHoraireRequest {
+  libelle: string;
+}
+
+// ============================================================================
 // Types d'activité (par séjour)
 // ============================================================================
 

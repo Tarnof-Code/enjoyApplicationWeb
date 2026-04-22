@@ -10,11 +10,22 @@ import ListeGroupes from "../../../components/Liste/ListeGroupes";
 import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
 import ListeTypesActivite from "../../../components/Liste/ListeTypesActivite";
-import { SejourDTO, EnfantDto, GroupeDto, ActiviteDto, LieuDto, MomentDto, TypeActiviteDto } from "../../../types/api";
+import ListeHoraires from "../../../components/Liste/ListeHoraires";
+import {
+    SejourDTO,
+    EnfantDto,
+    GroupeDto,
+    ActiviteDto,
+    LieuDto,
+    MomentDto,
+    TypeActiviteDto,
+    HoraireDto,
+} from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
+import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
 
 /** Accordéons sur la vue générale (hors activités — onglet dédié). */
-const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "8"] as const;
+const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "9", "8"] as const;
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -151,6 +162,7 @@ type SejourDetailLoaderSuccess = {
     groupes: GroupeDto[];
     lieux: LieuDto[];
     moments: MomentDto[];
+    horaires: HoraireDto[];
     activites: ActiviteDto[];
     typesActivite: TypeActiviteDto[];
 };
@@ -221,17 +233,22 @@ const DetailsSejourOverview: React.FC = () => {
         groupes,
         lieux,
         moments: momentsFromLoader,
+        horaires: horairesFromLoader,
         activites: activitesFromLoader,
         typesActivite: typesActiviteFromLoader,
     } = loaderData;
     const [moments, setMoments] = useState<MomentDto[]>(momentsFromLoader);
+    const [horaires, setHoraires] = useState<HoraireDto[]>(() =>
+        trierHorairesChronologiquement(horairesFromLoader)
+    );
     const [, setActivites] = useState<ActiviteDto[]>(activitesFromLoader);
     const [typesActivite, setTypesActivite] = useState<TypeActiviteDto[]>(typesActiviteFromLoader);
     useEffect(() => {
         setMoments(momentsFromLoader);
+        setHoraires(trierHorairesChronologiquement(horairesFromLoader));
         setActivites(activitesFromLoader);
         setTypesActivite(typesActiviteFromLoader);
-    }, [momentsFromLoader, activitesFromLoader, typesActiviteFromLoader, sejour.id]);
+    }, [momentsFromLoader, horairesFromLoader, activitesFromLoader, typesActiviteFromLoader, sejour.id]);
 
     const synchroniserMomentsDansActivites = (listeMoments: MomentDto[]) => {
         const parId = new Map(listeMoments.map((mo) => [mo.id, mo]));
@@ -378,6 +395,8 @@ const DetailsSejourOverview: React.FC = () => {
                 return `Lieux (${lieux?.length ?? 0})`;
             case "6":
                 return `Moments (${moments.length})`;
+            case "9":
+                return `Horaires (${horaires.length})`;
             case "8":
                 return `Types d'activité (${typesActivite.length})`;
             default:
@@ -453,6 +472,22 @@ const DetailsSejourOverview: React.FC = () => {
                             );
                         }}
                         onMomentDeleted={(id) => setMoments((prev) => prev.filter((x) => x.id !== id))}
+                    />
+                );
+            case "9":
+                return (
+                    <ListeHoraires
+                        horaires={horaires}
+                        sejourId={sejour.id}
+                        onHoraireCreated={(h) =>
+                            setHoraires((prev) => trierHorairesChronologiquement([...prev, h]))
+                        }
+                        onHoraireUpdated={(h) =>
+                            setHoraires((prev) =>
+                                trierHorairesChronologiquement(prev.map((x) => (x.id === h.id ? h : x)))
+                            )
+                        }
+                        onHoraireDeleted={(id) => setHoraires((prev) => prev.filter((x) => x.id !== id))}
                     />
                 );
             case "8":

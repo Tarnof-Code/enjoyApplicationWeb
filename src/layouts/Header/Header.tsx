@@ -9,7 +9,16 @@ import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
 import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling, FaThLarge, FaClipboardList, FaChevronRight } from "react-icons/fa";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
-import { SejourDTO, EnfantDto, GroupeDto, LieuDto, MomentDto, ActiviteDto, TypeActiviteDto } from "../../types/api";
+import {
+  SejourDTO,
+  EnfantDto,
+  GroupeDto,
+  LieuDto,
+  MomentDto,
+  HoraireDto,
+  ActiviteDto,
+  TypeActiviteDto,
+} from "../../types/api";
 
 type SejourDetailLoaderData = {
   sejour: SejourDTO;
@@ -17,6 +26,7 @@ type SejourDetailLoaderData = {
   groupes: GroupeDto[];
   lieux: LieuDto[];
   moments: MomentDto[];
+  horaires: HoraireDto[];
   activites: ActiviteDto[];
   typesActivite: TypeActiviteDto[];
 };
