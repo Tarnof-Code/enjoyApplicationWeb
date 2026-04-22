@@ -18,7 +18,12 @@ export const MOIS_COURTS_FR: readonly string[] = [
     "déc.",
 ];
 
-export const NB_JOURS_VUE_CALENDRIER = 7;
+/** Largeur de la fenêtre calendrier (nombre de colonnes « jour »). */
+export type CalendrierNombreJoursVue = 1 | 3 | 7;
+
+export const CALENDRIER_NOMBRES_JOURS_VUE: readonly CalendrierNombreJoursVue[] = [1, 3, 7];
+
+export const NB_JOURS_VUE_CALENDRIER_DEFAUT: CalendrierNombreJoursVue = 7;
 
 export const EMPLACEMENT_FILTRE_TOUS_ACTIVITE = "" as const;
 
@@ -90,14 +95,16 @@ export function addDaysToYmd(ymd: string, deltaJours: number): string | null {
 }
 
 export function bornesDebutFenetreCalendrier(
-    joursSejour: { ymd: string }[]
+    joursSejour: { ymd: string }[],
+    nombreJoursFenetre: number
 ): { minStartYmd: string; maxStartYmd: string } | null {
     if (joursSejour.length === 0) return null;
+    const n = Math.max(1, Math.floor(nombreJoursFenetre));
     const premier = parseYmdVersDateLocale(joursSejour[0].ymd);
     const dernier = parseYmdVersDateLocale(joursSejour[joursSejour.length - 1].ymd);
     if (!premier || !dernier) return null;
     const maxStart = new Date(dernier.getFullYear(), dernier.getMonth(), dernier.getDate());
-    maxStart.setDate(maxStart.getDate() - (NB_JOURS_VUE_CALENDRIER - 1));
+    maxStart.setDate(maxStart.getDate() - (n - 1));
     const premierCl = new Date(premier.getFullYear(), premier.getMonth(), premier.getDate());
     if (maxStart < premierCl) {
         maxStart.setTime(premierCl.getTime());
@@ -226,4 +233,20 @@ export function trierActivitesPourCelluleCalendrier(acts: ActiviteDto[], moments
         if (ia !== ib) return ia - ib;
         return a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
     });
+}
+
+/** Nombre de teintes espacées régulièrement (360° / N) : couleurs nettement différentes, pas des nuances proches. */
+const CALENDRIER_TYPE_NB_TEINTES = 36;
+
+/**
+ * Fond en HSL : une teinte parmi {@link CALENDRIER_TYPE_NB_TEINTES} directions fixes sur le cercle (ex. 10° si 36).
+ * Évite les verts (ou autres familles) presque identiques d’un HSL continu. Au-delà de N types, les teintes se réutilisent.
+ */
+export function couleurFondCalendrierPourTypeActivite(typeId: number | undefined): string {
+    if (typeId == null || !Number.isFinite(typeId)) {
+        return "#f5f6f8";
+    }
+    const idx = (Math.imul(typeId, 2654435761) >>> 0) % CALENDRIER_TYPE_NB_TEINTES;
+    const h = idx * (360 / CALENDRIER_TYPE_NB_TEINTES);
+    return `hsl(${h}, 50%, 87%)`;
 }

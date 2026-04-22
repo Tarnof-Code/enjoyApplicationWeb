@@ -21,7 +21,8 @@ import {
 import {
     EMPLACEMENT_FILTRE_TOUS_ACTIVITE,
     FILTRE_LISTE_LIEU_SANS,
-    NB_JOURS_VUE_CALENDRIER,
+    NB_JOURS_VUE_CALENDRIER_DEFAUT,
+    type CalendrierNombreJoursVue,
     activiteDateToFilterKey,
     activiteDateToInputDate,
     addDaysToYmd,
@@ -78,13 +79,16 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     >(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
 
     /** Filtres sur la liste (cumulables, ET logique) ; date = yyyy-MM-dd ou vide (toutes les dates) */
-    const [filtreListeDate, setFiltreListeDate] = useState(() => sejourChampDateVersInput(sejour.dateDebut));
+    const [filtreListeDate, setFiltreListeDate] = useState("");
     const [filtreListeLieu, setFiltreListeLieu] = useState("");
     const [filtreListeGroupe, setFiltreListeGroupe] = useState("");
     const [filtreListeAnimateur, setFiltreListeAnimateur] = useState("");
     const [filtreListeType, setFiltreListeType] = useState("");
     const [vueActivites, setVueActivites] = useState<VueActivites>("calendrier");
     const [calendrierDebutYmd, setCalendrierDebutYmd] = useState("");
+    const [calendrierNombreJoursVue, setCalendrierNombreJoursVue] = useState<CalendrierNombreJoursVue>(
+        NB_JOURS_VUE_CALENDRIER_DEFAUT
+    );
     /** Filtres vue calendrier : ensemble vide = tout afficher (animateurs / groupes d’activité). */
     const [filtreCalendrierTokens, setFiltreCalendrierTokens] = useState<Set<string>>(() => new Set());
     const [filtreCalendrierGroupeIds, setFiltreCalendrierGroupeIds] = useState<Set<number>>(() => new Set());
@@ -376,7 +380,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const joursDuSejourPourFiltre = useMemo(() => enumererJoursDuSejour(sejour), [sejour.dateDebut, sejour.dateFin]);
 
     useEffect(() => {
-        const bornes = bornesDebutFenetreCalendrier(joursDuSejourPourFiltre);
+        const bornes = bornesDebutFenetreCalendrier(joursDuSejourPourFiltre, calendrierNombreJoursVue);
         if (!bornes) {
             setCalendrierDebutYmd("");
             return;
@@ -385,11 +389,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             if (!prev) return bornes.minStartYmd;
             return clampYmdEntre(prev, bornes.minStartYmd, bornes.maxStartYmd);
         });
-    }, [joursDuSejourPourFiltre]);
+    }, [joursDuSejourPourFiltre, calendrierNombreJoursVue]);
 
     useEffect(() => {
-        const jours = enumererJoursDuSejour(sejour);
-        setFiltreListeDate(jours[0]?.ymd ?? sejourChampDateVersInput(sejour.dateDebut));
+        setFiltreListeDate("");
         setFiltreListeLieu("");
         setFiltreListeGroupe("");
         setFiltreListeAnimateur("");
@@ -405,7 +408,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         filtreListeType !== "";
 
     const activitesFiltrees = useMemo(() => {
-        return activites.filter((a) => {
+        const out = activites.filter((a) => {
             if (filtreListeDate !== "") {
                 if (activiteDateToFilterKey(a.date) !== filtreListeDate) return false;
             }
@@ -430,6 +433,13 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             }
             return true;
         });
+        out.sort((a, b) => {
+            const ka = activiteDateToFilterKey(a.date);
+            const kb = activiteDateToFilterKey(b.date);
+            if (ka !== kb) return ka.localeCompare(kb);
+            return a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
+        });
+        return out;
     }, [
         activites,
         filtreListeDate,
@@ -460,8 +470,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     }, [activites, equipeTriéeFiltre]);
 
     const bornesFenetreCalendrier = useMemo(
-        () => bornesDebutFenetreCalendrier(joursDuSejourPourFiltre),
-        [joursDuSejourPourFiltre]
+        () => bornesDebutFenetreCalendrier(joursDuSejourPourFiltre, calendrierNombreJoursVue),
+        [joursDuSejourPourFiltre, calendrierNombreJoursVue]
     );
 
     const debutCalendrierEffectif = useMemo(() => {
@@ -476,7 +486,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         const sejourSet = new Set(joursDuSejourPourFiltre.map((j) => j.ymd));
         const out: { ymd: string; label: string; dansSejour: boolean }[] = [];
         let ymd: string | null = debutCalendrierEffectif;
-        for (let i = 0; i < NB_JOURS_VUE_CALENDRIER; i++) {
+        for (let i = 0; i < calendrierNombreJoursVue; i++) {
             if (!ymd) break;
             const d = parseYmdVersDateLocale(ymd);
             if (!d) break;
@@ -488,7 +498,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             ymd = addDaysToYmd(ymd, 1);
         }
         return out;
-    }, [debutCalendrierEffectif, joursDuSejourPourFiltre]);
+    }, [debutCalendrierEffectif, joursDuSejourPourFiltre, calendrierNombreJoursVue]);
 
     const peutDefilerCalendrierVersPasse =
         bornesFenetreCalendrier != null && debutCalendrierEffectif > bornesFenetreCalendrier.minStartYmd;
@@ -662,7 +672,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             root.style.setProperty("--liste-act-pinned-left", `${Math.round(rootRect.left)}px`);
             root.style.setProperty("--liste-act-pinned-width", `${Math.round(rootRect.width)}px`);
             const stackH = stack.getBoundingClientRect().height;
-            root.style.setProperty("--liste-act-top-pinned-height", `${Math.ceil(stackH)}px`);
+            /** Pas de ceil ici : comme pour le header (floor ci-dessus), arrondir vers le haut créait une fente sous les filtres où le tableau défilait entre la barre fixe et l’en-tête sticky. Hauteur réelle (px fractionnaires) pour coller au pixel. */
+            root.style.setProperty("--liste-act-top-pinned-height", `${stackH}px`);
         };
 
         const scheduleApply = () => {
@@ -696,6 +707,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         equipe.length,
         joursDuSejourPourFiltre.length,
         joursFenetreCalendrier,
+        calendrierNombreJoursVue,
         equipePourCalendrier.length,
         activites.length,
     ]);
@@ -705,11 +717,6 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             <div ref={topPinnedStackRef} className={styles.topPinnedStack}>
             <div className={styles.addActiviteRow}>
                 <div className={styles.addActiviteRowInner}>
-                    {vueActivites !== "calendrier" ? (
-                        <Button color="success" onClick={openModal} disabled={!peutAjouterActivite}>
-                            Ajouter une activité
-                        </Button>
-                    ) : null}
                     {equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
                         <div
                             className={styles.vueToggle}
@@ -740,6 +747,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             </button>
                         </div>
                     ) : null}
+                    {vueActivites === "liste" ? (
+                        <Button color="success" onClick={openModal} disabled={!peutAjouterActivite}>
+                            Ajouter une activité
+                        </Button>
+                    ) : null}
                     {vueActivites === "calendrier" && joursFenetreCalendrier.length > 0 ? (
                         <CalendrierNavigationPeriode
                             libellePlage={libellePlageCalendrier}
@@ -747,6 +759,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             peutAvancer={peutDefilerCalendrierVersFutur}
                             onReculer={() => decalageFenetreCalendrier(-1)}
                             onAvancer={() => decalageFenetreCalendrier(1)}
+                            nombreJoursVue={calendrierNombreJoursVue}
+                            onNombreJoursVueChange={setCalendrierNombreJoursVue}
                         />
                     ) : null}
                 </div>
@@ -827,6 +841,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
             {vueActivites === "calendrier" && equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
                 <CalendrierPlanning
+                    nombreJoursFenetre={calendrierNombreJoursVue}
                     joursFenetreCalendrier={joursFenetreCalendrier}
                     equipePourCalendrier={equipePourCalendrier}
                     activitesParAnimateurEtDate={activitesParAnimateurEtDate}
@@ -984,7 +999,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         <Input
                             id="act-desc"
                             type="textarea"
-                            rows={3}
+                            rows={1}
                             value={formDescription}
                             onChange={(e) => setFormDescription(e.target.value)}
                             disabled={submitting}
@@ -1088,7 +1103,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             </span>
                         </Label>
                         <div className={styles.checkboxGroup}>
-                            {equipe.map((m) => (
+                            {equipeTriéeFiltre.map((m) => (
                                 <div key={m.tokenId} className={styles.checkboxRow}>
                                     <Input
                                         type="checkbox"

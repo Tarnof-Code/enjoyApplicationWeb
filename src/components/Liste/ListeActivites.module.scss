@@ -1,5 +1,9 @@
 @use "../../_variables" as *;
 
+/** Bordures du tableau calendrier (grille) — légèrement plus foncées, cohérentes */
+$cal-table-border: #cfd3db;
+$cal-table-border-strong: #c4cad4;
+
 /**
  * --liste-act-site-header : hauteur du <header> du site (mesurée en JS).
  * --liste-act-top-pinned-height : hauteur du bloc .topPinnedStack (boutons + filtres liste le cas échéant).
@@ -54,11 +58,69 @@
     background: #fff;
 }
 
+/** Barre + bouton (vue liste, petits écrans uniquement) */
+.listeFiltresMobileBar {
+    display: none;
+
+    @media (max-width: 991.98px) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+        margin-bottom: 0.35rem;
+    }
+}
+
+.listeFiltresToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid #c5cdd4;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1.2;
+    color: $bleu_principal;
+    cursor: pointer;
+
+    &:hover {
+        background: #f0f3f6;
+        border-color: $bleu_principal;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $bleu_principal;
+        outline-offset: 2px;
+    }
+}
+
+.listeFiltresBadgeActifs {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+}
+
+/** Panneau filtres : replié par défaut sous 768px jusqu’au clic */
+@media (max-width: 991.98px) {
+    .filterBlock.listeFiltresPanel[data-liste-filtres-ouverts="false"] {
+        display: none;
+    }
+}
+
 /** Filtres multi-sélection (animateurs / groupes) : même enveloppe que .stickyFiltersSection (vue liste). */
 .calendrierFiltersSection {
     position: relative;
-    padding-bottom: 0.25rem;
+    padding-bottom: 0.12rem;
     background: #fff;
+}
+
+/** Bloc gris des filtres calendrier : plus compact que la vue liste */
+.calendrierFiltersSection .filterBlock {
+    padding: 0.45rem 0.7rem;
 }
 
 .calendrierFiltreEntete {
@@ -66,14 +128,15 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
-    margin-bottom: 0.5rem;
+    gap: 0.35rem 0.75rem;
+    margin-bottom: 0.35rem;
 }
 
 .calendrierFiltreTitre {
-    font-size: 0.88rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: #333;
+    line-height: 1.2;
 }
 
 /** Titre, dropdowns, puis « Réinitialiser » aligné à droite après les filtres */
@@ -81,14 +144,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem 1rem;
+    gap: 0.35rem 0.65rem;
 }
 
 .calendrierFiltreBarreFiltres {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1.25rem;
+    gap: 0.45rem 0.75rem;
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -102,43 +165,43 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 0.75rem 1.25rem;
+    gap: 0.45rem 0.75rem;
 }
 
 .calendrierFiltreDropdown {
     position: relative;
-    flex: 1 1 12rem;
-    min-width: min(100%, 11rem);
-    max-width: 22rem;
+    flex: 1 1 0;
+    min-width: min(100%, 12rem);
+    max-width: 100%;
 }
 
 .calendrierFiltreLabelCompact {
     display: block;
-    font-size: 0.72rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: #555;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    margin-bottom: 0.28rem;
+    margin-bottom: 0.2rem;
 }
 
 .calendrierFiltreDropdownBtn {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.35rem;
     width: 100%;
-    min-height: 2.25rem;
-    padding: 0.35rem 0.65rem;
+    min-height: 1.85rem;
+    padding: 0.22rem 0.5rem;
     border: 1px solid #c5cdd4;
-    border-radius: 6px;
+    border-radius: 5px;
     background: #fff;
-    font-size: 0.88rem;
+    font-size: 0.78rem;
     font-family: inherit;
     color: #222;
     text-align: left;
     cursor: pointer;
-    line-height: 1.25;
+    line-height: 1.2;
     box-sizing: border-box;
 
     &:hover {
@@ -155,58 +218,60 @@
 .calendrierFiltreDropdownBtnText {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+    text-align: left;
+    white-space: normal;
+    line-height: 1.25;
+    word-break: break-word;
 }
 
 .calendrierFiltreDropdownChevron {
     flex-shrink: 0;
-    font-size: 0.65rem;
+    font-size: 0.58rem;
     color: #666;
     line-height: 1;
 }
 
 .calendrierFiltreDropdownPanel {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 3px);
     left: 0;
     right: 0;
     z-index: 70;
-    max-height: 14rem;
+    max-height: 12rem;
     overflow-y: auto;
-    padding: 0.35rem 0;
+    padding: 0.25rem 0;
     background: #fff;
     border: 1px solid #c5cdd4;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
 }
 
 .calendrierFiltreDropdownBulk {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem 0.75rem;
+    gap: 0.25rem 0.5rem;
     align-items: center;
-    padding: 0.35rem 0.65rem 0.45rem;
+    padding: 0.25rem 0.5rem 0.32rem;
     border-bottom: 1px solid #e8eaed;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.12rem;
 }
 
 .calendrierFiltreDropdownBulkBtn {
-    padding: 0.1rem 0 !important;
-    font-size: 0.8rem !important;
+    padding: 0.06rem 0 !important;
+    font-size: 0.72rem !important;
     min-height: auto !important;
-    line-height: 1.3 !important;
+    line-height: 1.25 !important;
 }
 
 .calendrierFiltreDropdownItem {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.35rem 0.65rem;
+    gap: 0.35rem;
+    padding: 0.26rem 0.5rem;
     margin: 0;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.78rem;
     color: #222;
 
     &:hover {
@@ -223,13 +288,20 @@
 .calendrierFiltreDropdownItemLabel {
     flex: 1 1 auto;
     min-width: 0;
-    line-height: 1.3;
+    line-height: 1.25;
+    font-size: 0.78rem;
     cursor: pointer;
     user-select: none;
 }
 
+.calendrierFiltersSection .filterReset {
+    font-size: 0.76rem;
+    padding: 0.1rem 0 !important;
+    line-height: 1.2;
+}
+
 /**
- * Bouton « Ajouter une activité » + bascule Liste/Calendrier (+ nav calendrier dans la barre).
+ * Bascule Liste/Calendrier, puis bouton « Ajouter une activité » (vue liste), nav calendrier si besoin.
  * L’espace sous la ligne est du padding (inclus dans la hauteur mesurée du .topPinnedStack).
  */
 .addActiviteRow {
@@ -297,7 +369,7 @@
     margin-bottom: 0;
     margin-left: auto;
     justify-content: flex-end;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.35rem 0.5rem;
 
     .calendrierNavBtn {
@@ -305,6 +377,49 @@
         height: 2rem;
         font-size: 1.15rem;
     }
+}
+
+/** Segment 1 / 3 / 7 jours (toolbar calendrier) */
+.calendrierVueJours {
+    display: inline-flex;
+    border: 1px solid #c5cdd4;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.calendrierVueJoursBtn {
+    min-width: 2.35rem;
+    padding: 0.28rem 0.45rem;
+    border: none;
+    border-right: 1px solid #e2e6ea;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: inherit;
+    line-height: 1.2;
+    color: #444;
+    cursor: pointer;
+
+    &:last-child {
+        border-right: none;
+    }
+
+    &:hover {
+        background: #f0f3f6;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $bleu_principal;
+        outline-offset: -2px;
+        z-index: 1;
+    }
+}
+
+.calendrierVueJoursBtnActive {
+    background: rgba($bleu_principal, 0.2);
+    color: $bleu_principal;
 }
 
 .calendrierNavBtn {
@@ -380,7 +495,7 @@
     left: 0;
     z-index: 3;
     background: #f4f6f8;
-    border: 1px solid #e2e6ea;
+    border: 1px solid $cal-table-border;
     padding: 0.65rem 0.5rem;
     text-align: center;
     font-weight: 700;
@@ -397,9 +512,9 @@ thead .calendrierCorner {
 }
 
 .calendrierColHead {
-    border-bottom: 1px solid #e2e6ea;
-    border-right: 1px solid #e8e8e8;
-    border-top: 1px solid #e8e8e8;
+    border-bottom: 1px solid $cal-table-border-strong;
+    border-right: 1px solid $cal-table-border;
+    border-top: 1px solid $cal-table-border;
     padding: 0.55rem 0.5rem;
     text-align: center;
     font-weight: 600;
@@ -436,9 +551,9 @@ thead .calendrierColHead {
     left: 0;
     z-index: 2;
     background: #fff;
-    border-right: 1px solid #e2e6ea;
-    border-bottom: 1px solid #eee;
-    border-left: 1px solid #eee;
+    border-right: 1px solid $cal-table-border;
+    border-bottom: 1px solid $cal-table-border;
+    border-left: 1px solid $cal-table-border;
     padding: 0.55rem 0.5rem;
     text-align: center;
     font-weight: 600;
@@ -465,8 +580,8 @@ thead .calendrierColHead {
 
 .calendrierCellEmpty,
 .calendrierCellFilled {
-    border-right: 1px solid #eee;
-    border-bottom: 1px solid #eee;
+    border-right: 1px solid $cal-table-border;
+    border-bottom: 1px solid $cal-table-border;
     padding: 0.45rem 0.4rem;
     vertical-align: top;
     box-sizing: border-box;
@@ -578,7 +693,7 @@ thead .calendrierColHead {
     padding: 0.4rem 0.48rem;
     border: 1px solid rgba($bleu_principal, 0.35);
     border-radius: 6px;
-    background: #fff;
+    background: var(--cal-act-type-bg, #fff);
     cursor: pointer;
     text-align: left;
     font-family: inherit;
@@ -592,7 +707,7 @@ thead .calendrierColHead {
 
     &:hover:not(:disabled) {
         border-color: $bleu_principal;
-        background: rgba($bleu_principal, 0.06);
+        filter: brightness(0.96);
     }
 
     &:disabled {
@@ -612,6 +727,7 @@ thead .calendrierColHead {
 }
 
 .calendrierActiviteLieu,
+.calendrierActiviteAvec,
 .calendrierActiviteGroupes {
     font-size: 0.75rem;
     color: #666;
@@ -634,6 +750,85 @@ thead .calendrierColHead {
     border-radius: 8px;
 }
 
+/** Vue liste : bloc filtres plus compact (sans réduire les boutons de dates .jourFiltreBtn) */
+.stickyFiltersSection .filterBlock {
+    padding: 0.45rem 0.7rem;
+    border-radius: 6px;
+}
+
+.stickyFiltersSection .joursFiltreRow {
+    margin-bottom: 0.5rem;
+}
+
+.stickyFiltersSection .filtersRow {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.45rem 0.75rem;
+    width: 100%;
+}
+
+.stickyFiltersSection .filtersRowInputs {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.45rem 0.75rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+}
+
+.stickyFiltersSection .filterField {
+    flex: 1 1 0;
+    min-width: min(100%, 12.5rem);
+    max-width: 100%;
+}
+
+.stickyFiltersSection .filterInput {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.78rem !important;
+    line-height: 1.2 !important;
+    min-height: 1.85rem !important;
+    padding: 0.22rem 0.5rem !important;
+    border-radius: 5px !important;
+}
+
+.stickyFiltersSection .filterActions {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.3rem 0.4rem;
+    flex-shrink: 0;
+    width: auto;
+    max-width: none;
+    margin-left: auto;
+}
+
+.stickyFiltersSection .filterReset {
+    font-size: 0.68rem;
+    padding: 0 !important;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.stickyFiltersSection .filterMeta {
+    display: inline;
+    font-size: 0.68rem;
+    line-height: 1.15;
+    padding: 0;
+    margin: 0;
+    color: #555;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .joursFiltreRow {
     display: flex;
     flex-wrap: wrap;
@@ -643,9 +838,9 @@ thead .calendrierColHead {
 }
 
 .jourFiltreBtn {
-    font-size: 0.78rem;
+    font-size: 0.68rem;
     font-weight: 600;
-    padding: 0.28rem 0.55rem;
+    padding: 0.22rem 0.48rem;
     line-height: 1.2;
     border: 1px solid #c5cdd4;
     border-radius: 6px;
@@ -664,6 +859,10 @@ thead .calendrierColHead {
     background: rgba($bleu_principal, 0.18);
     border-color: $bleu_principal;
     color: $bleu_principal;
+}
+
+.jourFiltreBtnToutesDates {
+    flex-shrink: 0;
 }
 
 /** Ligne des filtres lieu / groupe / … + actions à droite */
@@ -748,7 +947,7 @@ thead .calendrierColHead {
     flex-direction: column;
     min-width: 0;
     box-sizing: border-box;
-    border: 1px solid #e8e8e8;
+    border: 1px solid #cfd3db;
     border-radius: 10px;
     padding: 1rem 1.25rem;
     background: #fafbfc;

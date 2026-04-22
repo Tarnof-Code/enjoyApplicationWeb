@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, LieuDto, TypeActiviteDto } from "../../types/api";
 import type { MembreEquipeSejour } from "./listeActivitesTypes";
@@ -55,10 +56,40 @@ export function ListeActivitesListeFiltres({
  activitesFiltreesCount,
  activitesTotal,
 }: ListeActivitesListeFiltresProps) {
+    const [filtresMobileOuverts, setFiltresMobileOuverts] = useState(false);
+
     return (
         <div className={styles.stickyFiltersSection}>
-            <div className={styles.filterBlock}>
+            <div className={styles.listeFiltresMobileBar}>
+                <button
+                    type="button"
+                    className={styles.listeFiltresToggleBtn}
+                    aria-expanded={filtresMobileOuverts}
+                    aria-controls="liste-act-filtres-panel"
+                    onClick={() => setFiltresMobileOuverts((v) => !v)}
+                >
+                    {filtresMobileOuverts ? "Masquer les filtres" : "Afficher les filtres"}
+                </button>
+                {filtresListeActifs ? (
+                    <span className={styles.listeFiltresBadgeActifs}>Filtres actifs</span>
+                ) : null}
+            </div>
+            <div
+                id="liste-act-filtres-panel"
+                className={`${styles.filterBlock} ${styles.listeFiltresPanel}`}
+                data-liste-filtres-ouverts={filtresMobileOuverts ? "true" : "false"}
+            >
                 <div className={styles.joursFiltreRow} role="group" aria-label="Filtrer par jour du séjour">
+                    <button
+                        type="button"
+                        className={`${styles.jourFiltreBtn} ${
+                            filtreListeDate === "" ? styles.jourFiltreBtnSelected : ""
+                        } ${styles.jourFiltreBtnToutesDates}`}
+                        onClick={() => setFiltreListeDate("")}
+                        aria-pressed={filtreListeDate === ""}
+                    >
+                        Toutes les dates
+                    </button>
                     {joursDuSejourPourFiltre.map(({ ymd, label }) => (
                         <button
                             key={ymd}
@@ -154,20 +185,31 @@ export function ListeActivitesListeFiltres({
                         </div>
                     </div>
                     {filtresListeActifs ? (
-                        <div className={styles.filterActions}>
+                        <div
+                            className={styles.filterActions}
+                            role="group"
+                            aria-label={`${activitesFiltreesCount} activité${
+                                activitesFiltreesCount !== 1 ? "s" : ""
+                            } sur ${activitesTotal} avec filtres combinés`}
+                        >
                             <Button
                                 type="button"
                                 color="link"
                                 size="sm"
                                 className={styles.filterReset}
                                 onClick={voirToutesLesActivites}
+                                aria-label="Réinitialiser les filtres et afficher toutes les activités"
                             >
-                                Voir toutes les activités
+                                Tout afficher
                             </Button>
-                            <p className={styles.filterMeta}>
-                                {activitesFiltreesCount} activité{activitesFiltreesCount !== 1 ? "s" : ""} sur{" "}
-                                {activitesTotal} (filtres combinés)
-                            </p>
+                            <span
+                                className={styles.filterMeta}
+                                title={`${activitesFiltreesCount} activité${
+                                    activitesFiltreesCount !== 1 ? "s" : ""
+                                } sur ${activitesTotal} (filtres combinés)`}
+                            >
+                                {activitesFiltreesCount}&nbsp;/&nbsp;{activitesTotal}
+                            </span>
                         </div>
                     ) : null}
                 </div>

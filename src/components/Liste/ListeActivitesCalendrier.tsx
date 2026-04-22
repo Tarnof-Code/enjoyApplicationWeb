@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, MomentDto } from "../../types/api";
 import type { MembreEquipeSejour } from "./listeActivitesTypes";
-import { NB_JOURS_VUE_CALENDRIER, trierActivitesPourCelluleCalendrier } from "./listeActivitesUtils";
+import {
+    CALENDRIER_NOMBRES_JOURS_VUE,
+    type CalendrierNombreJoursVue,
+    couleurFondCalendrierPourTypeActivite,
+    trierActivitesPourCelluleCalendrier,
+} from "./listeActivitesUtils";
 import styles from "./ListeActivites.module.scss";
 
 export type CalendrierNavigationPeriodeProps = {
@@ -11,6 +16,8 @@ export type CalendrierNavigationPeriodeProps = {
     peutAvancer: boolean;
     onReculer: () => void;
     onAvancer: () => void;
+    nombreJoursVue: CalendrierNombreJoursVue;
+    onNombreJoursVueChange: (n: CalendrierNombreJoursVue) => void;
 };
 
 export function CalendrierNavigationPeriode({
@@ -19,6 +26,8 @@ export function CalendrierNavigationPeriode({
     peutAvancer,
     onReculer,
     onAvancer,
+    nombreJoursVue,
+    onNombreJoursVueChange,
 }: CalendrierNavigationPeriodeProps) {
     return (
         <div
@@ -26,6 +35,30 @@ export function CalendrierNavigationPeriode({
             role="toolbar"
             aria-label="Période affichée dans le calendrier"
         >
+            <div
+                className={styles.calendrierVueJours}
+                role="group"
+                aria-label="Nombre de jours visibles dans le planning"
+            >
+                {CALENDRIER_NOMBRES_JOURS_VUE.map((n) => (
+                    <button
+                        key={n}
+                        type="button"
+                        className={`${styles.calendrierVueJoursBtn} ${
+                            nombreJoursVue === n ? styles.calendrierVueJoursBtnActive : ""
+                        }`}
+                        aria-pressed={nombreJoursVue === n}
+                        aria-label={
+                            n === 1
+                                ? "Afficher une journée à la fois"
+                                : `Afficher ${n} jours à la fois`
+                        }
+                        onClick={() => onNombreJoursVueChange(n)}
+                    >
+                        {n === 1 ? "1 j." : `${n} j.`}
+                    </button>
+                ))}
+            </div>
             <button
                 type="button"
                 className={styles.calendrierNavBtn}
@@ -291,6 +324,8 @@ export function CalendrierFiltresPlanning({
 }
 
 export type CalendrierPlanningProps = {
+    /** Nombre de colonnes jour (pour la grille CSS) ; doit correspondre à la longueur de `joursFenetreCalendrier`. */
+    nombreJoursFenetre: number;
     joursFenetreCalendrier: { ymd: string; label: string; dansSejour: boolean }[];
     equipePourCalendrier: MembreEquipeSejour[];
     activitesParAnimateurEtDate: Map<string, Map<string, ActiviteDto[]>>;
@@ -308,6 +343,7 @@ export type CalendrierPlanningProps = {
 };
 
 export function CalendrierPlanning({
+    nombreJoursFenetre,
     joursFenetreCalendrier,
     equipePourCalendrier,
     activitesParAnimateurEtDate,
@@ -342,7 +378,9 @@ export function CalendrierPlanning({
                             className={styles.calendrierTable}
                             style={
                                 {
-                                    "--calendrier-jours": String(NB_JOURS_VUE_CALENDRIER),
+                                    "--calendrier-jours": String(
+                                        Math.max(1, nombreJoursFenetre || joursFenetreCalendrier.length)
+                                    ),
                                 } as React.CSSProperties
                             }
                         >
@@ -449,6 +487,14 @@ export function CalendrierPlanning({
                                                                 key={a.id}
                                                                 type="button"
                                                                 className={styles.calendrierActiviteBtn}
+                                                                style={
+                                                                    {
+                                                                        "--cal-act-type-bg":
+                                                                            couleurFondCalendrierPourTypeActivite(
+                                                                                a.typeActivite?.id
+                                                                            ),
+                                                                    } as React.CSSProperties
+                                                                }
                                                                 onClick={() => onOpenEdit(a)}
                                                                 disabled={deletingActiviteId === a.id}
                                                             >
@@ -465,6 +511,24 @@ export function CalendrierPlanning({
                                                                         Lieu : {a.lieu.nom}
                                                                     </span>
                                                                 ) : null}
+                                                                {(() => {
+                                                                    const autresAnimateurs = (a.membres ?? []).filter(
+                                                                        (m) => m.tokenId !== membre.tokenId
+                                                                    );
+                                                                    if (autresAnimateurs.length === 0) return null;
+                                                                    return (
+                                                                        <span
+                                                                            className={styles.calendrierActiviteAvec}
+                                                                        >
+                                                                            Avec :{" "}
+                                                                            {autresAnimateurs
+                                                                                .map((m) =>
+                                                                                    `${m.prenom} ${m.nom}`.trim()
+                                                                                )
+                                                                                .join(", ")}
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                                 {a.groupeIds?.length ? (
                                                                     <span
                                                                         className={styles.calendrierActiviteGroupes}
