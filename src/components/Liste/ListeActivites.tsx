@@ -854,6 +854,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     activitesCount={activites.length}
                     onOpenNouvelleActivite={openModalNouvelleActivite}
                     onOpenEdit={openEditModal}
+                    onDelete={requestDeleteActivite}
                     deletingActiviteId={deletingActiviteId}
                 />
             ) : (

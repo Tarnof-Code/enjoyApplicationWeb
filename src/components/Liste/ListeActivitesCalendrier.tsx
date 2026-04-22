@@ -1,3 +1,5 @@
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, MomentDto } from "../../types/api";
@@ -339,6 +341,7 @@ export type CalendrierPlanningProps = {
     activitesCount: number;
     onOpenNouvelleActivite: (opts?: { dateYmd?: string; animateurTokenId?: string }) => void;
     onOpenEdit: (a: ActiviteDto) => void;
+    onDelete: (activiteId: number) => void;
     deletingActiviteId: number | null;
 };
 
@@ -356,6 +359,7 @@ export function CalendrierPlanning({
     activitesCount,
     onOpenNouvelleActivite,
     onOpenEdit,
+    onDelete,
     deletingActiviteId,
 }: CalendrierPlanningProps) {
     return (
@@ -483,68 +487,85 @@ export function CalendrierPlanning({
                                                             </span>
                                                         ) : null}
                                                         {dansCellule.map((a) => (
-                                                            <button
+                                                            <div
                                                                 key={a.id}
-                                                                type="button"
-                                                                className={styles.calendrierActiviteBtn}
-                                                                style={
-                                                                    {
-                                                                        "--cal-act-type-bg":
-                                                                            couleurFondCalendrierPourTypeActivite(
-                                                                                a.typeActivite?.id
-                                                                            ),
-                                                                    } as React.CSSProperties
-                                                                }
-                                                                onClick={() => onOpenEdit(a)}
-                                                                disabled={deletingActiviteId === a.id}
+                                                                className={styles.calendrierActiviteCard}
                                                             >
-                                                                {a.moment ? (
-                                                                    <span className={styles.calendrierActiviteMoment}>
-                                                                        {a.moment.nom}
-                                                                    </span>
-                                                                ) : null}
-                                                                <span className={styles.calendrierActiviteNom}>
-                                                                    {a.nom}
-                                                                </span>
-                                                                {a.lieu ? (
-                                                                    <span className={styles.calendrierActiviteLieu}>
-                                                                        Lieu : {a.lieu.nom}
-                                                                    </span>
-                                                                ) : null}
-                                                                {(() => {
-                                                                    const autresAnimateurs = (a.membres ?? []).filter(
-                                                                        (m) => m.tokenId !== membre.tokenId
-                                                                    );
-                                                                    if (autresAnimateurs.length === 0) return null;
-                                                                    return (
-                                                                        <span
-                                                                            className={styles.calendrierActiviteAvec}
-                                                                        >
-                                                                            Avec :{" "}
-                                                                            {autresAnimateurs
-                                                                                .map((m) =>
-                                                                                    `${m.prenom} ${m.nom}`.trim()
-                                                                                )
-                                                                                .join(", ")}
+                                                                <button
+                                                                    type="button"
+                                                                    className={styles.calendrierActiviteBtn}
+                                                                    style={
+                                                                        {
+                                                                            "--cal-act-type-bg":
+                                                                                couleurFondCalendrierPourTypeActivite(
+                                                                                    a.typeActivite?.id
+                                                                                ),
+                                                                        } as React.CSSProperties
+                                                                    }
+                                                                    onClick={() => onOpenEdit(a)}
+                                                                    disabled={deletingActiviteId === a.id}
+                                                                >
+                                                                    {a.moment ? (
+                                                                        <span className={styles.calendrierActiviteMoment}>
+                                                                            {a.moment.nom}
                                                                         </span>
-                                                                    );
-                                                                })()}
-                                                                {a.groupeIds?.length ? (
-                                                                    <span
-                                                                        className={styles.calendrierActiviteGroupes}
-                                                                    >
-                                                                        Groupes :{" "}
-                                                                        {a.groupeIds
-                                                                            .map(
-                                                                                (id) =>
-                                                                                    groupes.find((g) => g.id === id)
-                                                                                        ?.nom
-                                                                            )
-                                                                            .filter(Boolean)
-                                                                            .join(", ") || "—"}
+                                                                    ) : null}
+                                                                    <span className={styles.calendrierActiviteNom}>
+                                                                        {a.nom}
                                                                     </span>
-                                                                ) : null}
-                                                            </button>
+                                                                    {a.lieu ? (
+                                                                        <span className={styles.calendrierActiviteLieu}>
+                                                                            Lieu : {a.lieu.nom}
+                                                                        </span>
+                                                                    ) : null}
+                                                                    {(() => {
+                                                                        const autresAnimateurs = (
+                                                                            a.membres ?? []
+                                                                        ).filter((m) => m.tokenId !== membre.tokenId);
+                                                                        if (autresAnimateurs.length === 0) return null;
+                                                                        return (
+                                                                            <span
+                                                                                className={styles.calendrierActiviteAvec}
+                                                                            >
+                                                                                Avec :{" "}
+                                                                                {autresAnimateurs
+                                                                                    .map((m) =>
+                                                                                        `${m.prenom} ${m.nom}`.trim()
+                                                                                    )
+                                                                                    .join(", ")}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                    {a.groupeIds?.length ? (
+                                                                        <span
+                                                                            className={styles.calendrierActiviteGroupes}
+                                                                        >
+                                                                            Groupes :{" "}
+                                                                            {a.groupeIds
+                                                                                .map(
+                                                                                    (id) =>
+                                                                                        groupes.find((g) => g.id === id)
+                                                                                            ?.nom
+                                                                                )
+                                                                                .filter(Boolean)
+                                                                                .join(", ") || "—"}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className={styles.calendrierActiviteDeleteBtn}
+                                                                    aria-label={`Supprimer l’activité « ${a.nom} »`}
+                                                                    title="Supprimer"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        onDelete(a.id);
+                                                                    }}
+                                                                    disabled={deletingActiviteId === a.id}
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrash} />
+                                                                </button>
+                                                            </div>
                                                         ))}
                                                         {dansSejour && peutAjouterActivite && dansCellule.length > 0 ? (
                                                             <button

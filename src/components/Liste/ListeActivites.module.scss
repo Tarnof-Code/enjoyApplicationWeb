@@ -683,14 +683,58 @@ thead .calendrierColHead {
     }
 }
 
+.calendrierActiviteCard {
+    position: relative;
+    margin-bottom: 0.32rem;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.calendrierActiviteDeleteBtn {
+    position: absolute;
+    top: 0.28rem;
+    right: 0.28rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(55, 55, 55, 0.5);
+    cursor: pointer;
+    font-size: 0.72rem;
+    line-height: 1;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+        color: #b32020;
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    &:focus-visible {
+        outline: 2px solid rgba($bleu_principal, 0.5);
+        outline-offset: 1px;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
 .calendrierActiviteBtn {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0.14rem;
     width: 100%;
-    margin-bottom: 0.32rem;
-    padding: 0.4rem 0.48rem;
+    margin: 0;
+    /** Espace pour l’icône supprimer en haut à droite (dans la carte) */
+    padding: 0.4rem 2.1rem 0.48rem 0.48rem;
     border: 1px solid rgba($bleu_principal, 0.35);
     border-radius: 6px;
     background: var(--cal-act-type-bg, #fff);
@@ -700,10 +744,6 @@ thead .calendrierColHead {
     font-size: 0.85rem;
     line-height: 1.25;
     color: #222;
-
-    &:last-child {
-        margin-bottom: 0;
-    }
 
     &:hover:not(:disabled) {
         border-color: $bleu_principal;
