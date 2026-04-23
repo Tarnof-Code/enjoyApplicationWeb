@@ -1,0 +1,141 @@
+# Décisions architecturales & patterns
+
+- **React 19 & Compiler :** 
+  - Utilisation de `babel-plugin-react-compiler` pour l'optimisation automatique.
+  - **INTERDICTION** d'utiliser `useMemo` et `useCallback` manuellement (sauf cas exceptionnel non géré par le compilateur).
+  - **Exception documentée** : **`ListeActivites.tsx`** — au minimum **`useMemo`** pour **`lieuxFiltrésParEmplacement`** et **`useEffect`** pour réinitialiser **`formLieuId`** si le lieu choisi ne correspond plus au filtre emplacement ; le fichier contient en outre d’autres **`useMemo` / `useCallback` / effets** (agrégations calendrier, filtres liste, bornes de fenêtre, etc.) pour la perf et des props stables vers **`ListeActivitesListe`** / **`ListeActivitesCalendrier`**. Ne pas généraliser ce pattern au reste de l’app sans besoin mesuré.
+  - **Exception documentée** : `DetailsSejourActivites.tsx` — **`useMemo`** pour la liste **`membresEquipePourActivites`** (directeur + équipe, triée) passée à **`ListeActivites`**.
+  - **Exception documentée** : `DetailsSejourOverview.tsx` — **`useCallback`** pour **`handleAccordionReorder`** (fin de glisser-déposer des panneaux).
+  - **Exception documentée** : **`ListePlanningsOrganisation.tsx`** — **`useMemo`** pour données dérivées (lignes triées, blocs de sections, grilles triées alphabétiquement, etc.) ; gros écran, interactions DnD et table.
+  - Pas d'import React inutile (React 19 auto-import).
+- **Data Fetching :** 
+  - Privilégier les loaders React Router (`useLoaderData` / **`useRouteLoaderData`** pour une route ancêtre) plutôt qu’un `useEffect` de chargement initial.
+  - Sous-routes du détail séjour : le loader est sur la route parent (`id: "sejour-detail"`) ; les pages enfants lisent **`useRouteLoaderData("sejour-detail")`**.
+  - Pattern standard : exporter `async function [pageName]Loader({params}: LoaderFunctionArgs)` depuis chaque page (ou un module dédié, ex. `detailsSejourLoader.ts`).
+  - Les loaders doivent gérer les erreurs et retourner les données ou `null`.
+- **Formulaires :** 
+  - Utilisation stricte de `src/components/Forms/Form.tsx` (générique) piloté par une configuration (props `fields`).
+  - Validation côté client via `validation` dans `FormField` (fonction qui retourne `string | null`).
+  - Validation automatique des champs requis et des règles personnalisées.
+  - Validation croisée : si `dateDebut` change, revalide automatiquement `dateFin` (pattern dans `handleFieldChange`).
+  - Utilisation de `useRevalidator` de React Router pour rafraîchir les données après soumission.
+  - Messages de succès/erreur configurables via props (`successMessage` peut être une fonction, `errorMessage`).
+  - Support des champs personnalisés via `customComponent` dans `FormField`.
+  - Modal de confirmation automatique après succès si `successMessage` est fourni (fermeture du formulaire après confirmation).
+  - Gestion de l'état de chargement (`loading`, `isSubmitting`) pour désactiver les champs et boutons pendant la soumission.
+- **Composants UI :** 
+  - Pattern d'accordéon sur **`DetailsSejourOverview`** : état local `openAccordions` (un seul panneau ouvert à la fois), ordre des panneaux **`accordionOrder`** + persistance `localStorage`. Ids **vue générale** : `1` infos générales, `2` équipe, `3` enfants, `4` groupes, `5` lieux (`ListeLieux`), **`6` moments (`ListeMoments`)**, **`9` horaires (`ListeHoraires`)**, **`8` types d'activité (`ListeTypesActivite`)**, **`10` plannings organisation (`ListePlanningsOrganisation`)** — **pas de `7`** (activités sur **`DetailsSejourActivites`** / route **`activites`**). Constante **`OVERVIEW_ACCORDION_IDS`** : `["1","2","3","4","5","6","9","8","10"]`. **`location.state.openAccordion`** et **`expandedGroupeId`** : retour depuis DossierEnfant, scroll vers accordéon / groupe (voir implémentation dans `DetailsSejourOverview.tsx`).
+  - Composants de liste génériques dans `components/Liste/` (`Liste.tsx`, `Equipe.tsx`, `TableauUtilisateurs.tsx`, `ListeEnfants.tsx`). `Liste.tsx` supporte les props `canDossier`/`onDossier` pour afficher une icône dossier (faFolder) à côté des actions éditer/supprimer.
+  - Composants enfants :
+    - `AddEnfantForm.tsx` : Formulaire générique pour créer/modifier un enfant (utilise `Form.tsx` avec configuration `fields`)
+    - `ListeEnfants.tsx` : Liste des enfants avec filtres, tri, actions CRUD (création, modification, suppression individuelle et groupée), icône dossier pour accéder au dossier de chaque enfant. Formatage automatique du niveau scolaire avec `NiveauScolaireLabels` (affichage "5ème" au lieu de "CINQUIEME")
+    - `DossierEnfant.tsx` : Page d'affichage et modification du dossier d'un enfant (contacts parents, médical, traitements). Bouton Modifier → modal avec formulaire.
+    - `DossierEnfantForm.tsx` : Formulaire de modification du dossier (13 champs, validation email/téléphone optionnelle, textarea pour les champs longs).
+    - `ImportExcelEnfants.tsx` : Import Excel avec gestion des résultats (`ExcelImportResponse`), affichage des erreurs détaillées, et icône info ouvrant une notice des colonnes (logique groupes ET/OU, colonnes obligatoires/optionnelles, mots-clés formatés, formats acceptés ; majuscules et espaces autorisés)
+    - `ListeGroupes.tsx` : Liste des groupes d'un séjour (accordéon, création/édition/suppression, ajout/retrait d'enfants, affichage des **référents**, bouton « Ajouter les enfants de la tranche » pour AGE/NIVEAU_SCOLAIRE)
+    - `ListeMoments.tsx` : **Moments** (créneaux) — ordre **`trierMomentsChronologiquement`** (champ **`ordre`** / `id`), CRUD modals, **Monter / Descendre** + **`reordonnerMoments`**, callbacks optionnels pour état parent (`onMomentsReordered`, etc.) ; champs **`SaveMomentRequest.nom`** (obligatoire)
+    - `ListeHoraires.tsx` : **Horaires** (libellés d’heure) — CRUD modals, validation **`validerLibelleHoraire`**, affichage trié **`trierHorairesChronologiquement`** ; callbacks `onHoraireCreated` / `onHoraireUpdated` / `onHoraireDeleted` pour l’état parent **`DetailsSejourOverview`**
+    - `ListeTypesActivite.tsx` : **Types d’activité** du séjour — accordéons **par défaut** vs **personnalisés**, CRUD (`SaveTypeActiviteRequest`), **`useRevalidator`** après succès, styles **`listPredefinis`**, **`cardReadonly`**, modale suppression avec gestion **type encore utilisé** (voir [contexte-actif.md](contexte-actif.md)).
+    - `ListePlanningsOrganisation.tsx` : **Plannings organisation** (grilles direction) — cartes par planning, modale tableau éditeur, sections, DnD lignes / sections, **`sejourPlanningGrilleService`** ; voir [contexte-actif.md](contexte-actif.md) et glossaire **Planning organisation (grille)** dans [etat-projet.md](etat-projet.md).
+    - **Liste des activités** ( **`DetailsSejourActivites`**, loader **`sejour-detail`**, **`sejourActiviteService`**) :
+      - **`ListeActivites.tsx`** : orchestration (modale CRUD, état formulaire, filtres globaux, bascule **liste / calendrier**).
+      - **`ListeActivitesListe.tsx`** : filtres cumulables + tableau des activités.
+      - **`ListeActivitesCalendrier.tsx`** : planning sur fenêtre de jours, filtres animateurs/groupes, navigation de période.
+      - **`listeActivitesTypes.ts`** / **`listeActivitesUtils.ts`** : props partagées, constantes filtres calendrier, utilitaires dates (`yyyy-MM-dd`), tris, libellés partage lieu.
+      - Règles métier / API : **créneau** **`moments`** + **`momentId`**, **type** **`typesActivite`** + **`typeActiviteId`**, **`groupeIds`**, **`membreTokenIds`**, **`lieuId`** + filtre emplacement, **`metaGrid`**, **`avertissementLieu`** — aligné **enjoyApi**.
+    - `ListeLieux.tsx` : Liste des **lieux** du séjour (`LieuDto`) — filtres emplacement / capacité min, CRUD via `sejourLieuService`, formulaire avec **partage entre animateurs** et **nombre max d’activités le même jour**, résumé partage sur les cartes, `useRevalidator` après mutations ; libellés `EmplacementLieuLabels`
+    - `CreateGroupeForm.tsx` : Formulaire création/édition de groupe (types THEMATIQUE, AGE, NIVEAU_SCOLAIRE ; `ReferentsSelector` pour les référents ; sync API après sauvegarde ; fallback ajout enfants si backend renvoie groupe vide)
+    - `ReferentsSelector.tsx` : Sélection multi-référents parmi l'équipe (valeur = JSON array de `tokenId`, voir section Types)
+    - `Acces_non_autorise.tsx` : Page d'erreur 403 (utilisée dans `ListeUtilisateurs` quand l'utilisateur n'a pas le rôle ADMIN)
+  - **Formatage des enums** : Utiliser les objets `Labels` (ex: `NiveauScolaireLabels`, `RoleSejourLabels`, `RoleSystemeLabels`, `EmplacementLieuLabels`) pour formater l'affichage des valeurs enum dans l'UI plutôt que d'afficher directement les valeurs brutes.
+- **Styles :** SCSS Modules (`.module.scss`) pour l'isolation CSS. Un fichier `.module.scss` par composant. Classes utilitaires : `.infoStack` (flex column, gap 1rem) pour espacer les blocs d'infos empilés verticalement ; `.grid` pour les grilles responsives (repeat auto-fill minmax).
+- **API :** 
+  - Centralisation des appels via `services/` (`caller.service.ts` configure Axios avec intercepteurs).
+  - Gestion automatique du refresh token via intercepteur Axios (401 → refresh automatique).
+  - Header `X-Skip-Token-Refresh` pour désactiver le refresh automatique sur certaines requêtes (ex: login, inscription, updateUser).
+  - Pattern de gestion d'erreurs centralisé dans `helpers/axiosError.ts` :
+    - `validateResponseStatus(response, expectedStatus)` : Vérifie le code HTTP attendu
+    - `adaptAxiosError(error, options)` : Adapte les erreurs Axios avec message, format validation (400), et préservation de `response.data`
+    - Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`
+    - Utilisé dans : `sejour.service.ts`, `sejour-equipe.service.ts`, `sejour-enfant.service.ts`, `sejour-groupe.service.ts`, `sejour-activite.service.ts`, **`sejour-moment.service.ts`**, **`sejour-horaire.service.ts`** (mutations ; GET avec try/catch simple), **`sejour-type-activite.service.ts`** (mutations ; GET avec try/catch simple), `sejour-lieu.service.ts` (mutations ; GET avec try/catch simple), **`sejour-planning-grille.service.ts`** (mutations), `utilisateur.service.ts`
+  - Types API centralisés dans `types/api.d.ts` (DTOs synchronisés avec le backend Java Spring).
+- **État Global :** 
+  - Redux Toolkit avec Redux Persist pour la persistance de l'état d'authentification (localStorage).
+  - AuthSlice (`redux/auth/authSlice.ts`) gère `role`, `prenom`, `genre`.
+  - PersistGate dans `main.tsx` pour attendre la réhydratation avant le rendu.
+  - Store configuré avec middleware Redux Persist (FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER ignorés dans serializableCheck).
+  - Types exportés : `RootState`, `AppDispatch` pour le typage TypeScript.
+
+Routes détaillées et layout : [documentation-ui-routing.md](documentation-ui-routing.md).
+
+- **Structure Dossiers :** 
+  - Séparation claire `Pages/_Admin` vs `Pages/_Directeur` pour les pages spécifiques aux rôles.
+  - Dossier détail séjour : `Pages/_Directeur/DetailsSejour/` — `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`, `SejourDetailOutlet.tsx`, `detailsSejourLoader.ts`, styles partagés `DetailsSejour.module.scss`.
+  - Helpers dans `helpers/`, types dans `types/`, services dans `services/`.
+  - Services séjour modulaires : `sejour.service.ts` (CRUD), `sejour-equipe.service.ts`, `sejour-enfant.service.ts`, `sejour-groupe.service.ts`, `sejour-activite.service.ts`, `sejour-moment.service.ts` (`sejourMomentService`), `sejour-horaire.service.ts` (`sejourHoraireService`), `sejour-type-activite.service.ts` (`sejourTypeActiviteService`), `sejour-lieu.service.ts` (`sejourLieuService`), `sejour-planning-grille.service.ts` (`sejourPlanningGrilleService`).
+- **Types :** 
+  - Les dates envoyées au backend pour les séjours sont au format `YYYY-MM-DD` (string).
+  - Types TypeScript stricts, éviter `any`, préférer `unknown` si nécessaire.
+  - Types API centralisés dans `types/api.d.ts` : 
+    - **DTOs** : `SejourDTO`, `ProfilUtilisateurDTO`, `DirecteurInfos`, `EnfantDto`, `DossierEnfantDto`, `GroupeDto` (inclut `referents: ReferentInfos[]`), `LieuDto` (**`partageableEntreAnimateurs`**, **`nombreMaxActivitesSimultanees`**), **`MomentDto`** (`id`, `nom`, `sejourId`, **`ordre`**), **`HoraireDto`** (`id`, `libelle`, `sejourId`), **`TypeActiviteDto`** (`id`, `libelle`, **`predefini`**, `sejourId`), `ActiviteDto` (**`moment`** imbriqué, **`typeActivite`**, **`lieu`**, **`avertissementLieu`**, `groupeIds`), `ActiviteMembreEquipeInfo`
+    - **Emplacement lieu** : type union `EmplacementLieu` dans `api.d.ts` (`INTERIEUR` | `EXTERIEUR` | `HORS_CENTRE`)
+    - **Référents** : `ReferentInfos` (`tokenId`, `nom`, `prenom`)
+    - **Requests** : `CreateSejourRequest`, `RegisterRequest`, `MembreEquipeRequest`, `UpdateUserRequest`, `AuthenticationRequest`, `ChangePasswordRequest`, `CreateEnfantRequest`, `UpdateDossierEnfantRequest`, `CreateGroupeRequest`, `AjouterReferentRequest` (referentTokenId pour ajouterReferent), **`SaveMomentRequest`** (`nom`), **`ReorderMomentsRequest`** (liste ordonnée des ids de moments), **`SaveHoraireRequest`** (`libelle` au format `6h00` … `23h59`), **`SaveTypeActiviteRequest`** (`libelle`), `CreateActiviteRequest` / `UpdateActiviteRequest` (**`lieuId`** optionnel, **`momentId`** optionnel côté TS ; **obligatoire en pratique** dès qu’il existe au moins un moment pour le séjour ; **`typeActiviteId`** **obligatoire**), `SaveLieuRequest` (champs **partage** alignés backend)
+    - **Responses** : `AuthenticationResponse`, `RefreshTokenResponse`, `ErrorResponse`, `ExcelImportResponse`, `ExcelImportSpecResponse`, `ExcelImportColumnSpec`
+  - Synchronisation avec les DTOs Java du backend (dates sérialisées en ISO 8601 strings).
+  - Documentation complète dans `types/api.d.ts` avec correspondances aux classes Java.
+  - **Note importante** : `EnfantDto` utilise un 'd' minuscule pour correspondre au nom Java `EnfantDto` (pas `EnfantDTO`).
+  - **DossierEnfantDto** (dans `api.d.ts`) : `id`, `enfantId`, `emailParent1`, `telephoneParent1`, `emailParent2`, `telephoneParent2`, `informationsMedicales`, `pai`, `informationsAlimentaires`, `traitementMatin`, `traitementMidi`, `traitementSoir`, `traitementSiBesoin`, `autresInformations`, `aPrendreEnSortie` (tous `string | null` sauf `id` et `enfantId` en `number`).
+  - **Séjours :** Utiliser `SejourDTO` pour typer les objets séjour (handler, callbacks, données de liste). Le type `Sejour` n'existe pas.
+- **Variables d'environnement :**
+  - `VITE_API_URL` : URL de base de l'API (défaut: `http://localhost:8080/api/v1`)
+  - `VITE_SECRET_KEY` : Clé secrète pour le chiffrement des tokens dans localStorage
+  - `VITE_APP_NAME` : Nom de l'application (affiché dans Header et Footer)
+  - `VITE_PORT` : Port de l'application (défini dans vite-env.d.ts mais non utilisé actuellement)
+
+## Enums & rôles
+
+- **RoleSysteme** (`enums/RoleSysteme.ts`) : Rôles système de l'application
+  - `ADMIN` : Administrateur (accès complet)
+  - `DIRECTION` : Directeur (gère ses séjours)
+  - `BASIC_USER` : Utilisateur de base
+  - Labels disponibles via `RoleSystemeLabels`
+- **EmplacementLieu** (`enums/EmplacementLieu.ts` + `EmplacementLieu` dans `api.d.ts`) : `INTERIEUR`, `EXTERIEUR`, `HORS_CENTRE` — libellés via `EmplacementLieuLabels` (aligné sur l’enum Java).
+- **RoleSejour** (`enums/RoleSejour.ts`) : Rôles dans un séjour spécifique
+  - `ANIM` : Animateur/Animatrice
+  - `AS` : Assistant(e) sanitaire
+  - `ADJOINT` : Adjoint(e)
+  - `SB` : Surveillant(e) de baignade
+  - `AUTRE` : Autre
+  - Labels disponibles via `RoleSejourLabels`
+- **Fonctions de formatage** : `getRoleSystemeByGenre()` et `getRoleSejourByGenre()` dans `utilisateur.service.ts` pour adapter les labels selon le genre.
+
+## Helpers & utilitaires
+
+- **Gestion des dates :**
+  - `formaterDate(date)` : Formate une date pour l'affichage (toLocaleDateString). Gère strings ISO, timestamps (secondes/millisecondes), Date objects. Retourne "Date invalide" si invalide, "" si null/undefined.
+  - `parseDate(date)` : Parse une date en Date object, gère tous les formats (ISO, timestamp secondes/millisecondes, Date, YYYY-MM-DD). Retourne null si invalide.
+  - `dateToISO(date)` : Convertit une date en string ISO 8601 pour l'API. Gère tous les formats (ISO, timestamp, Date, YYYY-MM-DD). Retourne undefined si invalide/absente.
+  - `formatDateAnglais(date)` : Formate une date au format YYYY-MM-DD (format anglais pour les inputs date). Gère timestamps (secondes/millisecondes), Date objects, strings ISO.
+  - `calculerDureeEnJours(dateDebut, dateFin)` : Calcule la durée en jours entre deux dates (arrondi au supérieur avec Math.ceil).
+- **Utilisateurs :**
+  - `trierUtilisateursParNom(utilisateurs)` : Trie un tableau d'utilisateurs par nom (alphabétique, insensible à la casse).
+  - `trierEnfantsParNom(enfants)` : Trie un tableau d'enfants par nom puis par prénom (alphabétique, insensible à la casse). Utilisé automatiquement dans `getEnfantsDuSejour()`.
+  - `calculerAge(dateNaissance, referenceDate?)` : Calcule l'âge à partir d'une date de naissance. Si `referenceDate` est fourni, l'âge est calculé à cette date (ex. date de début du séjour pour les groupes par âge). Sinon, utilise la date du jour. Utilisé dans `ListeEnfants`, `ListeGroupes` et `groupeTranche`.
+  - `getEnfantsMatchingTranche(groupe, enfants, dateDebutSejour, idsExclus?)` : Retourne les enfants correspondant à la tranche du groupe (âge ou niveau scolaire). Utilisé par `ListeGroupes` (bouton « Ajouter les enfants de la tranche ») et `CreateGroupeForm` (fallback création).
+- **Moments :**
+  - `trierMomentsChronologiquement(moments)` (`helpers/trierMomentsChronologiquement.ts`) : tri comme le backend — `COALESCE(ordre, id)`, puis `id`. Utilisé par `ListeMoments`, `DetailsSejourOverview`.
+- **Horaires :**
+  - `validerLibelleHoraire(libelle)` / `LIBELLE_HORAIRE_REGEX` (`helpers/validerLibelleHoraire.ts`) : alignés sur le pattern backend (`6h00` … `23h59`).
+  - `trierHorairesChronologiquement(horaires)` (`helpers/trierHorairesChronologiquement.ts`) : tri par heure-minute dérivée du libellé, puis `id`. Utilisé par `ListeHoraires`, `DetailsSejourOverview`.
+- **Plannings organisation (jours du séjour) :**
+  - `enumererJoursSejour(dateDebut, dateFin)` (`helpers/enumererJoursSejour.ts`) : liste des dates `yyyy-MM-dd` couvrant la période du séjour (inclus). Utilisé par **`ListePlanningsOrganisation`** pour les colonnes du tableau. En-têtes de jours : même logique d’affichage que le calendrier activités via **`libelleJourCourtPourBouton`** / **`parseYmdVersDateLocale`** (`components/Liste/listeActivitesUtils.ts`).
+- **Gestion des erreurs API** (`helpers/axiosError.ts`) :
+  - `validateResponseStatus(response, expectedStatus)` : Vérifie que le code HTTP correspond à l'attendu.
+  - `adaptAxiosError(error, options)` : Adapte les erreurs Axios en Error avec propriété `response` attachée. Gère les formats standard (`error`/`message`) et validation (`{ champ: "msg" }` ou `{ champ: ["msg"] }`).
+  - Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`.
+- **Validation :**
+  - `regexValidation.ts` : Fonctions de validation regex pour les champs de formulaire.
+    - `validateEmail(email)` : Valide un email (format standard)
+    - `validatePhone(phone)` : Valide un téléphone français (10 chiffres commençant par 0)
+    - `validatePassword(password)` : Valide un mot de passe (min 4 caractères, au moins une minuscule, une majuscule, un caractère spécial)

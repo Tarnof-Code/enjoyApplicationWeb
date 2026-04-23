@@ -1,0 +1,108 @@
+# Contexte actif
+
+## État actuel
+
+Application stabilisée sur React 19 avec React Compiler activé.
+
+## Journal (extraits)
+
+- **Dernière vérification cross-projet :** 2026-03-31 (lecture `../../../enjoyApi/AI_MEMORY.md` — lieux partageables, occupation lieu / `avertissementLieu`, `lieuId` activités). **2026-04-03 :** moments. **2026-04-04 :** **types d’activité** (CRUD + lien obligatoire sur les activités), aligné `enjoyApi` (`TypeActivite`, `/types-activite`). **2026-04-22 :** synchronisation doc front (Header, liste activités, `ListeTypesActivite` / revalidation) ; implémentation **horaires** séjour (accordéon vue générale, CRUD, tri chronologique). **2026-04-23 :** plannings **organisation** (grilles direction, `ListePlanningsOrganisation`, `sejour-planning-grille`, panneau accordéon `10`, loader `planningGrilles`).
+
+- **Dernière mise à jour de la Memory Bank :** 2026-04-23 (pivot + fiches `docs/ai/`).
+
+## Dernières réalisations (synthèse)
+
+- **Plannings organisation (direction)** — **`ListePlanningsOrganisation.tsx`** + **`ListePlanningsOrganisation.module.scss`** ; service **`sejour-planning-grille.service.ts`** (`/sejours/{sejourId}/planning-grilles` : lister grilles, détail, créer / modifier / supprimer grille, CRUD lignes, cellules). **Loader** : **`detailsSejourLoader.ts`** charge **`planningGrilles`** (try/catch si API indisponible). **Vue générale** : panneau accordéon **`10`** « Plannings organisation » (`DetailsSejourOverview`) — cartes triées **par titre** (`localeCompare` `fr`, `useMemo` **grillesTriAlphabetique**). **Création planning** : après POST, ouverture **directe** du tableau (`openConsultEditTable(created.id)`), sans modale de succès. **Tableau** (modale éditeur) : en-têtes de jours au **même format que le calendrier des activités** (`libelleJourCourtPourBouton` / `parseYmdVersDateLocale` depuis **`listeActivitesUtils.ts`**). **Sections** : libellés de regroupement **horizontaux** ; poignée de **déplacement de section entière** à **gauche** du texte (flex row, retours à la ligne) ; réordonnancement par blocs (`decomposerEnBlocsOrdre`, `reorderBlocsAvecCile`, `appliquerDeplacementSectionEntreBlocs`) — **ordre interne des lignes d’une section inchangé**. **Sections** listées dans l’ordre d’apparition (`sectionsDepuisLignes`). **`prochainOrdreNouvelleLigne`** : si aucune ligne « hors section » et nouvelle ligne sans regroupement, **`ordre = max(tous les ordres) + 1`** (évite doublon d’`ordre` quand toutes les lignes existantes sont dans une section). **Sans colonne libellé de ligne** (`sourceLibelleLignes == null` / `grilleLibelleLignesDesactive`) : **« Ajouter une ligne »** appelle **`creerLigneSansModal`** (pas de modale). **Glisser-déposer lignes** : même section uniquement ; **types** `PlanningGrilleDetailDto`, `PlanningLigneDto`, `SavePlanningLigneRequest`, etc. dans **`api.d.ts`** ; libellés enum **`PlanningLigneLibelleSourceLabels.ts`**. **Exception React Compiler** : ce fichier conserve **`useMemo`** (lignes triées, blocs, grilles triées, etc.).
+
+- **Horaires du séjour** — **`sejour-horaire.service.ts`** (`sejourHoraireService` : `getHorairesDuSejour`, `getHoraireById`, `creerHoraire`, `modifierHoraire`, `supprimerHoraire`) — préfixe `/sejours/{sejourId}/horaires`. **`ListeHoraires.tsx`** + **`ListeHoraires.module.scss`** : CRUD modals, validation client via **`validerLibelleHoraire`** / **`LIBELLE_HORAIRE_REGEX`** (`helpers/validerLibelleHoraire.ts`). **Affichage et état** : **`trierHorairesChronologiquement`** (`helpers/trierHorairesChronologiquement.ts`) — tri par heure réelle du libellé, puis `id`. **`detailsSejourLoader`** : **`getHorairesDuSejour`** dans le `Promise.all`. **`DetailsSejourOverview`** : panneau accordéon **`9`** « Horaires » (ordre par défaut après **`6`** Moments, avant **`8`** Types d’activité) ; état local **`horaires`** ; type loader enrichi dans **`Header.tsx`** / **`DetailsSejourActivites.tsx`**. Types **`HoraireDto`**, **`SaveHoraireRequest`** dans `api.d.ts`.
+
+- **Header directeur (détail séjour)** — `Header.tsx` : pour `RoleSysteme.DIRECTION`, lien **Mes séjours** ; si `useMatch("/directeur/sejours/:id")` et données valides de **`useRouteLoaderData("sejour-detail")`** (pas une `Error`), affichage du **fil** (chevron `FaChevronRight`, **pill** avec le nom du séjour, `role="tablist"` **aria-label** « Sections du séjour ») et des segments **Vue générale** (`end` sur la route index, `FaThLarge`) / **Activités** (`FaClipboardList`). Styles : `Header.module.scss` (`directorNav`, `directorSegmented`, alignement texte/icônes).
+
+- **Types d’activité — revalidation de route** — `ListeTypesActivite.tsx` : après **création / édition / suppression** réussies, `useRevalidator().revalidate()` pour recharger le loader **`sejour-detail`** (cohérence `typesActivite` + **activités** sur l’onglet Activités).
+
+- **Liste des activités — responsive & calendrier** — **Vue liste** (`ListeActivitesListe` + SCSS) : sous **max-width 991.98px**, barre **Afficher / Masquer les filtres** + pastille **Filtres actifs** ; le panneau de filtres est replié par défaut sous **768px** (`data-liste-filtres-ouverts`). **Barre supérieure** (boutons + filtres) **fixe** sous le header du site (`.topPinnedStack`, variables `--liste-act-site-header`, `--liste-act-top-pinned-height`, `--liste-act-pinned-left`, `--liste-act-pinned-width` (mesure JS), `.topPinnedStackSpacer`). **Vue calendrier** : choix de la **largeur de fenêtre en jours** (`calendrierNombreJoursVue` / `CalendrierNombreJoursVue`), navigation de période, **`CalendrierFiltresPlanning`** (dropdowns multi-sélection animateurs & groupes, **Réinitialiser** les filtres).
+
+- **Détail séjour en deux vues** — Route `/directeur/sejours/:id` avec **`id: "sejour-detail"`** et **`detailsSejourLoader`** ; **`SejourDetailOutlet`** ; index → **`DetailsSejourOverview`**, sous-route **`activites`** → **`DetailsSejourActivites`** (`ListeActivites`). Données : **`useRouteLoaderData("sejour-detail")`**. **Header** directeur : lien **Mes séjours** ; en contexte séjour, fil (pill nom, segments **Vue générale** / **Activités**) — voir le point *Header directeur* ci‑dessus.
+
+- **Accordéons vue générale** — Ids **`1`–`6`**, **`9`** (Horaires), **`8`**, **`10`** (Plannings organisation) (les activités ne sont plus au panneau **`7`**). Réordonnancement par glisser-déposer, clé `enjoy.detailsSejour.overviewAccordionOrder.{sejourId}` ; reprise de l’ancienne `enjoy.detailsSejour.accordionOrder.{sejourId}` sans l’id **`7`**.
+
+- **Moments réordonnables** — **`trierMomentsChronologiquement`**, **`sejourMomentService.reordonnerMoments`** (`PUT …/moments/reorder`, **`ReorderMomentsRequest`**), UI Monter/Descendre dans **`ListeMoments`** ; sync état parent **`DetailsSejourOverview`**.
+
+- **Types d’activité (par séjour)** — **`sejour-type-activite.service.ts`** (`getTypesActiviteDuSejour`, `getTypeActiviteById`, `creerTypeActivite`, `modifierTypeActivite`, `supprimerTypeActivite`) — préfixe `/sejours/{sejourId}/types-activite`. **`ListeTypesActivite.tsx`** : deux **accordéons internes** (Collapse reactstrap) — **types par défaut** (`predefini`, cartes étroites centrées, pas de modifier/supprimer) vs **types propres au séjour** (CRUD modals) ; après chaque **mutation** réussie, **`revalidate()`** sur la route (loader **`sejour-detail`**, alignement avec l’onglet **Activités**). Échec **DELETE** si le type est encore utilisé par des activités : message rouge fixe *« Impossible de supprimer ce type car des activités l'utilisent encore. »*, bouton **Confirmer la suppression** masqué, seul **Fermer** reste (détection via texte d’erreur API `IllegalArgumentException` côté **`TypeActiviteServiceImpl`**). **`DetailsSejourOverview`** : état local **`typesActivite`** ; panneau **`8` « Types d'activité »** ; callbacks pour garder les **`ActiviteDto`** en mémoire alignés (liste complète des activités sur l’onglet **Activités**). Types **`TypeActiviteDto`**, **`SaveTypeActiviteRequest`**, **`ActiviteDto.typeActivite`**, **`typeActiviteId`** obligatoire sur **`CreateActiviteRequest`** / **`UpdateActiviteRequest`** dans `api.d.ts`.
+
+- **Moments du séjour (créneaux)** — **`sejour-moment.service.ts`** (`sejourMomentService` : `getMomentsDuSejour`, `getMomentById`, `creerMoment`, `modifierMoment`, `supprimerMoment`, **`reordonnerMoments`**) — préfixe `/sejours/{sejourId}/moments`. **`ListeMoments.tsx`** : ordre **`trierMomentsChronologiquement`**, CRUD via modals, réordonnancement API (voir *Moments réordonnables* ci‑dessus). **`detailsSejourLoader`** inclut **`getMomentsDuSejour`**. Panneau **`6`** après Lieux. **`ListeActivites`** (page **`DetailsSejourActivites`**) : prop **`moments`** ; **`momentId`** obligatoire si des moments existent ; création bloquée si **`moments.length === 0`**. Types **`MomentDto`** (**`ordre`**), **`SaveMomentRequest`**, **`ReorderMomentsRequest`**, **`ActiviteDto.moment`**, **`momentId`** dans `api.d.ts`.
+
+- **Lieux & activités (alignement API)** — `api.d.ts` : **`LieuDto`** / **`SaveLieuRequest`** avec **`partageableEntreAnimateurs`**, **`nombreMaxActivitesSimultanees`** ; **`ActiviteDto`** avec **`lieu`**, **`avertissementLieu`** ; **`CreateActiviteRequest` / `UpdateActiviteRequest`** avec **`lieuId`** optionnel et **`typeActiviteId`** obligatoire. **`ListeLieux.tsx`** : case à cocher **partage entre animateurs**, champ **nombre max d’activités le même jour** (≥ 2 si partage), résumé partage sur chaque carte, payload **`SaveLieuRequest`** complet. **Module liste des activités** (**`DetailsSejourActivites`**) : orchestration dans **`ListeActivites.tsx`** (modal CRUD, état, appels **`sejourActiviteService`**, bascule **liste / calendrier**) ; affichage délégué à **`ListeActivitesListe.tsx`** (filtres + tableau) et **`ListeActivitesCalendrier.tsx`** (planning, navigation période, filtres animateurs/groupes) ; types partagés **`listeActivitesTypes.ts`**, utilitaires dates/tri/regroupements **`listeActivitesUtils.ts`**, styles **`ListeActivites.module.scss`**. Props : **`lieux`**, **`typesActivite`**, **`moments`**, etc. Sélecteur **type d’activité** (optgroups *par défaut* / *du séjour*), validation obligatoire ; création désactivée si **`typesActivite.length === 0`** ; **métadonnées** (moment, lieu, groupes, animateurs, type) en **`metaGrid`** flex **wrap**. Sélection **lieu optionnelle** avec **filtre par emplacement** (Tous / Intérieur / Extérieur / Hors centre — `EmplacementLieuValues` / `EmplacementLieuLabels`), texte d’aide sur le **partage** du lieu choisi, cartes affichant **lieu + règle de partage** ; en édition, **`lieuId: null`** si « Aucun lieu » ; après POST/PUT, concaténation de **`avertissementLieu`** au message de succès (modal avec classe **`successBody`** / `pre-wrap`). Styles : **`lieuHint`**, **`successBody`** dans `ListeActivites.module.scss`. **Exception doc React Compiler** : **`ListeActivites.tsx`** conserve encore **`useMemo` / `useCallback` / effets** au-delà du seul filtre lieu (dérivés calendrier, filtres liste, handlers stables vers les sous-composants) — voir [decisions-architecturales.md](decisions-architecturales.md).
+
+- **Vue générale (Lieux, Moments, Horaires, Types d’activité, Plannings organisation)** sur **`DetailsSejourOverview`** : **`ListeLieux`**, **`ListeMoments`**, **`ListeHoraires`**, **`ListeTypesActivite`**, **`ListePlanningsOrganisation`** (les activités sont sur la route **`/activites`**). **Lieux** : liste triée par nom, filtres emplacement et capacité minimale, CRUD via modal. Données chargées dans **`detailsSejourLoader`** : `Promise.all` — séjour, enfants, groupes, **lieux**, **moments**, **horaires**, activités, **types d’activité** (`sejourLieuService`, **`sejourMomentService`**, **`sejourHoraireService`**, `sejourActiviteService`, **`sejourTypeActiviteService`**) + en parallèle **`planningGrilles`** via **`listerGrilles`** (try/catch). API lieux : **`sejour-lieu.service.ts`** ; API moments : **`sejour-moment.service.ts`** ; API horaires : **`sejour-horaire.service.ts`** ; plannings grilles : **`sejour-planning-grille.service.ts`** ; types **`LieuDto`** / **`SaveLieuRequest`**, **`MomentDto`** / **`SaveMomentRequest`**, **`HoraireDto`** / **`SaveHoraireRequest`**, **`EmplacementLieu`**, DTOs planning (`PlanningGrille*`, `PlanningLigne*`, etc.) dans `api.d.ts` ; libellés **`EmplacementLieuLabels`**. Le **lieu principal** du séjour (`lieuDuSejour`) reste dans **Informations générales**. **Numérotation vue générale** : `1` … `6`, puis **`9`**, puis **`8`**, puis **`10`** (pas de **`7`**). Retour depuis le dossier enfant : **`/directeur/sejours/:id`** avec **`openAccordion: '3'`** ou **`'4'`** (+ `expandedGroupeId` si besoin).
+
+- **Référents de groupe** (membres de l'équipe désignés pour un groupe) :
+  - Composant `ReferentsSelector.tsx` : champ personnalisé pour le `Form` générique ; multi-sélection par cases à cocher sur l'équipe du séjour (`EquipePerson` : `tokenId`, `nom`, `prenom`). La valeur du champ est une **chaîne JSON** `JSON.stringify(string[])` des `tokenId` sélectionnés (parse côté soumission).
+  - Si l'équipe est vide : message invitant à ajouter des membres avant de désigner des référents.
+  - `CreateGroupeForm.tsx` : champ `referents` + après succès création/édition, **synchronisation par diff** avec l'API (`ajouterReferent` / `retirerReferent`) par rapport aux référents actuels du `GroupeDto`.
+  - `ListeGroupes.tsx` : affichage des référents dans l'accordéon (« Référents : » + noms joint par virgule).
+  - Types : `ReferentInfos`, `GroupeDto.referents`, `AjouterReferentRequest.referentTokenId`.
+
+- **Notice d'import Excel** (composant `ImportExcelEnfants`) :
+  - Icône d'information (faCircleInfo) à côté du bouton « Importer depuis Excel » ouvre une modal avec la notice des colonnes
+  - Données chargées dynamiquement via `GET /api/v1/sejours/{sejourId}/enfants/import/spec` (`getExcelImportSpec` dans `sejour-enfant.service.ts`)
+  - **Logique groupes (ET/OU)** : l'en-tête doit contenir **tous** les groupes (ET), avec **au moins un** mot par groupe (OU). Ex. : Email parent 1 = (email ou mail) ET parent ET 1. Synchronisé avec le backend `ExcelImportSpec` (groupesMotsCles).
+  - Affiche colonnes obligatoires, optionnelles avec mots-clés formatés (join " ET " entre groupes)
+  - Précise que les majuscules et les espaces sont autorisés dans les en-têtes Excel (détection flexible côté backend)
+  - `formatKeywordForDisplay()` : formate les mots-clés pour l'affichage (espaces) ; ne modifie pas les chaînes déjà formatées par l'API (ex. "(email ou mail)")
+  - Types : `ExcelImportSpecResponse`, `ExcelImportColumnSpec` dans `api.d.ts`
+
+- **Refactoring des services séjour** (séparation des responsabilités) :
+  - `sejour.service.ts` : CRUD des séjours uniquement (getAllSejours, getSejourById, getAllSejoursByDirecteur, addSejour, updateSejour, deleteSejour)
+  - `sejour-equipe.service.ts` : Gestion de l'équipe (ajouterNouveauMembreEquipe, ajouterMembreExistantEquipe, modifierRoleMembreEquipe, supprimerMembreEquipe)
+  - `sejour-enfant.service.ts` : Gestion des enfants (getEnfantsDuSejour, getDossierEnfant, updateDossierEnfant, supprimerEnfantDuSejour, supprimerTousLesEnfants, creerEtAjouterEnfant, modifierEnfant, importerEnfantsExcel)
+  - `sejour-groupe.service.ts` : Gestion des groupes (remplace groupe.service.ts, même API avec export sejourGroupeService)
+  - `sejour-activite.service.ts` : Activités d’un séjour (`getActivitesDuSejour`, `getActiviteById`, `creerActivite`, `modifierActivite`, `supprimerActivite`) — préfixe `/sejours/{sejourId}/activites`
+  - `sejour-moment.service.ts` : Moments d’un séjour (`getMomentsDuSejour`, `getMomentById`, `creerMoment`, `modifierMoment`, `supprimerMoment`, **`reordonnerMoments`**) — préfixe `/sejours/{sejourId}/moments` ; export `sejourMomentService`
+  - `sejour-type-activite.service.ts` : Types d’activité d’un séjour (`getTypesActiviteDuSejour`, `getTypeActiviteById`, `creerTypeActivite`, `modifierTypeActivite`, `supprimerTypeActivite`) — préfixe `/sejours/{sejourId}/types-activite` ; export `sejourTypeActiviteService`
+  - `sejour-lieu.service.ts` : Lieux d’un séjour (`getLieuxDuSejour`, `getLieuById`, `creerLieu`, `modifierLieu`, `supprimerLieu`) — préfixe `/sejours/{sejourId}/lieux` ; export `sejourLieuService`
+  - `sejour-horaire.service.ts` : Horaires d’un séjour (`getHorairesDuSejour`, `getHoraireById`, `creerHoraire`, `modifierHoraire`, `supprimerHoraire`) — préfixe `/sejours/{sejourId}/horaires` ; export `sejourHoraireService`
+
+- **Helper centralisé pour la gestion des erreurs API** (`helpers/axiosError.ts`) :
+  - `validateResponseStatus(response, expectedStatus)` : Vérifie le code HTTP attendu
+  - `adaptAxiosError(error, options)` : Adapte les erreurs Axios (message, format validation 400, preserveResponseData)
+  - Utilisé dans les services : séjour, équipe, enfant, groupe, **activités**, utilisateur
+
+- **Gestion des groupes** (section Groupes dans **`DetailsSejourOverview`**) :
+  - `ListeGroupes.tsx` : liste des groupes avec accordéon, création/édition/suppression, ajout/retrait manuel d'enfants
+  - `CreateGroupeForm.tsx` : formulaire création/édition avec types THEMATIQUE, AGE, NIVEAU_SCOLAIRE
+  - Bouton « Ajouter les X enfant(s) de la tranche » (vert, aligné à droite) pour groupes AGE/NIVEAU_SCOLAIRE — ajoute en masse les enfants correspondant à la tranche sans doublons
+  - Fallback frontend : si le backend renvoie un groupe vide à la création (ex. groupe créé avant la liste d'enfants), le frontend ajoute automatiquement les enfants correspondant à la tranche via `ajouterEnfantAuGroupe`
+  - Helper `getEnfantsMatchingTranche()` dans `helpers/groupeTranche.ts` — filtre les enfants par tranche (âge ou niveau scolaire), utilisé par ListeGroupes et CreateGroupeForm
+  - `calculerAge(dateNaissance, referenceDate?)` : le paramètre optionnel `referenceDate` permet de calculer l'âge à une date donnée (ex. date de début du séjour pour les groupes par âge)
+
+- **Implémentation complète du dossier enfant** (services dans `sejour-enfant.service.ts`) :
+  - Page `DossierEnfant` (`Pages/_Directeur/DossierEnfant/`) : affichage et modification du dossier (contacts parents, médical, traitements)
+  - Bouton "Modifier" ouvre un modal avec `DossierEnfantForm` — PUT complet via `updateDossierEnfant(sejourId, enfantId, request)`
+  - Route `/directeur/sejours/:sejourId/enfants/:enfantId/dossier` avec loader `dossierEnfantLoader`
+  - Icône dossier dans `ListeEnfants` (props `canDossier`/`onDossier` du composant `Liste`) — navigation vers la page dossier au clic
+  - Bouton Retour : revient vers **`/directeur/sejours/:sejourId`** (vue générale) en conservant le contexte. Depuis ListeEnfants : `state: { from: 'enfants', openAccordion: '3' }`. Depuis ListeGroupes : `state: { from: 'groupes', openAccordion: '4', expandedGroupeId }` — ouvre l'accordéon Groupes et scroll vers le groupe concerné
+  - Scroll automatique en haut de page à l'arrivée sur le dossier (`useEffect` + `window.scrollTo`)
+  - Styles : `.infoStack` pour espacement 1rem entre blocs d'infos, `.enfantNameBadge` avec police sans-serif pour lisibilité du nom
+
+- Migration complète vers React 19 avec `babel-plugin-react-compiler`
+- Refactoring des composants de liste (`ListeSejoursAdmin`, `ListeSejoursDirecteur`)
+- Optimisation des formulaires avec suppression des `useMemo`/`useCallback` inutiles
+- Détail séjour : **`DetailsSejourOverview`** + **`DetailsSejourActivites`**, **`SejourDetailOutlet`**, loader route **`sejour-detail`**
+- **Implémentation complète de la gestion des enfants** :
+  - Composant `AddEnfantForm` pour créer/modifier un enfant (utilise le Form générique)
+  - Composant `ListeEnfants` pour afficher et gérer la liste des enfants d'un séjour (CRUD complet)
+  - Composant `ImportExcelEnfants` pour importer des enfants depuis un fichier Excel
+  - Intégration dans **`DetailsSejourOverview`** (accordéon dédié)
+  - Services complets dans `sejour-enfant.service.ts` pour tous les endpoints enfants
+  - Utilisation des types centralisés de `api.d.ts` (`EnfantDto`, `CreateEnfantRequest`, `ExcelImportResponse`)
+- **Améliorations récentes** :
+  - Tri alphabétique automatique des enfants (par nom puis prénom) dans `getEnfantsDuSejour()`
+  - Formatage du niveau scolaire dans `ListeEnfants` avec `NiveauScolaireLabels` (affichage "5ème" au lieu de "CINQUIEME")
+  - Nettoyage du code : suppression de la méthode non utilisée `ajouterEnfantAuSejour` dans `sejour.service.ts`
+  - Mise à jour de `baseline-browser-mapping` vers 2.9.19 (dernière version) pour supprimer l'avertissement "data over two months old"
+  - Correction du type dans `ListeSejoursDirecteur.tsx` : utiliser `SejourDTO` (et non `Sejour`) pour le paramètre de `handleView` et les données de séjour
+
+## En cours
+
+Affinements **planning activités / calendrier** (filtres, UX, perf) — **`ListeActivitesCalendrier.tsx`**. Les **plannings direction** (grilles par séjour) sont gérés dans **`ListePlanningsOrganisation`** ; des évolutions plus larges (affectations avancées, vues suppl.) restent sur la [roadmap](roadmap.md).

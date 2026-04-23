@@ -19,7 +19,7 @@ L'assistant doit répondre exclusivement en français.
 # Règles React 19 & Optimisations
 - **Babel Plugin React Compiler** : Le projet utilise `babel-plugin-react-compiler` pour l'optimisation automatique.
 - **Hooks d'optimisation** : NE PAS utiliser manuellement `useMemo` ou `useCallback` sauf cas très spécifique non géré par le compilateur. Le compilateur s'occupe de la mémoïsation automatique.
-- **Exceptions documentées** (voir aussi `AI_MEMORY.md`) : `ListeActivites.tsx` (`useMemo` / `useEffect` pour filtre lieu par emplacement) ; `DetailsSejourActivites.tsx` (`useMemo` pour la liste animateurs) ; `DetailsSejourOverview.tsx` (`useCallback` pour le réordonnancement des accordéons par glisser-déposer).
+- **Exceptions documentées** (voir aussi `AI_MEMORY.md` + `docs/ai/decisions-architecturales.md`) : `ListeActivites.tsx` (`useMemo` / `useEffect` pour filtre lieu par emplacement) ; `DetailsSejourActivites.tsx` (`useMemo` pour la liste animateurs) ; `DetailsSejourOverview.tsx` (`useCallback` pour le réordonnancement des accordéons par glisser-déposer) ; `ListePlanningsOrganisation.tsx` (`useMemo` pour données dérivées / DnD).
 - **Chargement de données** : 
   - Privilégier les `loaders` de React Router (`useLoaderData`) plutôt que `useEffect` pour le fetching initial des pages.
   - **Route parent avec données partagées** : utiliser `useRouteLoaderData("sejour-detail")` sur les sous-pages du détail séjour (loader sur la route parent `id: "sejour-detail"` dans `App.tsx`).
@@ -146,20 +146,20 @@ L'assistant doit répondre exclusivement en français.
   This refactoring improves code maintainability and component reusability while reducing code duplication in the admin user management section.
 
 # Post-commit / Post-push
-- **Quand un commit est fait ET qu'un push est fait** : mettre à jour `AI_MEMORY.md` et `.cursorrules` si besoin.
+- **Quand un commit est fait ET qu'un push est fait** : mettre à jour la Memory Bank (**`AI_MEMORY.md` pivot** + **fiches `docs/ai/*.md` concernées**) et `.cursorrules` si besoin.
 - Vérifier si les changements poussés justifient une mise à jour de la mémoire (nouveaux patterns, décisions architecturales, tâches accomplies, etc.).
 - Vérifier si les changements poussés justifient une mise à jour des règles (nouvelles conventions, nouveaux composants à documenter, etc.).
 
 # AI MEMORY BANK PROTOCOL
 
 1. **LECTURE SYSTÉMATIQUE :** 
-   - Au début de chaque session ou nouvelle tâche, lis `AI_MEMORY.md` (frontend) pour charger le contexte.
-   - **IMPORTANT :** Lis également le fichier `../enjoyApi/AI_MEMORY.md` (backend Java) pour comprendre l'architecture backend, les DTOs, les patterns d'API et la synchronisation frontend-backend.
+   - Début de session ou tâche majeure : lire **`AI_MEMORY.md`** (pivot), puis **systématiquement** `docs/ai/contexte-actif.md` et `docs/ai/decisions-architecturales.md`, puis les autres fiches pertinentes (`documentation-ui-routing.md`, `etat-projet.md`, `roadmap.md`, etc.).
+   - **IMPORTANT :** Lire aussi `../enjoyApi/AI_MEMORY.md` (backend Java) pour l’architecture backend, les DTOs, les patterns d’API et la synchronisation frontend-backend.
 
 2. **MISE À JOUR OBLIGATOIRE :**
-   - **Fin de tâche :** Quand une tâche est terminée, mets à jour la section "Contexte Actif" et coche la case dans "Liste des Tâches" du `AI_MEMORY.md`.
-   - **Changement d'architecture :** Si nous créons un nouveau pattern (ex: nouveau hook, nouveau service générique), documente-le immédiatement dans "Décisions Architecturales".
-   - **Roadmap :** Ajoute les futures étapes identifiées dans "Liste des Tâches".
-   - **Synchronisation Backend :** Si des changements backend affectent les types API ou les contrats, vérifie et mets à jour `types/api.d.ts` en référence au `AI_MEMORY.md` du backend.
+   - **Fin de tâche / décision technique :** mettre à jour le **pivot** (liens ou rappel si nécessaire) et la **fiche** qui porte le détail (`contexte-actif.md`, `decisions-architecturales.md`, `etat-projet.md`, `roadmap.md`, …).
+   - **Demande explicite « mets à jour AI_MEMORY.md » :** mettre à jour **toute** la Memory Bank concernée (pivot + fiches), **créer** une nouvelle fiche si aucune n’existe pour le sujet, **référencer** dans `AI_MEMORY.md` et `docs/ai/README.md`.
+   - **Roadmap :** cases à cocher et nouvelles étapes dans `docs/ai/roadmap.md`.
+   - **Synchronisation backend :** si l’API change, mettre à jour `types/api.d.ts` et la fiche **`docs/ai/etat-projet.md`** (ou une fiche dédiée sync), en référence au `AI_MEMORY.md` enjoyApi.
 
-3. **REFLEXIVITÉ :** Si le code contredit la Memory Bank, signale-le : soit le code est faux, soit la mémoire doit être mise à jour.
+3. **RÉFLEXIVITÉ :** Si le code contredit la Memory Bank, signaler : soit le code est faux, soit la mémoire doit être mise à jour.

@@ -1,0 +1,25 @@
+# Roadmap front
+
+- [x] Créer le composant Form générique
+- [x] Refactoriser User_form avec le Form générique
+- [x] Refactoriser Sejour_form avec le Form générique
+- [x] Ajouter les docs utiles dans les settings de Cursor
+- [x] Migrer vers React 19 et activer React Compiler
+- [x] Renommer et séparer les listes de séjours (`ListeSejoursAdmin`, `ListeSejoursDirecteur`)
+- [x] Supprimer les `useMemo`/`useCallback` inutiles dans les composants clés
+- [x] Détail séjour : vue générale + onglet activités (`DetailsSejourOverview`, `DetailsSejourActivites`, routes imbriquées, accordéons `1`–`6` / `9` / `8` / `10`, `reordonnerMoments`)
+- [x] Gestion des **horaires** du séjour (`ListeHoraires`, `sejourHoraireService`, `trierHorairesChronologiquement`, `validerLibelleHoraire`, panneau `9`, `HoraireDto` / `SaveHoraireRequest`, `detailsSejourLoader`)
+- [x] Gestion des lieux d’un séjour (`ListeLieux`, `sejour-lieu.service.ts` / `sejourLieuService`, types `LieuDto` / `SaveLieuRequest` / `EmplacementLieu`, **partage** UI + API)
+- [x] Implémenter la gestion de la liste des enfants dans la vue générale du détail séjour (CRUD complet + import Excel)
+- [x] Implémenter l'affichage du dossier enfant (page `DossierEnfant`, endpoint `getDossierEnfant`, type `DossierEnfantDto`, icône dossier dans `ListeEnfants`)
+- [x] Standardiser la gestion des erreurs API dans les services (helper `axiosError.ts` avec `adaptAxiosError` et `validateResponseStatus`)
+- [x] Implémenter la gestion des groupes (ListeGroupes, CreateGroupeForm, ajout enfants par tranche, fallback création)
+- [x] Référents de groupe (`ReferentsSelector`, sync après création/édition dans `CreateGroupeForm`, affichage dans `ListeGroupes`, endpoints referents)
+- [x] Refactoriser les services séjour (sejour-equipe, sejour-enfant, sejour-groupe, sejour-activite) et centraliser la gestion des erreurs API (helpers/axiosError.ts)
+- [x] Gestion des activités d’un séjour (`ListeActivites` sur **`DetailsSejourActivites`**, **lieu** / **moment** / **type**, **`avertissementLieu`**, `sejour-activite.service.ts`, données **`sejour-detail`**)
+- [x] Gestion des **moments** du séjour (`ListeMoments`, `reordonnerMoments`, `trierMomentsChronologiquement`, `sejourMomentService`, `MomentDto` / `SaveMomentRequest` / `ReorderMomentsRequest`, `detailsSejourLoader`)
+- [x] Gestion des **types d’activité** (`ListeTypesActivite`, `sejour-type-activite.service.ts`, panneau accordéon `8`, types `TypeActiviteDto` / `SaveTypeActiviteRequest` / `ActiviteDto.typeActivite`, UX suppression si type encore utilisé)
+- [x] Vue **calendrier** des activités dans l’onglet Activités (`ListeActivitesCalendrier` + bascule depuis `ListeActivites`)
+- [x] **Plannings organisation (direction)** : grilles par séjour, CRUD, tableau planning (`ListePlanningsOrganisation`, `sejour-planning-grille.service.ts`, panneau accordéon `10`, `detailsSejourLoader.planningGrilles`)
+- [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)
+- [ ] Optimiser les performances des listes si nécessaire (virtualisation si beaucoup d'éléments)

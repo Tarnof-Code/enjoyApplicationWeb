@@ -37,3 +37,4 @@ config.local.js
 # Fichiers Markdown (tous les fichiers .md)
 *.md
 !AI_MEMORY.md
+!docs/ai/*.md
