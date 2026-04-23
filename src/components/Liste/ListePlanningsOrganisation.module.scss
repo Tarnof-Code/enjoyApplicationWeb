@@ -1,0 +1,687 @@
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.hint {
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.card {
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    background: #fafbfc;
+    min-width: 0;
+}
+
+.cardTitle {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #1a1a1a;
+    word-break: break-word;
+    margin-bottom: 0.35rem;
+}
+
+.cardMeta {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.cardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+}
+
+.empty {
+    color: #666;
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+
+.modalField {
+    margin-bottom: 1rem;
+}
+
+.membresCheckboxes {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 0.35rem 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.membreCheckboxRow {
+    margin-bottom: 0.35rem;
+    margin-left: 0.5rem;
+}
+
+.membreCheckboxLabel {
+    font-weight: 500;
+}
+
+.modalFooter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.modalFooterMessage {
+    flex: 1 1 auto;
+    min-width: 12rem;
+    margin-right: auto;
+}
+
+.modalFooterError {
+    color: #dc3545;
+    font-size: 0.9rem;
+}
+
+.modalFooterActions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.editorConsigne {
+    padding: 0.75rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+}
+
+.tableWrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 1.25rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.tableToolbar {
+    padding: 0.75rem 1rem;
+    background: #f8f9fb;
+    border-bottom: 1px solid #e2e6ec;
+    border-radius: 8px 8px 0 0;
+}
+
+.tableToolbarRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+}
+
+.tableToolbarHint {
+    flex: 1 1 100%;
+    margin: 0.35rem 0 0;
+    font-size: 0.82rem;
+    color: #555;
+    line-height: 1.35;
+}
+
+.tableToolbarHintIcon {
+    display: inline-block;
+    vertical-align: -0.2em;
+    opacity: 0.85;
+}
+
+.sectionModalBlock {
+    margin-bottom: 1.5rem;
+}
+
+.sectionModalBlockTitle {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    color: #1a3550;
+}
+
+.sectionModalBlockMuted {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.sectionEditPanel {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.1rem;
+    background: #e8f2fc;
+    border: 1px solid #b8d4ee;
+    border-radius: 8px;
+}
+
+.sectionEditActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.sectionLinePickRowLocked {
+    opacity: 0.72;
+}
+
+.sectionLineLockedHint {
+    flex: 0 1 auto;
+    font-size: 0.78rem;
+    color: #666;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 12rem;
+}
+
+.sectionLinesPick {
+    max-height: 14rem;
+    overflow-y: auto;
+    border: 1px solid #e2e6ec;
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    margin-top: 0.35rem;
+    background: #fff;
+}
+
+.sectionLinePickRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+}
+
+.sectionLineCheckbox {
+    flex: 0 0 auto;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.sectionLinePickLabel {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.88rem;
+}
+
+.sectionCreateButton {
+    margin-top: 0.65rem;
+}
+
+.sectionEmpty {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #666;
+    font-style: italic;
+}
+
+.sectionTable {
+    width: 100%;
+    font-size: 0.88rem;
+    border-collapse: collapse;
+}
+
+.sectionTable th,
+.sectionTable td {
+    border: 1px solid #e2e6ec;
+    padding: 0.45rem 0.55rem;
+    vertical-align: middle;
+    text-align: left;
+}
+
+.sectionTable th {
+    background: #f0f4f8;
+    font-weight: 600;
+}
+
+.sectionTableCount {
+    width: 4.5rem;
+    text-align: center;
+}
+
+.sectionTableActions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.sectionRowActions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 1.85rem;
+}
+
+.sectionDeleteBanner {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+}
+
+.sectionDeleteBannerText {
+    margin: 0 0 0.65rem;
+    font-size: 0.9rem;
+}
+
+.sectionDeleteBannerActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lineActionsHead {
+    width: 1%;
+    min-width: 8.5rem;
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.4rem 0.45rem !important;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1a3550;
+    white-space: nowrap;
+    /* Reste visible quand on fait défiler les colonnes de dates */
+    position: sticky;
+    right: 0;
+    z-index: 4;
+    background: #f0f4f8;
+    box-shadow: -6px 0 12px rgba(0, 0, 0, 0.06);
+}
+
+.lineActionsCell {
+    padding: 0.25rem 0.35rem !important;
+    background: #fafafa;
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    box-shadow: -6px 0 12px rgba(0, 0, 0, 0.06);
+    min-width: 8.5rem;
+    vertical-align: middle;
+}
+
+/* Poignée + icônes sur une seule ligne, centrées verticalement entre elles */
+.lineActionsButtons {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    justify-content: center;
+    align-items: center;
+    min-height: 1.85rem;
+}
+
+/* Icône seule (pas de style « bouton » rempli) — mêmes dimensions que .lineDragHandleInActions */
+.lineActionIconHit {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    min-width: 1.55rem;
+    min-height: 1.85rem;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #1a5a9e;
+    cursor: pointer;
+    line-height: 0;
+
+    &:hover,
+    &:focus-visible {
+        background: #e3eef8;
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+}
+
+.lineActionIconHitDanger {
+    color: #b02a37;
+
+    &:hover,
+    &:focus-visible {
+        background: #fbe8ea;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.35);
+    }
+}
+
+.lineActionIcon {
+    display: block;
+    font-size: 0.95rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.gridTable {
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    min-width: 100%;
+    table-layout: auto;
+}
+
+.gridTable th,
+.gridTable td {
+    border: 1px solid #ddd;
+    padding: 0.35rem 0.5rem;
+    vertical-align: top;
+}
+
+/* Plus spécifique que `.gridTable td` pour ne pas être écrasé par vertical-align: top */
+.gridTable td.rowLabel,
+.gridTable td.regroupementCellVertical,
+.gridTable td.lineActionsCell {
+    vertical-align: middle;
+}
+
+.gridTable th {
+    background: #f0f4f8;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Colonnes de dates : mêmes limites de largeur que le corps, texte autorisé à se couper sur plusieurs lignes */
+.gridTable th.planningGridHead {
+    min-width: 7rem;
+    max-width: 22rem;
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
+}
+
+.regroupementColHead {
+    width: 7.5rem;
+    min-width: 6.5rem;
+    max-width: 11rem;
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.4rem 0.35rem !important;
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+}
+
+.rowLabelHead {
+    background: #f0f4f8;
+    max-width: 22rem;
+    min-width: 11rem;
+    padding: 0.4rem 0.35rem !important;
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+}
+
+.regroupementCellVertical {
+    position: relative;
+    width: 7.5rem;
+    min-width: 6.5rem;
+    max-width: 11rem;
+    padding: 0 !important;
+    vertical-align: middle;
+    text-align: center;
+    background: #f4f7fb;
+    border-right: 2px solid #c5d4e3;
+}
+
+/* Remplit toute la cellule (y compris rowSpan) : libellé seul = centré ; avec poignée = ligne (icône à gauche). */
+.regroupementCellInner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.3rem;
+    box-sizing: border-box;
+}
+
+/* Poignée à gauche, texte à droite qui peut revenir à la ligne ; l’icône reste à gauche du bloc texte. */
+.regroupementCellInnerRow {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
+}
+
+.regroupementCellVerticalSectionDrop {
+    background: #d4e9fc !important;
+    outline: 1px solid #2b6cb0;
+    outline-offset: -2px;
+}
+
+.regroupementSectionHandle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    color: #4a5f78;
+    cursor: grab;
+    line-height: 1;
+    user-select: none;
+    min-width: 0.9rem;
+    z-index: 1;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+/* Libellé de section : affichage horizontal, retours à la ligne possibles */
+.regroupementCellLabel {
+    display: block;
+    position: relative;
+    z-index: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a3550;
+    line-height: 1.3;
+    text-align: center;
+    word-break: break-word;
+    hyphens: auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.regroupementCellInnerRow .regroupementCellLabel {
+    text-align: left;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.rowLabel {
+    background: #fafafa;
+    font-weight: 500;
+    text-align: left;
+    vertical-align: middle;
+    min-width: 11rem;
+    max-width: 22rem;
+    box-sizing: border-box;
+}
+
+.rowLabelRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.lineDragHandle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    min-height: 1.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: #e8eef5;
+    color: #4a6278;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+
+    &:hover {
+        background: #dde6f0;
+    }
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+/* Même poignée, dans la colonne Actions quand la colonne libellé est masquée */
+.lineDragHandleInActions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    min-height: 1.45rem;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: #e8eef5;
+    color: #4a6278;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+
+    &:hover {
+        background: #dde6f0;
+    }
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.gridTable tbody tr.planningLineRowDragging {
+    opacity: 0.55;
+}
+
+.gridTable tbody tr.planningLineRowDropTarget td {
+    background-color: #e7f1ff !important;
+}
+
+.rowLabelInner {
+    display: block;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+/* Colonnes jour : contenu en flux (plus de position absolute) pour hauteur/largeur cohérentes ; le texte reste dans la case. */
+.gridTable td.planningGridCell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.3rem 0.4rem !important;
+    min-width: 7rem;
+    max-width: 22rem;
+    box-sizing: border-box;
+}
+
+.cellButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.1rem;
+    margin: 0;
+    padding: 0.3rem 0.35rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: center;
+    font-size: inherit;
+    border-radius: 0;
+    color: #1a1a1a;
+    flex-wrap: wrap;
+    align-content: center;
+    box-sizing: border-box;
+}
+
+/* Texte de cellule : retour à la ligne, jamais de débordement hors de la case */
+.cellButton > span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.3;
+    hyphens: auto;
+    display: block;
+}
+
+.cellButton:hover {
+    background: #e8f4fc;
+}
+
+.cellMuted {
+    color: #999;
+    font-style: italic;
+}
+
+.fieldHint {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 0.35rem 0 0;
+    line-height: 1.35;
+}
+
+.fieldHintWarn {
+    font-size: 0.85rem;
+    color: #856404;
+    margin: 0.35rem 0 0;
+    line-height: 1.35;
+}
+

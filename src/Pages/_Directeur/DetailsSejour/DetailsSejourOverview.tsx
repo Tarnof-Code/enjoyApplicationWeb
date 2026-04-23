@@ -11,6 +11,7 @@ import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
 import ListeTypesActivite from "../../../components/Liste/ListeTypesActivite";
 import ListeHoraires from "../../../components/Liste/ListeHoraires";
+import ListePlanningsOrganisation from "../../../components/Liste/ListePlanningsOrganisation";
 import {
     SejourDTO,
     EnfantDto,
@@ -20,12 +21,13 @@ import {
     MomentDto,
     TypeActiviteDto,
     HoraireDto,
+    PlanningGrilleSummaryDto,
 } from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
 
 /** Accordéons sur la vue générale (hors activités — onglet dédié). */
-const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "9", "8"] as const;
+const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "9", "8", "10"] as const;
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -165,6 +167,7 @@ type SejourDetailLoaderSuccess = {
     horaires: HoraireDto[];
     activites: ActiviteDto[];
     typesActivite: TypeActiviteDto[];
+    planningGrilles: PlanningGrilleSummaryDto[];
 };
 
 const DetailsSejourOverview: React.FC = () => {
@@ -236,6 +239,7 @@ const DetailsSejourOverview: React.FC = () => {
         horaires: horairesFromLoader,
         activites: activitesFromLoader,
         typesActivite: typesActiviteFromLoader,
+        planningGrilles: planningGrillesFromLoader,
     } = loaderData;
     const [moments, setMoments] = useState<MomentDto[]>(momentsFromLoader);
     const [horaires, setHoraires] = useState<HoraireDto[]>(() =>
@@ -399,6 +403,8 @@ const DetailsSejourOverview: React.FC = () => {
                 return `Horaires (${horaires.length})`;
             case "8":
                 return `Types d'activité (${typesActivite.length})`;
+            case "10":
+                return `Plannings organisation (${planningGrillesFromLoader.length})`;
             default:
                 return "";
         }
@@ -517,6 +523,21 @@ const DetailsSejourOverview: React.FC = () => {
                         onTypeDeleted={(id) => {
                             setTypesActivite((prev) => prev.filter((x) => x.id !== id));
                         }}
+                    />
+                );
+            case "10":
+                return (
+                    <ListePlanningsOrganisation
+                        sejourId={sejour.id}
+                        dateDebut={sejour.dateDebut}
+                        dateFin={sejour.dateFin}
+                        grilles={planningGrillesFromLoader}
+                        moments={moments}
+                        horaires={horaires}
+                        groupes={groupes ?? []}
+                        lieux={lieux ?? []}
+                        membresEquipe={sejour.equipe ?? []}
+                        directeur={sejour.directeur}
                     />
                 );
             default:

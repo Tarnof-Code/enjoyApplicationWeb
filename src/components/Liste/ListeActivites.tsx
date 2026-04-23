@@ -33,7 +33,6 @@ import {
     libelleJourCourtPourBouton,
     parseYmdVersDateLocale,
     resumePartageLieu,
-    sejourChampDateVersInput,
     sejourDebutToInputDate,
     tokensEquipePourFiltreGroupesCalendrier,
     trierLieuxParNom,

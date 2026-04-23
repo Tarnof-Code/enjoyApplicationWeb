@@ -7,6 +7,7 @@ import { sejourLieuService } from "../../../services/sejour-lieu.service";
 import { sejourMomentService } from "../../../services/sejour-moment.service";
 import { sejourTypeActiviteService } from "../../../services/sejour-type-activite.service";
 import { sejourHoraireService } from "../../../services/sejour-horaire.service";
+import { sejourPlanningGrilleService } from "../../../services/sejour-planning-grille.service";
 
 export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
     if (!params.id) throw new Error("ID du séjour manquant");
@@ -22,7 +23,23 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             sejourActiviteService.getActivitesDuSejour(sejourId),
             sejourTypeActiviteService.getTypesActiviteDuSejour(sejourId),
         ]);
-        return { sejour, enfants, groupes, lieux, moments, horaires, activites, typesActivite };
+        let planningGrilles: Awaited<ReturnType<typeof sejourPlanningGrilleService.listerGrilles>> = [];
+        try {
+            planningGrilles = await sejourPlanningGrilleService.listerGrilles(sejourId);
+        } catch {
+            console.warn("Plannings grilles non chargés (API indisponible ou erreur réseau)");
+        }
+        return {
+            sejour,
+            enfants,
+            groupes,
+            lieux,
+            moments,
+            horaires,
+            activites,
+            typesActivite,
+            planningGrilles,
+        };
     } catch (error) {
         console.error("Erreur chargement séjour", error);
         return error;

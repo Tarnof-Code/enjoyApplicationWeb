@@ -48,6 +48,8 @@ export interface DirecteurInfos {
  * DTO utilisé pour retourner les informations d'un utilisateur
  */
 export interface ProfilUtilisateurDTO {
+  /** Identifiant base utilisateurs (ex. affectation animateurs / cellules planning). */
+  id: number;
   tokenId: string;
   role: RoleSysteme | string;
   roleSejour?: RoleSejour; 
@@ -523,4 +525,113 @@ export interface UpdateActiviteRequest {
   lieuId?: number | null;
   momentId?: number | null;
   typeActiviteId: number;
+}
+
+// ============================================================================
+// Plannings direction (grilles génériques) — PlanningGrilleController
+// ============================================================================
+
+export interface PlanningGrilleSummaryDto {
+  id: number;
+  sejourId: number;
+  titre: string;
+  miseAJour: string;
+}
+
+export interface PlanningGrilleDetailDto {
+  id: number;
+  sejourId: number;
+  titre: string;
+  consigneGlobale: string | null;
+  /**
+   * Type de libellé imposé à toutes les lignes de cette grille.
+   * `null` si aucun type n’a été choisi à la création (« pas de libellé de ligne ») : pas de colonne libellé, pas de saisie.
+   */
+  sourceLibelleLignes: PlanningLigneLibelleSource | null;
+  /**
+   * Type de contenu des cellules (même enum que les lignes : saisie libre, groupe, lieu, horaire, moment).
+   */
+  sourceContenuCellules: PlanningLigneLibelleSource;
+  miseAJour: string;
+  lignes: PlanningLigneDto[];
+}
+
+/** `MEMBRE_EQUIPE` : autorisé pour le contenu des cellules ; pour les libellés de lignes, voir règles API. */
+export type PlanningLigneLibelleSource =
+  | "SAISIE_LIBRE"
+  | "HORAIRE"
+  | "MOMENT"
+  | "GROUPE"
+  | "LIEU"
+  | "MEMBRE_EQUIPE";
+
+export interface PlanningLigneDto {
+  id: number;
+  ordre: number;
+  /** Saisie libre ou texte d’en-tête complémentaire selon `sourceLibelleLignes` de la grille. */
+  libelleSaisieLibre: string | null;
+  libelleRegroupement: string | null;
+  libelleMomentId: number | null;
+  libelleHoraireId: number | null;
+  libelleGroupeId: number | null;
+  libelleLieuId: number | null;
+  /** Si `sourceLibelleLignes` est `MEMBRE_EQUIPE` : `tokenId` d’un membre d’équipe du séjour. */
+  libelleUtilisateurTokenId: string | null;
+  cellules: PlanningCelluleDto[];
+}
+
+export interface PlanningCelluleDto {
+  id: number;
+  jour: string;
+  /** `tokenId` des animateurs (tableau, peut être vide). */
+  membreTokenIds: string[];
+  horaireId: number | null;
+  horaireLibelle: string | null;
+  momentId: number | null;
+  groupeId: number | null;
+  lieuId: number | null;
+  texteLibre: string | null;
+}
+
+export interface SavePlanningGrilleRequest {
+  titre: string;
+  consigneGlobale?: string | null;
+  /** Défaut côté API : `SAISIE_LIBRE` si absent ou null. */
+  sourceLibelleLignes?: PlanningLigneLibelleSource | null;
+  /** Défaut côté API : `SAISIE_LIBRE` si absent ou null. `MEMBRE_EQUIPE` autorisé pour le contenu des cellules. */
+  sourceContenuCellules?: PlanningLigneLibelleSource | null;
+}
+
+export interface UpdatePlanningGrilleRequest {
+  titre: string;
+  consigneGlobale?: string | null;
+  sourceLibelleLignes?: PlanningLigneLibelleSource | null;
+  sourceContenuCellules?: PlanningLigneLibelleSource | null;
+}
+
+export interface SavePlanningLigneRequest {
+  ordre: number;
+  libelleSaisieLibre?: string | null;
+  libelleRegroupement?: string | null;
+  libelleMomentId?: number | null;
+  libelleHoraireId?: number | null;
+  libelleGroupeId?: number | null;
+  libelleLieuId?: number | null;
+  libelleUtilisateurTokenId?: string | null;
+}
+
+export type UpdatePlanningLigneRequest = SavePlanningLigneRequest;
+
+export interface PlanningCellulePayload {
+  jour: string;
+  membreTokenIds?: string[] | null;
+  horaireId?: number | null;
+  texteLibre?: string | null;
+  momentId?: number | null;
+  groupeId?: number | null;
+  lieuId?: number | null;
+}
+
+export interface UpsertPlanningCellulesRequest {
+  cellules: PlanningCellulePayload[];
 }
