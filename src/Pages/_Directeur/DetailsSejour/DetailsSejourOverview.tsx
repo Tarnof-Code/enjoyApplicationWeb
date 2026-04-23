@@ -76,10 +76,14 @@ function normalizeOverviewAccordionOrder(stored: string[]): string[] {
 
 function reorderOverviewAccordionIds(order: string[], draggedId: string, targetId: string): string[] {
     if (draggedId === targetId) return order;
+    const from = order.indexOf(draggedId);
+    const to = order.indexOf(targetId);
+    if (from === -1 || to === -1) return order;
     const next = order.filter((x) => x !== draggedId);
     const idx = next.indexOf(targetId);
     if (idx === -1) return order;
-    next.splice(idx, 0, draggedId);
+    const insertAt = from < to ? idx + 1 : idx;
+    next.splice(insertAt, 0, draggedId);
     return next;
 }
 
