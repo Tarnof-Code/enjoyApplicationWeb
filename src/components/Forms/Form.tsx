@@ -29,6 +29,8 @@ export interface FormField {
   autoComplete?: string;
   /** Si défini, le champ n'est affiché que lorsque la fonction retourne true */
   visible?: (formData: Record<string, any>) => boolean;
+  /** Hauteur initiale des `<textarea />` (défaut 4) */
+  rows?: number;
 }
 
 export interface FormProps {
@@ -221,7 +223,7 @@ function Form({
           ) : field.type === 'textarea' ? (
             <Input
               type="textarea"
-              rows={4}
+              rows={field.rows ?? 4}
               {...inputProps}
             />
           ) : (

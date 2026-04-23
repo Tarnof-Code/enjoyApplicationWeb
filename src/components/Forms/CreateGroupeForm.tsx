@@ -42,6 +42,7 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
             label: "Description",
             type: "textarea",
             required: false,
+            rows: 1,
             placeholder: "Description optionnelle (max 500 caractères)",
             validation: (value) => (value && (value as string).length > 500) ? "Max 500 caractères" : null
         },
