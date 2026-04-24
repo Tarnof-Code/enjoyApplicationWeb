@@ -13,7 +13,5 @@ export const planningLigneLibelleSourceOptions: { value: PlanningLigneLibelleSou
     Object.entries(PlanningLigneLibelleSourceLabels) as [PlanningLigneLibelleSource, string][]
 ).map(([value, label]) => ({ value, label }));
 
-/** Valeurs proposées pour `sourceLibelleLignes` uniquement (`MEMBRE_EQUIPE` est réservé au contenu des cellules). */
-export const planningLibelleLignesSourceOptions = planningLigneLibelleSourceOptions.filter(
-    (o) => o.value !== "MEMBRE_EQUIPE"
-);
+/** Valeurs proposées pour le type de libellé des lignes d’une grille (incl. membre d’équipe). */
+export const planningLibelleLignesSourceOptions = planningLigneLibelleSourceOptions;

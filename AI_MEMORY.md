@@ -29,5 +29,5 @@ Index : [docs/ai/README.md](docs/ai/README.md).
 
 ## Convention de maintenance
 
-- **« Mets à jour `AI_MEMORY.md` »** = mise à jour du **pivot** et des **fiches concernées** dans `docs/ai/` ; créer une nouvelle fiche si besoin et la lister ici + dans [`docs/ai/README.md`](docs/ai/README.md).
+- **« Mets à jour `AI_MEMORY.md` »** = ne pas y dupliquer le journal ni les détails fonctionnels : les écrire dans la **fiche adéquate** de [`docs/ai/`](docs/ai/) (souvent [`contexte-actif.md`](docs/ai/contexte-actif.md) pour l’historique, [`etat-projet.md`](docs/ai/etat-projet.md) pour glossaire / services, etc.). Ici, ne mettre à jour le pivot **que** si la table des fiches ou un invariant global change. Créer une nouvelle fiche si besoin et la lister ici + dans [`docs/ai/README.md`](docs/ai/README.md).
 - Après un changement structurel (commit / push), appliquer la même discipline (voir section Memory Bank dans `.cursorrules`).

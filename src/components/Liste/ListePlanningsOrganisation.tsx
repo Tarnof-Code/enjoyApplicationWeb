@@ -437,10 +437,9 @@ function prochainOrdreNouvelleLigne(lignes: PlanningLigneDto[], regroupementPres
     return Math.max(...peers.map((l) => l.ordre), 0) + 1;
 }
 
-/** Type de libellé des lignes (champ `sourceLibelleLignes` sur la grille) pour les formulaires : la saisie « membre » n’y est pas gérée. */
+/** Type de libellé des lignes (champ `sourceLibelleLignes` sur la grille) pour les formulaires. */
 function sourceLibelleEffectifGrille(d: PlanningGrilleDetailDto): PlanningLigneLibelleSource {
-    const s = d.sourceLibelleLignes ?? "SAISIE_LIBRE";
-    return s === "MEMBRE_EQUIPE" ? "SAISIE_LIBRE" : s;
+    return d.sourceLibelleLignes ?? "SAISIE_LIBRE";
 }
 
 /** Type réel côté API (incl. `MEMBRE_EQUIPE`) pour reconstruire un `SavePlanningLigneRequest` à partir d’une ligne chargée. */
@@ -509,7 +508,10 @@ function validateLineForm(
     sourceLibelle: PlanningLigneLibelleSource
 ): string | null {
     if (sourceLibelle === "MEMBRE_EQUIPE") {
-        return "Le type « Membre d'équipe » n'est pas autorisé pour le libellé des lignes. Corrigez le planning dans « Modifier infos ».";
+        if (!form.entiteId.trim()) {
+            return "Sélectionnez un membre de l’équipe pour le libellé de la ligne.";
+        }
+        return null;
     }
     if (sourceLibelle === "SAISIE_LIBRE") {
         return null;
@@ -569,6 +571,17 @@ function buildSaveLigneRequest(
                 libelleMomentId: parseInt(form.entiteId, 10),
                 libelleSaisieLibre: null,
             };
+        case "MEMBRE_EQUIPE": {
+            if (sansLibelleLigneColonne) {
+                return { ...base, libelleSaisieLibre: null };
+            }
+            const token = form.entiteId.trim();
+            return {
+                ...base,
+                libelleUtilisateurTokenId: token || null,
+                libelleSaisieLibre: null,
+            };
+        }
         default:
             return { ...base, libelleSaisieLibre: null };
     }
@@ -646,18 +659,24 @@ function optionsPourSource(
     groupes: GroupeDto[],
     lieux: LieuDto[],
     horaires: HoraireDto[],
-    moments: MomentDto[]
-): { id: number; label: string }[] {
+    moments: MomentDto[],
+    equipe: LigneEquipePourAffichage[]
+): { id: string; label: string }[] {
     if (source == null) return [];
     switch (source) {
         case "GROUPE":
-            return groupes.map((g) => ({ id: g.id, label: g.nom }));
+            return groupes.map((g) => ({ id: String(g.id), label: g.nom }));
         case "LIEU":
-            return lieux.map((x) => ({ id: x.id, label: x.nom }));
+            return lieux.map((x) => ({ id: String(x.id), label: x.nom }));
         case "HORAIRE":
-            return horaires.map((h) => ({ id: h.id, label: h.libelle }));
+            return horaires.map((h) => ({ id: String(h.id), label: h.libelle }));
         case "MOMENT":
-            return moments.map((m) => ({ id: m.id, label: m.nom }));
+            return moments.map((m) => ({ id: String(m.id), label: m.nom }));
+        case "MEMBRE_EQUIPE":
+            return equipe.map((m) => ({
+                id: m.tokenId,
+                label: libelleCourtPersonne(m),
+            }));
         default:
             return [];
     }
@@ -674,6 +693,8 @@ function labelSelectEntite(source: PlanningLigneLibelleSource): string {
             return "Choisir un horaire";
         case "MOMENT":
             return "Choisir un moment";
+        case "MEMBRE_EQUIPE":
+            return "Choisir un membre de l’équipe";
         default:
             return "Entité";
     }
@@ -872,12 +893,6 @@ function ListePlanningsOrganisation({
             setMetaError("Le titre est obligatoire.");
             return;
         }
-        if (metaForm.sourceLibelleLignes === "MEMBRE_EQUIPE") {
-            setMetaError(
-                "Le type « Membre d'équipe » est réservé au contenu des cellules, pas au libellé des lignes."
-            );
-            return;
-        }
         setMetaError(null);
         setMetaSubmitting(true);
         try {
@@ -923,10 +938,7 @@ function ListePlanningsOrganisation({
             setMetaForm({
                 titre: d.titre,
                 consigneGlobale: d.consigneGlobale,
-                sourceLibelleLignes:
-                    d.sourceLibelleLignes === "MEMBRE_EQUIPE"
-                        ? "SAISIE_LIBRE"
-                        : (d.sourceLibelleLignes ?? null),
+                sourceLibelleLignes: d.sourceLibelleLignes ?? null,
                 sourceContenuCellules: d.sourceContenuCellules ?? null,
             });
             setMetaModalOpen(true);
@@ -1412,7 +1424,8 @@ function ListePlanningsOrganisation({
         groupes,
         lieux,
         horaires,
-        moments
+        moments,
+        membresPourCellulesModal
     );
 
     const regroupementCellInfos = detail ? infosRegroupementParLigne(lignesTri) : [];
@@ -2372,8 +2385,18 @@ function ListePlanningsOrganisation({
                             </Input>
                             {entiteChoicesLigne.length === 0 ? (
                                 <p className={styles.fieldHintWarn}>
-                                    Aucune entité de ce type pour ce séjour. Ajoutez-en depuis la vue générale du
-                                    séjour.
+                                    {ligneSourceEffectif === "MEMBRE_EQUIPE" ? (
+                                        <>
+                                            Aucun membre dans l’équipe de ce séjour (ou <code>tokenId</code> manquant
+                                            sur les profils). Ajoutez des membres dans le bloc « Équipe » de la fiche
+                                            séjour.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Aucune entité de ce type pour ce séjour. Ajoutez-en depuis la vue
+                                            générale du séjour.
+                                        </>
+                                    )}
                                 </p>
                             ) : null}
                         </FormGroup>

@@ -556,7 +556,7 @@ export interface PlanningGrilleDetailDto {
   lignes: PlanningLigneDto[];
 }
 
-/** `MEMBRE_EQUIPE` : autorisé pour le contenu des cellules ; pour les libellés de lignes, voir règles API. */
+/** Inclut `MEMBRE_EQUIPE` pour le contenu des cellules et pour le libellé des lignes (`libelleUtilisateurTokenId`). */
 export type PlanningLigneLibelleSource =
   | "SAISIE_LIBRE"
   | "HORAIRE"
