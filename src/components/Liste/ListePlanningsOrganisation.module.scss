@@ -655,7 +655,7 @@
     box-sizing: border-box;
 }
 
-/* Texte de cellule : retour à la ligne, jamais de débordement hors de la case */
+/* Texte de cellule : une valeur par ligne (join \n côté TS), jamais de débordement hors de la case */
 .cellButton > span {
     min-width: 0;
     max-width: 100%;
@@ -664,6 +664,7 @@
     line-height: 1.3;
     hyphens: auto;
     display: block;
+    white-space: pre-line;
 }
 
 .cellButton:hover {

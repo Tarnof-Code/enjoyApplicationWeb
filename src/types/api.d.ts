@@ -584,13 +584,14 @@ export interface PlanningCelluleDto {
   id: number;
   jour: string;
   /** `tokenId` des animateurs (tableau, peut être vide). */
-  membreTokenIds: string[];
-  horaireId: number | null;
-  horaireLibelle: string | null;
-  momentId: number | null;
-  groupeId: number | null;
-  lieuId: number | null;
-  texteLibre: string | null;
+  membreTokenIds?: string[] | null;
+  /** Même ordre que `horaireLibelles` (tri par id côté serveur). */
+  horaireIds?: number[] | null;
+  horaireLibelles?: string[] | null;
+  momentIds?: number[] | null;
+  groupeIds?: number[] | null;
+  lieuIds?: number[] | null;
+  texteLibre?: string | null;
 }
 
 export interface SavePlanningGrilleRequest {
@@ -625,11 +626,11 @@ export type UpdatePlanningLigneRequest = SavePlanningLigneRequest;
 export interface PlanningCellulePayload {
   jour: string;
   membreTokenIds?: string[] | null;
-  horaireId?: number | null;
+  horaireIds?: number[] | null;
   texteLibre?: string | null;
-  momentId?: number | null;
-  groupeId?: number | null;
-  lieuId?: number | null;
+  momentIds?: number[] | null;
+  groupeIds?: number[] | null;
+  lieuIds?: number[] | null;
 }
 
 export interface UpsertPlanningCellulesRequest {
