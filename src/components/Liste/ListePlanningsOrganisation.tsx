@@ -654,6 +654,53 @@ function planningLigneDetailToSaveRequest(
     }
 }
 
+interface DonneesSejourPourTypesPlanning {
+    horaires: HoraireDto[];
+    moments: MomentDto[];
+    groupes: GroupeDto[];
+    lieux: LieuDto[];
+    membresAvecNom: LigneEquipePourAffichage[];
+}
+
+function sourcePlanningADonneesPourType(
+    src: PlanningLigneLibelleSource,
+    d: DonneesSejourPourTypesPlanning
+): boolean {
+    switch (src) {
+        case "SAISIE_LIBRE":
+            return true;
+        case "HORAIRE":
+            return d.horaires.length > 0;
+        case "MOMENT":
+            return d.moments.length > 0;
+        case "GROUPE":
+            return d.groupes.length > 0;
+        case "LIEU":
+            return d.lieux.length > 0;
+        case "MEMBRE_EQUIPE":
+            return d.membresAvecNom.length > 0;
+        default:
+            return false;
+    }
+}
+
+function noteCreerDabordPourTypePlanning(src: PlanningLigneLibelleSource): string {
+    switch (src) {
+        case "HORAIRE":
+            return "créez d'abord au moins un horaire pour ce séjour";
+        case "MOMENT":
+            return "créez d'abord au moins un moment";
+        case "GROUPE":
+            return "créez d'abord au moins un groupe";
+        case "LIEU":
+            return "créez d'abord au moins un lieu";
+        case "MEMBRE_EQUIPE":
+            return "ajoutez d'abord au moins un membre à l'équipe du séjour";
+        default:
+            return "";
+    }
+}
+
 function optionsPourSource(
     source: PlanningLigneLibelleSource | null,
     groupes: GroupeDto[],
@@ -732,6 +779,17 @@ function ListePlanningsOrganisation({
     const membresPourCellulesModal = useMemo(
         () => membresDirecteurEtEquipePourModal(directeur, membresEquipe),
         [directeur, membresEquipe]
+    );
+
+    const donneesPourTypesPlanningMeta = useMemo<DonneesSejourPourTypesPlanning>(
+        () => ({
+            horaires,
+            moments,
+            groupes,
+            lieux,
+            membresAvecNom: membresPourCellulesModal,
+        }),
+        [horaires, moments, groupes, lieux, membresPourCellulesModal]
     );
 
     const grillesTriAlphabetique = useMemo(
@@ -1542,11 +1600,29 @@ function ListePlanningsOrganisation({
                             }
                         >
                             <option value="">— Pas de libellé de ligne —</option>
-                            {planningLibelleLignesSourceOptions.map((o) => (
-                                <option key={o.value} value={o.value}>
-                                    {o.label}
-                                </option>
-                            ))}
+                            {planningLibelleLignesSourceOptions.map((o) => {
+                                const disponible = sourcePlanningADonneesPourType(
+                                    o.value,
+                                    donneesPourTypesPlanningMeta
+                                );
+                                const optionSelectionnee = metaForm.sourceLibelleLignes === o.value;
+                                const libelleOption =
+                                    disponible ?
+                                        o.label
+                                    :   `${o.label} — ${noteCreerDabordPourTypePlanning(o.value)}`;
+                                return (
+                                    <option
+                                        key={o.value}
+                                        value={o.value}
+                                        disabled={!disponible && !optionSelectionnee}
+                                        className={
+                                            !disponible ? styles.planningMetaOptionIndisponible : undefined
+                                        }
+                                    >
+                                        {libelleOption}
+                                    </option>
+                                );
+                            })}
                         </Input>
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
@@ -1569,11 +1645,29 @@ function ListePlanningsOrganisation({
                             }
                         >
                             <option value="">— Saisie libre —</option>
-                            {planningLigneLibelleSourceOptions.map((o) => (
-                                <option key={o.value} value={o.value}>
-                                    {o.label}
-                                </option>
-                            ))}
+                            {planningLigneLibelleSourceOptions.map((o) => {
+                                const disponible = sourcePlanningADonneesPourType(
+                                    o.value,
+                                    donneesPourTypesPlanningMeta
+                                );
+                                const optionSelectionnee = metaForm.sourceContenuCellules === o.value;
+                                const libelleOption =
+                                    disponible ?
+                                        o.label
+                                    :   `${o.label} — ${noteCreerDabordPourTypePlanning(o.value)}`;
+                                return (
+                                    <option
+                                        key={o.value}
+                                        value={o.value}
+                                        disabled={!disponible && !optionSelectionnee}
+                                        className={
+                                            !disponible ? styles.planningMetaOptionIndisponible : undefined
+                                        }
+                                    >
+                                        {libelleOption}
+                                    </option>
+                                );
+                            })}
                         </Input>
                     </FormGroup>
                 </ModalBody>
@@ -2383,22 +2477,6 @@ function ListePlanningsOrganisation({
                                     </option>
                                 ))}
                             </Input>
-                            {entiteChoicesLigne.length === 0 ? (
-                                <p className={styles.fieldHintWarn}>
-                                    {ligneSourceEffectif === "MEMBRE_EQUIPE" ? (
-                                        <>
-                                            Aucun membre dans l’équipe de ce séjour (ou <code>tokenId</code> manquant
-                                            sur les profils). Ajoutez des membres dans le bloc « Équipe » de la fiche
-                                            séjour.
-                                        </>
-                                    ) : (
-                                        <>
-                                            Aucune entité de ce type pour ce séjour. Ajoutez-en depuis la vue
-                                            générale du séjour.
-                                        </>
-                                    )}
-                                </p>
-                            ) : null}
                         </FormGroup>
                     ) : null}
                 </ModalBody>
