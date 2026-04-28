@@ -8,7 +8,9 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 - **Dernière vérification cross-projet :** 2026-03-31 (lecture `../../../enjoyApi/AI_MEMORY.md` — lieux partageables, occupation lieu / `avertissementLieu`, `lieuId` activités). **2026-04-03 :** moments. **2026-04-04 :** **types d’activité** (CRUD + lien obligatoire sur les activités), aligné `enjoyApi` (`TypeActivite`, `/types-activite`). **2026-04-22 :** synchronisation doc front (Header, liste activités, `ListeTypesActivite` / revalidation) ; implémentation **horaires** séjour (accordéon vue générale, CRUD, tri chronologique). **2026-04-23 :** plannings **organisation** (grilles direction, `ListePlanningsOrganisation`, `sejour-planning-grille`, panneau accordéon `10`, loader `planningGrilles`). **2026-04-24 :** plannings — **`MEMBRE_EQUIPE`** autorisé comme **type de libellé de ligne** (UI + `libelleUtilisateurTokenId`).
 
-- **Dernière mise à jour de la Memory Bank :** 2026-04-24 (pivot + fiches `docs/ai/`).
+- **2026-04-28 :** **Plannings organisation** — modale **créer / modifier** grille : pour **type de libellé des lignes** et **type du contenu des cellules**, un `PlanningLigneLibelleSource` sans données côté séjour (lists **horaires**, **moments**, **groupes**, **lieux**, **équipe+directeur**) est affiché comme **option désactivée**, style **`planningMetaOptionIndisponible`**, avec libellé `Type — …` via **`noteCreerDabordPourTypePlanning`** (helpers **`sourcePlanningADonneesPourType`**, **`donneesPourTypesPlanningMeta`**). La valeur déjà choisie pour une grille existante reste sélectionnable même si les listes ont été vidées. Modale **nouvelle ligne / modifier ligne** : retrait du message d’avertissement sous le select quand **`entiteChoicesLigne`** est vide (redondant avec le flux création grille).
+
+- **Dernière mise à jour de la Memory Bank :** 2026-04-28 (pivot + fiches `docs/ai/`).
 
 ## Dernières réalisations (synthèse)
 

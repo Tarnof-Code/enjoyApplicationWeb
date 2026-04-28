@@ -4,6 +4,8 @@ Point d’entrée pour le contexte projet. Le détail est dans [`docs/ai/`](docs
 
 **Important (IA)** : ce pivot seul ne suffit pas. Lire aussi [`docs/ai/contexte-actif.md`](docs/ai/contexte-actif.md) et [`docs/ai/decisions-architecturales.md`](docs/ai/decisions-architecturales.md), puis les autres fiches selon la tâche.
 
+**Dernière revue Memory Bank (alignement [`.cursorrules`](.cursorrules)) :** 2026-04-28 — journal et conventions à jour dans [`docs/ai/contexte-actif.md`](docs/ai/contexte-actif.md) (plannings organisation : options de type sans référents) ; détail pattern UI dans [`docs/ai/decisions-architecturales.md`](docs/ai/decisions-architecturales.md) et glossaire dans [`docs/ai/etat-projet.md`](docs/ai/etat-projet.md).
+
 ## Invariants
 
 Les règles obligatoires (langue, lint, patterns) sont dans [`.cursorrules`](.cursorrules).
