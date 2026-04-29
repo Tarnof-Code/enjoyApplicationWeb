@@ -13,7 +13,7 @@ Application Web de gestion de séjours (Enjoy).
 ## Structure des dossiers (rappel)
 
 - Séparation `Pages/_Admin` vs `Pages/_Directeur` pour les pages par rôle.
-- Détail séjour : `Pages/_Directeur/DetailsSejour/` — `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`, `SejourDetailOutlet.tsx`, `detailsSejourLoader.ts`, styles `DetailsSejour.module.scss`.
+- Détail séjour : `Pages/_Directeur/DetailsSejour/` — `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`, **`DetailsSejourParametrage.tsx`**, `SejourDetailOutlet.tsx`, `detailsSejourLoader.ts`, styles `DetailsSejour.module.scss` ; composant accordéon partagé **`components/DetailsSejour/DetailsSejourAccordionItem.tsx`** (styles importés depuis `DetailsSejour.module.scss`).
 - Helpers dans `helpers/`, types dans `types/`, services dans `services/`.
 - Composants de liste génériques dans `components/Liste/`.
 

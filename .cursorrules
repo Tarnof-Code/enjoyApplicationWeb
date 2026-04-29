@@ -19,7 +19,7 @@ L'assistant doit répondre exclusivement en français.
 # Règles React 19 & Optimisations
 - **Babel Plugin React Compiler** : Le projet utilise `babel-plugin-react-compiler` pour l'optimisation automatique.
 - **Hooks d'optimisation** : NE PAS utiliser manuellement `useMemo` ou `useCallback` sauf cas très spécifique non géré par le compilateur. Le compilateur s'occupe de la mémoïsation automatique.
-- **Exceptions documentées** (voir aussi `AI_MEMORY.md` + `docs/ai/decisions-architecturales.md`) : `ListeActivites.tsx` (`useMemo` / `useEffect` pour filtre lieu par emplacement) ; `DetailsSejourActivites.tsx` (`useMemo` pour la liste animateurs) ; `DetailsSejourOverview.tsx` (`useCallback` pour le réordonnancement des accordéons par glisser-déposer) ; `ListePlanningsOrganisation.tsx` (`useMemo` pour données dérivées / DnD).
+- **Exceptions documentées** (voir aussi `AI_MEMORY.md` + `docs/ai/decisions-architecturales.md`) : `ListeActivites.tsx` (`useMemo` / `useEffect` pour filtre lieu par emplacement) ; `DetailsSejourActivites.tsx` (`useMemo` pour la liste animateurs) ; `DetailsSejourOverview.tsx` et **`DetailsSejourParametrage.tsx`** (`useCallback` pour le réordonnancement des accordéons par glisser-déposer ; Paramétrage aussi `useCallback` pour `refreshLoaderData` / `useRevalidator`) ; `ListePlanningsOrganisation.tsx` (`useMemo` pour données dérivées / DnD).
 - **Chargement de données** : 
   - Privilégier les `loaders` de React Router (`useLoaderData`) plutôt que `useEffect` pour le fetching initial des pages.
   - **Route parent avec données partagées** : utiliser `useRouteLoaderData("sejour-detail")` sur les sous-pages du détail séjour (loader sur la route parent `id: "sejour-detail"` dans `App.tsx`).
@@ -83,7 +83,7 @@ L'assistant doit répondre exclusivement en français.
 - Signale les problèmes de perf/sécurité/accessibilité
 - Propose des alternatives quand pertinent
 - Respecte l'architecture existante (Form générique, loaders, SCSS Modules)
-- Utilise les composants existants (`Form.tsx`, `Liste.tsx`, `Equipe.tsx`, `ListeEnfants.tsx`, `ListeGroupes.tsx`, `CreateGroupeForm.tsx`, `ListeLieux`, `ListeMoments`, `ListeTypesActivite`, `ListeActivites`, `Acces_non_autorise`) plutôt que de créer de nouveaux patterns
+- Utilise les composants existants (`Form.tsx`, `Liste.tsx`, `Equipe.tsx`, `ListeEnfants.tsx`, `ListeGroupes.tsx`, `CreateGroupeForm.tsx`, `ListeLieux`, `ListeMoments`, `ListeTypesActivite`, **`DetailsSejourAccordionItem`** (`components/DetailsSejour/`), `ListeActivites`, `Acces_non_autorise`) plutôt que de créer de nouveaux patterns
 - **Liste.tsx** : Supporte les props `canDossier`/`onDossier` pour afficher une icône dossier (faFolder) ; utiliser pour naviguer vers la page dossier d'un enfant. Depuis ListeEnfants : `state: { from: 'enfants', openAccordion: '3' }`. Depuis ListeGroupes : `state: { from: 'groupes', openAccordion: '4', expandedGroupeId }` (retour vers `/directeur/sejours/:id`, vue générale).
 - **Formulaires** : 
   - Utiliser le composant générique `Form.tsx` avec configuration via `fields` (FormField[])
@@ -116,8 +116,8 @@ L'assistant doit répondre exclusivement en français.
   - Définies dans `src/types/vite-env.d.ts` pour le typage TypeScript
 - **Navigation & Routes** : 
   - Routes définies dans `App.tsx` avec `createBrowserRouter`
-  - Routes principales : `/` (connexion, redirige vers `/profil` si connecté), `/profil`, `/utilisateurs` (ADMIN, affiche `Acces_non_autorise` si non-ADMIN), `/sejours` (ADMIN), `/directeur/sejours` (DIRECTION), `/directeur/sejours/:id` (DIRECTION, **index** = vue générale `DetailsSejourOverview`), `/directeur/sejours/:id/activites` (DIRECTION, `DetailsSejourActivites` / `ListeActivites`), `/directeur/sejours/:sejourId/enfants/:enfantId/dossier` (DIRECTION, page dossier enfant)
-  - Détail séjour : route parent avec `id: "sejour-detail"` + `detailsSejourLoader` ; conteneur `SejourDetailOutlet` ; le Header directeur propose les onglets Vue générale / Activités
+  - Routes principales : `/` (connexion, redirige vers `/profil` si connecté), `/profil`, `/utilisateurs` (ADMIN, affiche `Acces_non_autorise` si non-ADMIN), `/sejours` (ADMIN), `/directeur/sejours` (DIRECTION), `/directeur/sejours/:id` (DIRECTION, **index** = vue générale `DetailsSejourOverview`), `/directeur/sejours/:id/activites` (DIRECTION, `DetailsSejourActivites` / `ListeActivites`), `/directeur/sejours/:id/parametrage` (DIRECTION, `DetailsSejourParametrage`), `/directeur/sejours/:sejourId/enfants/:enfantId/dossier` (DIRECTION, page dossier enfant)
+  - Détail séjour : route parent avec `id: "sejour-detail"` + `detailsSejourLoader` ; conteneur `SejourDetailOutlet` ; le Header directeur propose les segments Vue générale / Activités / Paramétrage
   - Routes protégées via `ProtectedRoute.tsx` avec vérification du rôle Redux
   - Layout (`Layout.tsx`) gère l'affichage conditionnel du Header (uniquement si `pathname !== "/"` et `role !== null`)
   - Layout récupère automatiquement le profil utilisateur si connecté mais rôle manquant dans Redux (gestion 401 → logout)
