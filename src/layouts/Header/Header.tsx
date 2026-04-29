@@ -6,7 +6,7 @@ import { accountService } from "../../services/account.service";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
-import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling, FaThLarge, FaClipboardList, FaChevronRight } from "react-icons/fa";
+import { FaUsers, FaUser, FaPowerOff, FaSuitcaseRolling, FaThLarge, FaClipboardList, FaChevronRight, FaSlidersH } from "react-icons/fa";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
 import {
@@ -123,6 +123,15 @@ const Admin_header: React.FC = () => {
                       >
                         <FaClipboardList size={14} aria-hidden />
                         Activités
+                      </NavLink>
+                      <NavLink
+                        to={`/directeur/sejours/${sejourIdParam}/parametrage`}
+                        className={({ isActive }) =>
+                          `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
+                        }
+                      >
+                        <FaSlidersH size={14} aria-hidden />
+                        Paramétrage
                       </NavLink>
                     </div>
                   </div>

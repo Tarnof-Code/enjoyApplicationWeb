@@ -1,33 +1,27 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, type ReactNode } from "react";
 import { useRouteLoaderData, useNavigate, useLocation } from "react-router-dom";
-import { FaGripVertical } from "react-icons/fa";
 import styles from "./DetailsSejour.module.scss";
 import formaterDate from "../../../helpers/formaterDate";
 import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
-import ListeLieux from "../../../components/Liste/ListeLieux";
-import ListeMoments from "../../../components/Liste/ListeMoments";
-import ListeTypesActivite from "../../../components/Liste/ListeTypesActivite";
-import ListeHoraires from "../../../components/Liste/ListeHoraires";
 import ListePlanningsOrganisation from "../../../components/Liste/ListePlanningsOrganisation";
+import DetailsSejourAccordionItem from "../../../components/DetailsSejour/DetailsSejourAccordionItem";
 import {
     SejourDTO,
     EnfantDto,
     GroupeDto,
-    ActiviteDto,
     LieuDto,
     MomentDto,
-    TypeActiviteDto,
     HoraireDto,
     PlanningGrilleSummaryDto,
 } from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
 
-/** Accordéons sur la vue générale (hors activités — onglet dédié). */
-const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6", "9", "8", "10"] as const;
+/** Accordéons sur la vue générale (lieux / moments / horaires / types → page Paramétrage). */
+const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "10"] as const;
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -87,81 +81,6 @@ function reorderOverviewAccordionIds(order: string[], draggedId: string, targetI
     return next;
 }
 
-function SejourAccordionItem({
-    id,
-    title,
-    isOpen,
-    onToggle,
-    containerRef,
-    children,
-    isDragging,
-    isDropTarget,
-    onDragHandleStart,
-    onDragHandleEnd,
-    onItemDragOver,
-    onReorderDrop,
-}: {
-    id: string;
-    title: string;
-    isOpen: boolean;
-    onToggle: () => void;
-    containerRef: (el: HTMLDivElement | null) => void;
-    children: ReactNode;
-    isDragging: boolean;
-    isDropTarget: boolean;
-    onDragHandleStart: () => void;
-    onDragHandleEnd: () => void;
-    onItemDragOver: () => void;
-    onReorderDrop: (draggedId: string, targetId: string) => void;
-}) {
-    const itemClass = [
-        styles.accordionItem,
-        isDragging ? styles.accordionItemDragging : "",
-        isDropTarget ? styles.accordionItemDropTarget : "",
-    ]
-        .filter(Boolean)
-        .join(" ");
-
-    return (
-        <div
-            ref={containerRef}
-            data-accordion-id={id}
-            className={itemClass}
-            onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                onItemDragOver();
-            }}
-            onDrop={(e) => {
-                e.preventDefault();
-                const dragged = e.dataTransfer.getData("text/plain");
-                if (dragged) onReorderDrop(dragged, id);
-            }}
-        >
-            <div className={styles.accordionHeaderRow}>
-                <div
-                    className={styles.dragHandle}
-                    aria-label="Glisser pour réorganiser les blocs"
-                    title="Réorganiser"
-                    draggable
-                    onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", id);
-                        e.dataTransfer.effectAllowed = "move";
-                        onDragHandleStart();
-                    }}
-                    onDragEnd={onDragHandleEnd}
-                >
-                    <FaGripVertical aria-hidden size={18} />
-                </div>
-                <button type="button" className={`${styles.accordionHeader} ${isOpen ? styles.active : ""}`} onClick={onToggle}>
-                    {title}
-                </button>
-            </div>
-            {isOpen && <div className={styles.accordionBody}>{children}</div>}
-        </div>
-    );
-}
-
 type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
     enfants: EnfantDto[];
@@ -169,8 +88,6 @@ type SejourDetailLoaderSuccess = {
     lieux: LieuDto[];
     moments: MomentDto[];
     horaires: HoraireDto[];
-    activites: ActiviteDto[];
-    typesActivite: TypeActiviteDto[];
     planningGrilles: PlanningGrilleSummaryDto[];
 };
 
@@ -212,69 +129,6 @@ const DetailsSejourOverview: React.FC = () => {
         [sejourIdForStorage]
     );
 
-    if (loaderData === undefined) {
-        return (
-            <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
-                    ← Retour à la liste
-                </button>
-                <p className={styles.error}>Chargement du séjour…</p>
-            </div>
-        );
-    }
-
-    if (loaderData instanceof Error) {
-        return (
-            <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
-                    ← Retour à la liste
-                </button>
-                <p className={styles.error}>Erreur lors du chargement du séjour</p>
-            </div>
-        );
-    }
-
-    const {
-        sejour,
-        enfants,
-        groupes,
-        lieux,
-        moments: momentsFromLoader,
-        horaires: horairesFromLoader,
-        activites: activitesFromLoader,
-        typesActivite: typesActiviteFromLoader,
-        planningGrilles: planningGrillesFromLoader,
-    } = loaderData;
-    const [moments, setMoments] = useState<MomentDto[]>(momentsFromLoader);
-    const [horaires, setHoraires] = useState<HoraireDto[]>(() =>
-        trierHorairesChronologiquement(horairesFromLoader)
-    );
-    const [, setActivites] = useState<ActiviteDto[]>(activitesFromLoader);
-    const [typesActivite, setTypesActivite] = useState<TypeActiviteDto[]>(typesActiviteFromLoader);
-    useEffect(() => {
-        setMoments(momentsFromLoader);
-        setHoraires(trierHorairesChronologiquement(horairesFromLoader));
-        setActivites(activitesFromLoader);
-        setTypesActivite(typesActiviteFromLoader);
-    }, [momentsFromLoader, horairesFromLoader, activitesFromLoader, typesActiviteFromLoader, sejour.id]);
-
-    const synchroniserMomentsDansActivites = (listeMoments: MomentDto[]) => {
-        const parId = new Map(listeMoments.map((mo) => [mo.id, mo]));
-        setActivites((prev) =>
-            prev.map((a) => {
-                const mo = parId.get(a.moment.id);
-                return mo ? { ...a, moment: mo } : a;
-            })
-        );
-    };
-
-    const toggleAccordion = (id: string) => {
-        setOpenAccordions((prev) => {
-            const isOpening = !prev.includes(id);
-            if (isOpening) lastOpenedAccordion.current = id;
-            return isOpening ? [id] : prev.filter((item) => item !== id);
-        });
-    };
     useEffect(() => {
         const id = lastOpenedAccordion.current;
         if (!id) return;
@@ -353,6 +207,46 @@ const DetailsSejourOverview: React.FC = () => {
         return () => clearTimeout(timer);
     }, [location.state, location.key, openAccordions]);
 
+    if (loaderData === undefined) {
+        return (
+            <div className={styles.pageContainer}>
+                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                    ← Retour à la liste
+                </button>
+                <p className={styles.error}>Chargement du séjour…</p>
+            </div>
+        );
+    }
+
+    if (loaderData instanceof Error) {
+        return (
+            <div className={styles.pageContainer}>
+                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                    ← Retour à la liste
+                </button>
+                <p className={styles.error}>Erreur lors du chargement du séjour</p>
+            </div>
+        );
+    }
+
+    const {
+        sejour,
+        enfants,
+        groupes,
+        lieux,
+        moments: momentsFromLoader,
+        horaires: horairesFromLoader,
+        planningGrilles: planningGrillesFromLoader,
+    } = loaderData;
+
+    const toggleAccordion = (id: string) => {
+        setOpenAccordions((prev) => {
+            const isOpening = !prev.includes(id);
+            if (isOpening) lastOpenedAccordion.current = id;
+            return isOpening ? [id] : prev.filter((item) => item !== id);
+        });
+    };
+
     if (!sejour) {
         return (
             <div className={styles.pageContainer}>
@@ -399,14 +293,6 @@ const DetailsSejourOverview: React.FC = () => {
                 return `Liste des enfants (${enfants?.length || 0})`;
             case "4":
                 return `Groupes (${groupes?.length || 0})`;
-            case "5":
-                return `Lieux (${lieux?.length ?? 0})`;
-            case "6":
-                return `Moments (${moments.length})`;
-            case "9":
-                return `Horaires (${horaires.length})`;
-            case "8":
-                return `Types d'activité (${typesActivite.length})`;
             case "10":
                 return `Plannings organisation (${planningGrillesFromLoader.length})`;
             default:
@@ -461,74 +347,6 @@ const DetailsSejourOverview: React.FC = () => {
                         }}
                     />
                 );
-            case "5":
-                return <ListeLieux lieux={lieux ?? []} sejourId={sejour.id} />;
-            case "6":
-                return (
-                    <ListeMoments
-                        moments={moments}
-                        sejourId={sejour.id}
-                        onMomentsReordered={(ordered) => {
-                            setMoments(ordered);
-                            synchroniserMomentsDansActivites(ordered);
-                        }}
-                        onMomentCreated={(m) => setMoments((prev) => trierMomentsChronologiquement([...prev, m]))}
-                        onMomentUpdated={(m) => {
-                            setMoments((prev) =>
-                                trierMomentsChronologiquement(prev.map((x) => (x.id === m.id ? m : x)))
-                            );
-                            setActivites((prev) =>
-                                prev.map((a) => (a.moment.id === m.id ? { ...a, moment: m } : a))
-                            );
-                        }}
-                        onMomentDeleted={(id) => setMoments((prev) => prev.filter((x) => x.id !== id))}
-                    />
-                );
-            case "9":
-                return (
-                    <ListeHoraires
-                        horaires={horaires}
-                        sejourId={sejour.id}
-                        onHoraireCreated={(h) =>
-                            setHoraires((prev) => trierHorairesChronologiquement([...prev, h]))
-                        }
-                        onHoraireUpdated={(h) =>
-                            setHoraires((prev) =>
-                                trierHorairesChronologiquement(prev.map((x) => (x.id === h.id ? h : x)))
-                            )
-                        }
-                        onHoraireDeleted={(id) => setHoraires((prev) => prev.filter((x) => x.id !== id))}
-                    />
-                );
-            case "8":
-                return (
-                    <ListeTypesActivite
-                        typesActivite={typesActivite}
-                        sejourId={sejour.id}
-                        onTypeCreated={(t) => {
-                            setTypesActivite((prev) =>
-                                [...prev, t].sort((a, b) =>
-                                    a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" })
-                                )
-                            );
-                        }}
-                        onTypeUpdated={(t) => {
-                            setTypesActivite((prev) =>
-                                prev
-                                    .map((x) => (x.id === t.id ? t : x))
-                                    .sort((a, b) =>
-                                        a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" })
-                                    )
-                            );
-                            setActivites((prev) =>
-                                prev.map((a) => (a.typeActivite.id === t.id ? { ...a, typeActivite: t } : a))
-                            );
-                        }}
-                        onTypeDeleted={(id) => {
-                            setTypesActivite((prev) => prev.filter((x) => x.id !== id));
-                        }}
-                    />
-                );
             case "10":
                 return (
                     <ListePlanningsOrganisation
@@ -536,8 +354,8 @@ const DetailsSejourOverview: React.FC = () => {
                         dateDebut={sejour.dateDebut}
                         dateFin={sejour.dateFin}
                         grilles={planningGrillesFromLoader}
-                        moments={moments}
-                        horaires={horaires}
+                        moments={trierMomentsChronologiquement(momentsFromLoader)}
+                        horaires={trierHorairesChronologiquement(horairesFromLoader)}
                         groupes={groupes ?? []}
                         lieux={lieux ?? []}
                         membresEquipe={sejour.equipe ?? []}
@@ -553,7 +371,7 @@ const DetailsSejourOverview: React.FC = () => {
         <div className={styles.pageContainer}>
             <div className={styles.accordion}>
                 {accordionOrder.map((panelId) => (
-                    <SejourAccordionItem
+                    <DetailsSejourAccordionItem
                         key={panelId}
                         id={panelId}
                         title={accordionPanelTitle(panelId)}
@@ -577,7 +395,7 @@ const DetailsSejourOverview: React.FC = () => {
                         onReorderDrop={handleAccordionReorder}
                     >
                         {accordionPanelBody(panelId)}
-                    </SejourAccordionItem>
+                    </DetailsSejourAccordionItem>
                 ))}
             </div>
         </div>

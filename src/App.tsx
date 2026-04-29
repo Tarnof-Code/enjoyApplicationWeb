@@ -14,6 +14,7 @@ import { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/detailsSej
 import SejourDetailOutlet from "./Pages/_Directeur/DetailsSejour/SejourDetailOutlet";
 import DetailsSejourOverview from "./Pages/_Directeur/DetailsSejour/DetailsSejourOverview";
 import DetailsSejourActivites from "./Pages/_Directeur/DetailsSejour/DetailsSejourActivites";
+import DetailsSejourParametrage from "./Pages/_Directeur/DetailsSejour/DetailsSejourParametrage";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Directeur/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 
@@ -75,6 +76,10 @@ const App: React.FC = () => {
             {
               index: true,
               element: <DetailsSejourOverview />,
+            },
+            {
+              path: "parametrage",
+              element: <DetailsSejourParametrage />,
             },
             {
               path: "activites",
