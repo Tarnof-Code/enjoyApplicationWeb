@@ -288,11 +288,41 @@ function lignesTrieesParOrdre(lignes: PlanningLigneDto[]): PlanningLigneDto[] {
     return [...lignes].sort((a, b) => a.ordre - b.ordre);
 }
 
+/**
+ * Ordre affiché dans la grille : regroupe les lignes d’une même section en bloc vertical en utilisant
+ * le plus petit `ordre` du groupe comme rang principal — corrige l’affichage lorsque les `ordre`
+ * persistés sont entrelacés entre sections (régression ou anciennes données).
+ */
+function lignesTriPourAffichageGrille(lignes: PlanningLigneDto[]): PlanningLigneDto[] {
+    const tri = lignesTrieesParOrdre(lignes);
+    const minOrdreParRg = new Map<string, number>();
+    for (const l of lignes) {
+        const rg = cleRegroupementPourTri(l.libelleRegroupement);
+        if (rg == null) continue;
+        const o = l.ordre;
+        const prev = minOrdreParRg.get(rg);
+        if (prev === undefined || o < prev) minOrdreParRg.set(rg, o);
+    }
+    return [...tri].sort((a, b) => {
+        const rgA = cleRegroupementPourTri(a.libelleRegroupement);
+        const rgB = cleRegroupementPourTri(b.libelleRegroupement);
+        const primA = rgA == null ? a.ordre : (minOrdreParRg.get(rgA) ?? a.ordre);
+        const primB = rgB == null ? b.ordre : (minOrdreParRg.get(rgB) ?? b.ordre);
+        if (primA !== primB) return primA - primB;
+        const cleSec = (rg: string | null, ligne: PlanningLigneDto) =>
+            rg == null ? `\u0001hors:${ligne.id}` : `\u0000sec:${rg}`;
+        const cmpSec = cleSec(rgA, a).localeCompare(cleSec(rgB, b));
+        if (cmpSec !== 0) return cmpSec;
+        if (a.ordre !== b.ordre) return a.ordre - b.ordre;
+        return a.id - b.id;
+    });
+}
+
 /** Libellés de section distincts, dans l’ordre d’apparition dans le tableau. */
 function sectionsDepuisLignes(
     lignes: PlanningLigneDto[]
 ): { libelle: string; ligneIds: number[] }[] {
-    const tri = lignesTrieesParOrdre(lignes);
+    const tri = lignesTriPourAffichageGrille(lignes);
     const m = new Map<string, { libelle: string; ligneIds: number[]; first: number }>();
     tri.forEach((l, i) => {
         const key = l.libelleRegroupement;
@@ -312,7 +342,7 @@ type PlanningBlocOrdreLigne =
     | { kind: "hors"; lineIds: number[] };
 
 function decomposerEnBlocsOrdre(lignes: PlanningLigneDto[]): PlanningBlocOrdreLigne[] {
-    const tri = lignesTrieesParOrdre(lignes);
+    const tri = lignesTriPourAffichageGrille(lignes);
     const blocs: PlanningBlocOrdreLigne[] = [];
     let i = 0;
     while (i < tri.length) {
@@ -966,7 +996,7 @@ function ListePlanningsOrganisation({
 
     const appliquerDeplacementSectionEntreBlocs = async (fromBlocIdx: number, toBlocIdx: number) => {
         if (editorGrilleId == null || !detail || fromBlocIdx === toBlocIdx) return;
-        const blocs = decomposerEnBlocsOrdre(lignesTrieesParOrdre(detail.lignes));
+        const blocs = decomposerEnBlocsOrdre(detail.lignes);
         const fromB = blocs[fromBlocIdx];
         const toB = blocs[toBlocIdx];
         if (!fromB || !toB || fromB.kind !== "section" || toB.kind !== "section") return;
@@ -1337,7 +1367,7 @@ function ListePlanningsOrganisation({
 
     const appliquerGlisserDeposerOrdreLignes = async (draggedId: number, targetId: number) => {
         if (editorGrilleId == null || !detail || draggedId === targetId) return;
-        const lignesOrd = lignesTrieesParOrdre(detail.lignes);
+        const lignesOrd = lignesTriPourAffichageGrille(detail.lignes);
         const dragged = lignesOrd.find((l) => l.id === draggedId);
         const target = lignesOrd.find((l) => l.id === targetId);
         if (!dragged || !target || !sontMemeBlocOrdre(dragged, target)) return;
@@ -1347,8 +1377,19 @@ function ListePlanningsOrganisation({
         const ids = ordered.map((l) => l.id);
         const newIds = reorderIdsInList(ids, draggedId, targetId);
         const newOrdered = newIds.map((id) => ordered.find((l) => l.id === id)!);
-        const updates = newOrdered
-            .map((l, newOrdre) => ({ l, newOrdre }))
+
+        const startPeer = peersIdx.length ? Math.min(...peersIdx) : -1;
+        const endPeer = peersIdx.length ? Math.max(...peersIdx) : -1;
+        if (startPeer < 0 || endPeer < startPeer) return;
+
+        /** `ordre` côté API est global sur la grille, pas relatif au bloc section (sinon collisions avec les autres lignes). */
+        const mergedLines = [
+            ...lignesOrd.slice(0, startPeer),
+            ...newOrdered,
+            ...lignesOrd.slice(endPeer + 1),
+        ];
+        const updates = mergedLines
+            .map((l, globalOrdre) => ({ l, newOrdre: globalOrdre }))
             .filter(({ l, newOrdre }) => l.ordre !== newOrdre);
         if (updates.length === 0) return;
 
@@ -1553,7 +1594,7 @@ function ListePlanningsOrganisation({
     };
 
     const lignesTri = useMemo(
-        () => (detail ? lignesTrieesParOrdre(detail.lignes) : []),
+        () => (detail ? lignesTriPourAffichageGrille(detail.lignes) : []),
         [detail]
     );
     const blocsPlein = useMemo(
