@@ -35,6 +35,8 @@ import {
 import { enumererJoursSejour, normaliserJourPlanningPourCle } from "../../helpers/enumererJoursSejour";
 import formaterDate from "../../helpers/formaterDate";
 import { libelleJourCourtPourBouton, parseYmdVersDateLocale } from "./listeActivitesUtils";
+import { CalendrierNavigationPeriode } from "./ListeActivitesCalendrier";
+import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
 import styles from "./ListePlanningsOrganisation.module.scss";
 
 /** Même libellé de jour que le calendrier des activités (ex. « Lun 15 juil. »). */
@@ -56,6 +58,11 @@ export interface ListePlanningsOrganisationProps {
     membresEquipe?: ProfilUtilisateurDTO[];
     /** Directeur du séjour : ajouté en tête de liste s’il n’est pas déjà dans l’équipe. */
     directeur?: DirecteurInfos | null;
+    /** Mode pleine page : affiche uniquement l’éditeur (pas la liste ni la modale tableau). */
+    embeddedEditorGrilleId?: number | null;
+    onCloseEmbeddedEditor?: () => void;
+    /** Si défini, création et « Consulter / tableau » naviguent au lieu d’ouvrir la modale. */
+    onNavigateToPlanning?: (grilleId: number) => void;
 }
 
 /** L’API n’expose plus de hiérarchie parent / enfant sur les lignes : profondeur d’indentation toujours nulle. */
@@ -794,9 +801,31 @@ function ListePlanningsOrganisation({
     lieux,
     membresEquipe = [],
     directeur,
+    embeddedEditorGrilleId,
+    onCloseEmbeddedEditor,
+    onNavigateToPlanning,
 }: ListePlanningsOrganisationProps) {
+    const isEmbeddedEditor =
+        embeddedEditorGrilleId != null &&
+        Number.isFinite(embeddedEditorGrilleId) &&
+        embeddedEditorGrilleId > 0;
+
     const revalidator = useRevalidator();
-    const jours = enumererJoursSejour(dateDebut, dateFin);
+
+    const joursDuSejourPlanning = useMemo(
+        () => enumererJoursSejour(dateDebut, dateFin).map((ymd) => ({ ymd })),
+        [dateDebut, dateFin]
+    );
+
+    const {
+        nombreJoursVue: planningNombreJoursVue,
+        setNombreJoursVue: setPlanningNombreJoursVue,
+        joursFenetre,
+        libellePlage: planningLibellePlage,
+        peutReculer: planningPeutReculer,
+        peutAvancer: planningPeutAvancer,
+        decalage: planningDecalage,
+    } = useCalendrierFenetreJours(joursDuSejourPlanning);
 
     const membresPourCellulesModal = useMemo(
         () => membresDirecteurEtEquipePourModal(directeur, membresEquipe),
@@ -838,7 +867,11 @@ function ListePlanningsOrganisation({
     const [deletingGrille, setDeletingGrille] = useState(false);
 
     const [editorOpen, setEditorOpen] = useState(false);
-    const [editorGrilleId, setEditorGrilleId] = useState<number | null>(null);
+    const [editorGrilleId, setEditorGrilleId] = useState<number | null>(() => {
+        const e = embeddedEditorGrilleId;
+        if (e != null && Number.isFinite(e) && e > 0) return e;
+        return null;
+    });
     const [detail, setDetail] = useState<PlanningGrilleDetailDto | null>(null);
     const [editorLoading, setEditorLoading] = useState(false);
     const [editorError, setEditorError] = useState<string | null>(null);
@@ -893,7 +926,15 @@ function ListePlanningsOrganisation({
     };
 
     useEffect(() => {
-        if (!editorOpen || editorGrilleId == null) return;
+        const e = embeddedEditorGrilleId;
+        if (e != null && Number.isFinite(e) && e > 0) {
+            setEditorGrilleId(e);
+        }
+    }, [embeddedEditorGrilleId]);
+
+    useEffect(() => {
+        const editorActif = editorOpen || isEmbeddedEditor;
+        if (!editorActif || editorGrilleId == null) return;
         let cancelled = false;
         (async () => {
             setEditorLoading(true);
@@ -911,11 +952,11 @@ function ListePlanningsOrganisation({
         return () => {
             cancelled = true;
         };
-    }, [editorOpen, editorGrilleId, sejourId]);
+    }, [editorOpen, isEmbeddedEditor, editorGrilleId, sejourId]);
 
     useEffect(() => {
-        if (!editorOpen) setSectionModalOpen(false);
-    }, [editorOpen]);
+        if (!editorOpen && !isEmbeddedEditor) setSectionModalOpen(false);
+    }, [editorOpen, isEmbeddedEditor]);
 
     const reloadDetail = async () => {
         if (editorGrilleId == null) return;
@@ -995,7 +1036,11 @@ function ListePlanningsOrganisation({
                 });
                 showSuccess("Planning mis à jour.");
                 setMetaModalOpen(false);
-                if (editorOpen && editorGrilleId != null && editorGrilleId === metaEditingId) {
+                if (
+                    (editorOpen || isEmbeddedEditor) &&
+                    editorGrilleId != null &&
+                    editorGrilleId === metaEditingId
+                ) {
                     const d = await sejourPlanningGrilleService.getGrilleDetail(sejourId, metaEditingId);
                     setDetail(d);
                 }
@@ -1047,6 +1092,9 @@ function ListePlanningsOrganisation({
                 setEditorOpen(false);
                 setEditorGrilleId(null);
                 setDetail(null);
+                if (isEmbeddedEditor) {
+                    onCloseEmbeddedEditor?.();
+                }
             }
             showSuccess("Planning supprimé.");
             refreshAfterMutation();
@@ -1058,6 +1106,10 @@ function ListePlanningsOrganisation({
     };
 
     const openConsultEditTable = (grilleId: number) => {
+        if (onNavigateToPlanning) {
+            onNavigateToPlanning(grilleId);
+            return;
+        }
         setEditorError(null);
         setEditorGrilleId(grilleId);
         setDetail(null);
@@ -1552,13 +1604,407 @@ function ListePlanningsOrganisation({
         </div>
     );
 
+    const renderEditorSurface = () => (
+        <>
+        {editorLoading && <p>Chargement…</p>}
+        {editorError && <div className={styles.errorMessage}>{editorError}</div>}
+        {!editorLoading && detail && (
+            <>
+                {detail.consigneGlobale ? (
+                    <div className={styles.editorConsigne}>
+                        <strong>Consigne :</strong> {detail.consigneGlobale}
+                    </div>
+                ) : null}
+                <div className={`${styles.tableWrap} ${styles.planningGridWindow}`}>
+                    <div className={styles.tableToolbar}>
+                        <div className={styles.tableToolbarRow}>
+                            <div className={styles.tableToolbarActions}>
+                                <Button
+                                    color="success"
+                                    size="sm"
+                                    onClick={openCreateLine}
+                                    disabled={ligneRapideBusy}
+                                >
+                                    {ligneRapideBusy ? "Ajout…" : "Ajouter une ligne"}
+                                </Button>
+                                <Button color="secondary" size="sm" onClick={openSectionModal}>
+                                    Libellés de section
+                                </Button>
+                            </div>
+                            {joursFenetre.length > 0 ?
+                                <CalendrierNavigationPeriode
+                                    libellePlage={planningLibellePlage}
+                                    peutReculer={planningPeutReculer}
+                                    peutAvancer={planningPeutAvancer}
+                                    onReculer={() => planningDecalage(-1)}
+                                    onAvancer={() => planningDecalage(1)}
+                                    nombreJoursVue={planningNombreJoursVue}
+                                    onNombreJoursVueChange={setPlanningNombreJoursVue}
+                                />
+                            :   null}
+                        </div>
+                    </div>
+                    <table className={styles.gridTable}>
+                        <thead>
+                            <tr>
+                                {afficherColonneRegroupement ? (
+                                    <th
+                                        className={styles.regroupementColHead}
+                                        aria-label="Regroupement"
+                                    >
+                                        {"\u00a0"}
+                                    </th>
+                                ) : null}
+                                {afficherColonneLibelleLigne ? (
+                                    <th
+                                        className={styles.rowLabelHead}
+                                        aria-label="Libellé de ligne"
+                                    >
+                                        {"\u00a0"}
+                                    </th>
+                                ) : null}
+                                {joursFenetre.map(({ ymd, label }) => (
+                                    <th key={ymd} className={styles.planningGridHead}>
+                                        {label}
+                                    </th>
+                                ))}
+                                <th className={styles.lineActionsHead} scope="col">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {lignesTri.map((ligne, idx) => {
+                                const indent = depths.get(ligne.id) ?? 0;
+                                const libelleCol = libelleLignePourAffichage(
+                                    ligne,
+                                    sourceLibelleApiDetail,
+                                    groupes,
+                                    lieux,
+                                    horaires,
+                                    moments,
+                                    membresPourCellulesModal
+                                );
+                                const rgInfo = regroupementCellInfos[idx]!;
+                                const idxBlocTeteSection = blocsPlein.findIndex(
+                                    (b) =>
+                                        b.kind === "section" && b.lineIds[0] === ligne.id
+                                );
+                                const auMoinsDeuxSections =
+                                    blocsPlein.filter((b) => b.kind === "section")
+                                        .length >= 2;
+                                const afficherPoigneeDeplacerSection =
+                                    afficherColonneRegroupement &&
+                                    auMoinsDeuxSections &&
+                                    idxBlocTeteSection >= 0 &&
+                                    rgInfo.showLeadingCell &&
+                                    !!rgInfo.libelleRegroupement;
+                                const cibleDeDepotSection =
+                                    dropTargetSectionBlocIndex === idxBlocTeteSection &&
+                                    idxBlocTeteSection >= 0 &&
+                                    draggingSectionBlocIndex != null &&
+                                    draggingSectionBlocIndex !== idxBlocTeteSection;
+                                const draggedRow =
+                                    draggingPlanningLigneId != null
+                                        ? lignesTri.find(
+                                              (l) => l.id === draggingPlanningLigneId
+                                          )
+                                        : null;
+                                const isDropTargetRow =
+                                    dropTargetPlanningLigneId === ligne.id &&
+                                    draggingPlanningLigneId != null &&
+                                    draggingPlanningLigneId !== ligne.id &&
+                                    draggedRow != null &&
+                                    sontMemeBlocOrdre(draggedRow, ligne);
+                                const rowDnDClass = [
+                                    draggingPlanningLigneId === ligne.id
+                                        ? styles.planningLineRowDragging
+                                        : "",
+                                    isDropTargetRow ? styles.planningLineRowDropTarget : "",
+                                ]
+                                    .filter(Boolean)
+                                    .join(" ");
+                                return (
+                                    <Fragment key={ligne.id}>
+                                        <tr
+                                            className={rowDnDClass || undefined}
+                                            onDragOver={(e) => {
+                                                if (
+                                                    lineReorderBusy ||
+                                                    reordonnancementSectionBusy ||
+                                                    draggingPlanningLigneId == null
+                                                )
+                                                    return;
+                                                const dr = lignesTri.find(
+                                                    (l) => l.id === draggingPlanningLigneId
+                                                );
+                                                if (!dr || !sontMemeBlocOrdre(dr, ligne)) {
+                                                    e.dataTransfer.dropEffect = "none";
+                                                    setDropTargetPlanningLigneId(null);
+                                                    return;
+                                                }
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = "move";
+                                                setDropTargetPlanningLigneId(ligne.id);
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const raw = e.dataTransfer.getData("text/plain");
+                                                if (raw.startsWith("section-bloc:")) {
+                                                    return;
+                                                }
+                                                const draggedId = raw.startsWith("line:")
+                                                    ? parseInt(raw.slice(5), 10)
+                                                    : parseInt(raw, 10);
+                                                setDraggingPlanningLigneId(null);
+                                                setDropTargetPlanningLigneId(null);
+                                                if (Number.isNaN(draggedId)) return;
+                                                void appliquerGlisserDeposerOrdreLignes(
+                                                    draggedId,
+                                                    ligne.id
+                                                );
+                                            }}
+                                        >
+                                            {afficherColonneRegroupement && rgInfo.showLeadingCell ? (
+                                                <td
+                                                    rowSpan={rgInfo.rowspan}
+                                                    className={[
+                                                        styles.regroupementCellVertical,
+                                                        cibleDeDepotSection
+                                                            ? styles.regroupementCellVerticalSectionDrop
+                                                            : "",
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(" ")}
+                                                    onDragOver={(e) => {
+                                                        if (reordonnancementSectionBusy) {
+                                                            return;
+                                                        }
+                                                        if (draggingSectionBlocIndex == null) {
+                                                            return;
+                                                        }
+                                                        if (idxBlocTeteSection < 0) {
+                                                            e.dataTransfer.dropEffect = "none";
+                                                            return;
+                                                        }
+                                                        const cible = blocsPlein[idxBlocTeteSection];
+                                                        if (!cible || cible.kind !== "section") {
+                                                            return;
+                                                        }
+                                                        if (idxBlocTeteSection === draggingSectionBlocIndex) {
+                                                            e.dataTransfer.dropEffect = "none";
+                                                            return;
+                                                        }
+                                                        e.preventDefault();
+                                                        e.dataTransfer.dropEffect = "move";
+                                                        setDropTargetSectionBlocIndex(idxBlocTeteSection);
+                                                    }}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (reordonnancementSectionBusy) return;
+                                                        const raw = e.dataTransfer.getData("text/plain");
+                                                        const m = /^section-bloc:(\d+)$/.exec(raw);
+                                                        const from = m
+                                                            ? parseInt(m[1]!, 10)
+                                                            : null;
+                                                        setDraggingSectionBlocIndex(null);
+                                                        setDropTargetSectionBlocIndex(null);
+                                                        if (from == null || Number.isNaN(from)) return;
+                                                        if (idxBlocTeteSection < 0) return;
+                                                        if (
+                                                            blocsPlein[idxBlocTeteSection]?.kind !==
+                                                            "section"
+                                                        )
+                                                            return;
+                                                        if (from === idxBlocTeteSection) return;
+                                                        void appliquerDeplacementSectionEntreBlocs(
+                                                            from,
+                                                            idxBlocTeteSection
+                                                        );
+                                                    }}
+                                                >
+                                                    <div
+                                                        className={[
+                                                            styles.regroupementCellInner,
+                                                            afficherPoigneeDeplacerSection
+                                                                ? styles.regroupementCellInnerRow
+                                                                : "",
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(" ")}
+                                                    >
+                                                        {afficherPoigneeDeplacerSection ? (
+                                                            <div
+                                                                className={
+                                                                    styles.regroupementSectionHandle
+                                                                }
+                                                                draggable={
+                                                                    !reordonnancementSectionBusy
+                                                                }
+                                                                onDragStart={(e) => {
+                                                                    e.dataTransfer.setData(
+                                                                        "text/plain",
+                                                                        `section-bloc:${idxBlocTeteSection}`
+                                                                    );
+                                                                    e.dataTransfer.effectAllowed =
+                                                                        "move";
+                                                                    setDraggingSectionBlocIndex(
+                                                                        idxBlocTeteSection
+                                                                    );
+                                                                }}
+                                                                onDragEnd={() => {
+                                                                    setDraggingSectionBlocIndex(null);
+                                                                    setDropTargetSectionBlocIndex(
+                                                                        null
+                                                                    );
+                                                                }}
+                                                                aria-label="Déplacer toute la section"
+                                                                title="Déplacer la section (toutes les lignes groupées, sans modifier l’ordre interne)"
+                                                            >
+                                                                <FaGripVertical
+                                                                    aria-hidden
+                                                                    size={12}
+                                                                />
+                                                            </div>
+                                                        ) : null}
+                                                        {rgInfo.libelleRegroupement ? (
+                                                            <span
+                                                                className={styles.regroupementCellLabel}
+                                                            >
+                                                                {rgInfo.libelleRegroupement}
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                </td>
+                                            ) : null}
+                                            {afficherColonneLibelleLigne ? (
+                                                <td className={styles.rowLabel}>
+                                                    <div className={styles.rowLabelRow}>
+                                                        {renderLineDragHandle(
+                                                            ligne,
+                                                            styles.lineDragHandle
+                                                        )}
+                                                        <span
+                                                            className={styles.rowLabelInner}
+                                                            style={{
+                                                                paddingLeft: `${indent * 12}px`,
+                                                            }}
+                                                        >
+                                                            {libelleCol.trim() !== "" ? (
+                                                                libelleCol
+                                                            ) : (
+                                                                <span className={styles.cellMuted}>
+                                                                    —
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            ) : null}
+                                            {joursFenetre.map(({ ymd: j }) => {
+                                                const c = cellulePourJour(ligne, j);
+                                                const texteCellule = resumeCellule(
+                                                    c,
+                                                    groupes,
+                                                    lieux,
+                                                    horaires,
+                                                    moments,
+                                                    membresPourCellulesModal
+                                                );
+                                                return (
+                                                    <td key={j} className={styles.planningGridCell}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.cellButton}
+                                                            onClick={() => openCellModal(ligne.id, j)}
+                                                        >
+                                                            <span
+                                                                className={
+                                                                    texteCellule === "—"
+                                                                        ? styles.cellMuted
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {texteCellule}
+                                                            </span>
+                                                        </button>
+                                                    </td>
+                                                );
+                                            })}
+                                            <td className={styles.lineActionsCell}>
+                                                <div className={styles.lineActionsButtons}>
+                                                    {!afficherColonneLibelleLigne
+                                                        ? renderLineDragHandle(
+                                                              ligne,
+                                                              styles.lineDragHandleInActions
+                                                          )
+                                                        : null}
+                                                    {!grilleLibelleLignesDesactive(detail) ? (
+                                                        <button
+                                                            type="button"
+                                                            className={styles.lineActionIconHit}
+                                                            onClick={() => openEditLine(ligne)}
+                                                            aria-label="Modifier la ligne"
+                                                            title="Modifier"
+                                                        >
+                                                            <FaEdit
+                                                                aria-hidden
+                                                                className={styles.lineActionIcon}
+                                                                size={16}
+                                                            />
+                                                        </button>
+                                                    ) : null}
+                                                    <button
+                                                        type="button"
+                                                        className={`${styles.lineActionIconHit} ${styles.lineActionIconHitDanger}`}
+                                                        onClick={() => {
+                                                            void handleDeleteLine(ligne.id);
+                                                        }}
+                                                        disabled={deletingLine}
+                                                        aria-label="Supprimer la ligne"
+                                                        title="Supprimer"
+                                                    >
+                                                        <FaTrashAlt
+                                                            aria-hidden
+                                                            className={styles.lineActionIcon}
+                                                            size={16}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </>
+        )}
+        </>
+    );
+
     return (
         <div>
-            <div className={styles.actionsContainer}>
-                <Button color="success" onClick={openCreateMeta}>
-                    Créer un planning
-                </Button>
-            </div>
+            {isEmbeddedEditor && (
+                <div className={styles.planningEditorPage}>
+                    <div className={styles.planningEditorHeader}>
+                        <h1 className={styles.planningEditorTitle}>{detail?.titre ?? "Planning"}</h1>
+                        <Button color="secondary" type="button" onClick={() => onCloseEmbeddedEditor?.()}>
+                            Retour aux plannings
+                        </Button>
+                    </div>
+                    <div className={styles.planningEditorBody}>{renderEditorSurface()}</div>
+                </div>
+            )}
+            {!isEmbeddedEditor && (
+                <>
+                    <div className={styles.actionsContainer}>
+                        <Button color="success" onClick={openCreateMeta}>
+                            Créer un planning
+                        </Button>
+                    </div>
             {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
 
             {grilles.length === 0 ? (
@@ -1585,6 +2031,8 @@ function ListePlanningsOrganisation({
                         </article>
                     ))}
                 </div>
+            )}
+                </>
             )}
 
             <Modal isOpen={metaModalOpen} toggle={() => !metaSubmitting && setMetaModalOpen(false)} size="lg">
@@ -1745,381 +2193,19 @@ function ListePlanningsOrganisation({
                 </ModalFooter>
             </Modal>
 
+            {!isEmbeddedEditor && (
             <Modal isOpen={editorOpen} toggle={() => setEditorOpen(false)} size="xl" scrollable>
                 <ModalHeader toggle={() => setEditorOpen(false)}>
                     {detail?.titre ?? "Planning"}
                 </ModalHeader>
-                <ModalBody>
-                    {editorLoading && <p>Chargement…</p>}
-                    {editorError && <div className={styles.errorMessage}>{editorError}</div>}
-                    {!editorLoading && detail && (
-                        <>
-                            {detail.consigneGlobale ? (
-                                <div className={styles.editorConsigne}>
-                                    <strong>Consigne :</strong> {detail.consigneGlobale}
-                                </div>
-                            ) : null}
-                            <div className={styles.tableWrap}>
-                                <div className={styles.tableToolbar}>
-                                    <div className={styles.tableToolbarRow}>
-                                        <Button
-                                            color="success"
-                                            size="sm"
-                                            onClick={openCreateLine}
-                                            disabled={ligneRapideBusy}
-                                        >
-                                            {ligneRapideBusy ? "Ajout…" : "Ajouter une ligne"}
-                                        </Button>
-                                        <Button color="secondary" size="sm" onClick={openSectionModal}>
-                                            Libellés de section
-                                        </Button>
-                                    </div>  
-                                </div>
-                                <table className={styles.gridTable}>
-                                    <thead>
-                                        <tr>
-                                            {afficherColonneRegroupement ? (
-                                                <th
-                                                    className={styles.regroupementColHead}
-                                                    aria-label="Regroupement"
-                                                >
-                                                    {"\u00a0"}
-                                                </th>
-                                            ) : null}
-                                            {afficherColonneLibelleLigne ? (
-                                                <th
-                                                    className={styles.rowLabelHead}
-                                                    aria-label="Libellé de ligne"
-                                                >
-                                                    {"\u00a0"}
-                                                </th>
-                                            ) : null}
-                                            {jours.map((j) => (
-                                                <th key={j} className={styles.planningGridHead}>
-                                                    {libelleJourCommeCalendrierActivites(j)}
-                                                </th>
-                                            ))}
-                                            <th className={styles.lineActionsHead} scope="col">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {lignesTri.map((ligne, idx) => {
-                                            const indent = depths.get(ligne.id) ?? 0;
-                                            const libelleCol = libelleLignePourAffichage(
-                                                ligne,
-                                                sourceLibelleApiDetail,
-                                                groupes,
-                                                lieux,
-                                                horaires,
-                                                moments,
-                                                membresPourCellulesModal
-                                            );
-                                            const rgInfo = regroupementCellInfos[idx]!;
-                                            const idxBlocTeteSection = blocsPlein.findIndex(
-                                                (b) =>
-                                                    b.kind === "section" && b.lineIds[0] === ligne.id
-                                            );
-                                            const auMoinsDeuxSections =
-                                                blocsPlein.filter((b) => b.kind === "section")
-                                                    .length >= 2;
-                                            const afficherPoigneeDeplacerSection =
-                                                afficherColonneRegroupement &&
-                                                auMoinsDeuxSections &&
-                                                idxBlocTeteSection >= 0 &&
-                                                rgInfo.showLeadingCell &&
-                                                !!rgInfo.libelleRegroupement;
-                                            const cibleDeDepotSection =
-                                                dropTargetSectionBlocIndex === idxBlocTeteSection &&
-                                                idxBlocTeteSection >= 0 &&
-                                                draggingSectionBlocIndex != null &&
-                                                draggingSectionBlocIndex !== idxBlocTeteSection;
-                                            const draggedRow =
-                                                draggingPlanningLigneId != null
-                                                    ? lignesTri.find(
-                                                          (l) => l.id === draggingPlanningLigneId
-                                                      )
-                                                    : null;
-                                            const isDropTargetRow =
-                                                dropTargetPlanningLigneId === ligne.id &&
-                                                draggingPlanningLigneId != null &&
-                                                draggingPlanningLigneId !== ligne.id &&
-                                                draggedRow != null &&
-                                                sontMemeBlocOrdre(draggedRow, ligne);
-                                            const rowDnDClass = [
-                                                draggingPlanningLigneId === ligne.id
-                                                    ? styles.planningLineRowDragging
-                                                    : "",
-                                                isDropTargetRow ? styles.planningLineRowDropTarget : "",
-                                            ]
-                                                .filter(Boolean)
-                                                .join(" ");
-                                            return (
-                                                <Fragment key={ligne.id}>
-                                                    <tr
-                                                        className={rowDnDClass || undefined}
-                                                        onDragOver={(e) => {
-                                                            if (
-                                                                lineReorderBusy ||
-                                                                reordonnancementSectionBusy ||
-                                                                draggingPlanningLigneId == null
-                                                            )
-                                                                return;
-                                                            const dr = lignesTri.find(
-                                                                (l) => l.id === draggingPlanningLigneId
-                                                            );
-                                                            if (!dr || !sontMemeBlocOrdre(dr, ligne)) {
-                                                                e.dataTransfer.dropEffect = "none";
-                                                                setDropTargetPlanningLigneId(null);
-                                                                return;
-                                                            }
-                                                            e.preventDefault();
-                                                            e.dataTransfer.dropEffect = "move";
-                                                            setDropTargetPlanningLigneId(ligne.id);
-                                                        }}
-                                                        onDrop={(e) => {
-                                                            e.preventDefault();
-                                                            const raw = e.dataTransfer.getData("text/plain");
-                                                            if (raw.startsWith("section-bloc:")) {
-                                                                return;
-                                                            }
-                                                            const draggedId = raw.startsWith("line:")
-                                                                ? parseInt(raw.slice(5), 10)
-                                                                : parseInt(raw, 10);
-                                                            setDraggingPlanningLigneId(null);
-                                                            setDropTargetPlanningLigneId(null);
-                                                            if (Number.isNaN(draggedId)) return;
-                                                            void appliquerGlisserDeposerOrdreLignes(
-                                                                draggedId,
-                                                                ligne.id
-                                                            );
-                                                        }}
-                                                    >
-                                                        {afficherColonneRegroupement && rgInfo.showLeadingCell ? (
-                                                            <td
-                                                                rowSpan={rgInfo.rowspan}
-                                                                className={[
-                                                                    styles.regroupementCellVertical,
-                                                                    cibleDeDepotSection
-                                                                        ? styles.regroupementCellVerticalSectionDrop
-                                                                        : "",
-                                                                ]
-                                                                    .filter(Boolean)
-                                                                    .join(" ")}
-                                                                onDragOver={(e) => {
-                                                                    if (reordonnancementSectionBusy) {
-                                                                        return;
-                                                                    }
-                                                                    if (draggingSectionBlocIndex == null) {
-                                                                        return;
-                                                                    }
-                                                                    if (idxBlocTeteSection < 0) {
-                                                                        e.dataTransfer.dropEffect = "none";
-                                                                        return;
-                                                                    }
-                                                                    const cible = blocsPlein[idxBlocTeteSection];
-                                                                    if (!cible || cible.kind !== "section") {
-                                                                        return;
-                                                                    }
-                                                                    if (idxBlocTeteSection === draggingSectionBlocIndex) {
-                                                                        e.dataTransfer.dropEffect = "none";
-                                                                        return;
-                                                                    }
-                                                                    e.preventDefault();
-                                                                    e.dataTransfer.dropEffect = "move";
-                                                                    setDropTargetSectionBlocIndex(idxBlocTeteSection);
-                                                                }}
-                                                                onDrop={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    if (reordonnancementSectionBusy) return;
-                                                                    const raw = e.dataTransfer.getData("text/plain");
-                                                                    const m = /^section-bloc:(\d+)$/.exec(raw);
-                                                                    const from = m
-                                                                        ? parseInt(m[1]!, 10)
-                                                                        : null;
-                                                                    setDraggingSectionBlocIndex(null);
-                                                                    setDropTargetSectionBlocIndex(null);
-                                                                    if (from == null || Number.isNaN(from)) return;
-                                                                    if (idxBlocTeteSection < 0) return;
-                                                                    if (
-                                                                        blocsPlein[idxBlocTeteSection]?.kind !==
-                                                                        "section"
-                                                                    )
-                                                                        return;
-                                                                    if (from === idxBlocTeteSection) return;
-                                                                    void appliquerDeplacementSectionEntreBlocs(
-                                                                        from,
-                                                                        idxBlocTeteSection
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <div
-                                                                    className={[
-                                                                        styles.regroupementCellInner,
-                                                                        afficherPoigneeDeplacerSection
-                                                                            ? styles.regroupementCellInnerRow
-                                                                            : "",
-                                                                    ]
-                                                                        .filter(Boolean)
-                                                                        .join(" ")}
-                                                                >
-                                                                    {afficherPoigneeDeplacerSection ? (
-                                                                        <div
-                                                                            className={
-                                                                                styles.regroupementSectionHandle
-                                                                            }
-                                                                            draggable={
-                                                                                !reordonnancementSectionBusy
-                                                                            }
-                                                                            onDragStart={(e) => {
-                                                                                e.dataTransfer.setData(
-                                                                                    "text/plain",
-                                                                                    `section-bloc:${idxBlocTeteSection}`
-                                                                                );
-                                                                                e.dataTransfer.effectAllowed =
-                                                                                    "move";
-                                                                                setDraggingSectionBlocIndex(
-                                                                                    idxBlocTeteSection
-                                                                                );
-                                                                            }}
-                                                                            onDragEnd={() => {
-                                                                                setDraggingSectionBlocIndex(null);
-                                                                                setDropTargetSectionBlocIndex(
-                                                                                    null
-                                                                                );
-                                                                            }}
-                                                                            aria-label="Déplacer toute la section"
-                                                                            title="Déplacer la section (toutes les lignes groupées, sans modifier l’ordre interne)"
-                                                                        >
-                                                                            <FaGripVertical
-                                                                                aria-hidden
-                                                                                size={12}
-                                                                            />
-                                                                        </div>
-                                                                    ) : null}
-                                                                    {rgInfo.libelleRegroupement ? (
-                                                                        <span
-                                                                            className={styles.regroupementCellLabel}
-                                                                        >
-                                                                            {rgInfo.libelleRegroupement}
-                                                                        </span>
-                                                                    ) : null}
-                                                                </div>
-                                                            </td>
-                                                        ) : null}
-                                                        {afficherColonneLibelleLigne ? (
-                                                            <td className={styles.rowLabel}>
-                                                                <div className={styles.rowLabelRow}>
-                                                                    {renderLineDragHandle(
-                                                                        ligne,
-                                                                        styles.lineDragHandle
-                                                                    )}
-                                                                    <span
-                                                                        className={styles.rowLabelInner}
-                                                                        style={{
-                                                                            paddingLeft: `${indent * 12}px`,
-                                                                        }}
-                                                                    >
-                                                                        {libelleCol.trim() !== "" ? (
-                                                                            libelleCol
-                                                                        ) : (
-                                                                            <span className={styles.cellMuted}>
-                                                                                —
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                        ) : null}
-                                                        {jours.map((j) => {
-                                                            const c = cellulePourJour(ligne, j);
-                                                            const texteCellule = resumeCellule(
-                                                                c,
-                                                                groupes,
-                                                                lieux,
-                                                                horaires,
-                                                                moments,
-                                                                membresPourCellulesModal
-                                                            );
-                                                            return (
-                                                                <td key={j} className={styles.planningGridCell}>
-                                                                    <button
-                                                                        type="button"
-                                                                        className={styles.cellButton}
-                                                                        onClick={() => openCellModal(ligne.id, j)}
-                                                                    >
-                                                                        <span
-                                                                            className={
-                                                                                texteCellule === "—"
-                                                                                    ? styles.cellMuted
-                                                                                    : undefined
-                                                                            }
-                                                                        >
-                                                                            {texteCellule}
-                                                                        </span>
-                                                                    </button>
-                                                                </td>
-                                                            );
-                                                        })}
-                                                        <td className={styles.lineActionsCell}>
-                                                            <div className={styles.lineActionsButtons}>
-                                                                {!afficherColonneLibelleLigne
-                                                                    ? renderLineDragHandle(
-                                                                          ligne,
-                                                                          styles.lineDragHandleInActions
-                                                                      )
-                                                                    : null}
-                                                                {!grilleLibelleLignesDesactive(detail) ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        className={styles.lineActionIconHit}
-                                                                        onClick={() => openEditLine(ligne)}
-                                                                        aria-label="Modifier la ligne"
-                                                                        title="Modifier"
-                                                                    >
-                                                                        <FaEdit
-                                                                            aria-hidden
-                                                                            className={styles.lineActionIcon}
-                                                                            size={16}
-                                                                        />
-                                                                    </button>
-                                                                ) : null}
-                                                                <button
-                                                                    type="button"
-                                                                    className={`${styles.lineActionIconHit} ${styles.lineActionIconHitDanger}`}
-                                                                    onClick={() => {
-                                                                        void handleDeleteLine(ligne.id);
-                                                                    }}
-                                                                    disabled={deletingLine}
-                                                                    aria-label="Supprimer la ligne"
-                                                                    title="Supprimer"
-                                                                >
-                                                                    <FaTrashAlt
-                                                                        aria-hidden
-                                                                        className={styles.lineActionIcon}
-                                                                        size={16}
-                                                                    />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                </Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </>
-                    )}
-                </ModalBody>
+                <ModalBody>{renderEditorSurface()}</ModalBody>
                 <ModalFooter>
                     <Button color="secondary" onClick={() => setEditorOpen(false)}>
                         Fermer
                     </Button>
                 </ModalFooter>
             </Modal>
+            )}
 
             <Modal
                 isOpen={sectionModalOpen}

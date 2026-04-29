@@ -6,22 +6,15 @@ import calculerDureeEnJours from "../../../helpers/calculerDureeEnJours";
 import Equipe from "../../../components/Liste/Equipe";
 import ListeEnfants from "../../../components/Liste/ListeEnfants";
 import ListeGroupes from "../../../components/Liste/ListeGroupes";
-import ListePlanningsOrganisation from "../../../components/Liste/ListePlanningsOrganisation";
 import DetailsSejourAccordionItem from "../../../components/DetailsSejour/DetailsSejourAccordionItem";
 import {
     SejourDTO,
     EnfantDto,
     GroupeDto,
-    LieuDto,
-    MomentDto,
-    HoraireDto,
-    PlanningGrilleSummaryDto,
 } from "../../../types/api";
-import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
-import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
 
-/** Accordéons sur la vue générale (lieux / moments / horaires / types → page Paramétrage). */
-const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4", "10"] as const;
+/** Accordéons sur la vue générale (lieux / moments / horaires / types → Paramétrage ; plannings organisation → page Organisation). */
+const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4"] as const;
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -85,10 +78,6 @@ type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
     enfants: EnfantDto[];
     groupes: GroupeDto[];
-    lieux: LieuDto[];
-    moments: MomentDto[];
-    horaires: HoraireDto[];
-    planningGrilles: PlanningGrilleSummaryDto[];
 };
 
 const DetailsSejourOverview: React.FC = () => {
@@ -233,10 +222,6 @@ const DetailsSejourOverview: React.FC = () => {
         sejour,
         enfants,
         groupes,
-        lieux,
-        moments: momentsFromLoader,
-        horaires: horairesFromLoader,
-        planningGrilles: planningGrillesFromLoader,
     } = loaderData;
 
     const toggleAccordion = (id: string) => {
@@ -293,8 +278,6 @@ const DetailsSejourOverview: React.FC = () => {
                 return `Liste des enfants (${enfants?.length || 0})`;
             case "4":
                 return `Groupes (${groupes?.length || 0})`;
-            case "10":
-                return `Plannings organisation (${planningGrillesFromLoader.length})`;
             default:
                 return "";
         }
@@ -345,21 +328,6 @@ const DetailsSejourOverview: React.FC = () => {
                         onGroupRendered={(groupeId) => {
                             requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));
                         }}
-                    />
-                );
-            case "10":
-                return (
-                    <ListePlanningsOrganisation
-                        sejourId={sejour.id}
-                        dateDebut={sejour.dateDebut}
-                        dateFin={sejour.dateFin}
-                        grilles={planningGrillesFromLoader}
-                        moments={trierMomentsChronologiquement(momentsFromLoader)}
-                        horaires={trierHorairesChronologiquement(horairesFromLoader)}
-                        groupes={groupes ?? []}
-                        lieux={lieux ?? []}
-                        membresEquipe={sejour.equipe ?? []}
-                        directeur={sejour.directeur}
                     />
                 );
             default:

@@ -4,7 +4,6 @@ import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHe
 import { ActiviteDto, CreateActiviteRequest, EmplacementLieu, UpdateActiviteRequest } from "../../types/api";
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
-import formaterDate from "../../helpers/formaterDate";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import styles from "./ListeActivites.module.scss";
 import {
@@ -21,23 +20,17 @@ import {
 import {
     EMPLACEMENT_FILTRE_TOUS_ACTIVITE,
     FILTRE_LISTE_LIEU_SANS,
-    NB_JOURS_VUE_CALENDRIER_DEFAUT,
-    type CalendrierNombreJoursVue,
     activiteDateToFilterKey,
     activiteDateToInputDate,
-    addDaysToYmd,
-    bornesDebutFenetreCalendrier,
     groupeIdsReferentsPourToken,
-    clampYmdEntre,
     enumererJoursDuSejour,
-    libelleJourCourtPourBouton,
-    parseYmdVersDateLocale,
     resumePartageLieu,
     sejourDebutToInputDate,
     tokensEquipePourFiltreGroupesCalendrier,
     trierLieuxParNom,
     trierTypesParLibelle,
 } from "./listeActivitesUtils";
+import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
 
 export type { ListeActivitesProps, MembreEquipeSejour } from "./listeActivitesTypes";
 
@@ -84,10 +77,6 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const [filtreListeAnimateur, setFiltreListeAnimateur] = useState("");
     const [filtreListeType, setFiltreListeType] = useState("");
     const [vueActivites, setVueActivites] = useState<VueActivites>("calendrier");
-    const [calendrierDebutYmd, setCalendrierDebutYmd] = useState("");
-    const [calendrierNombreJoursVue, setCalendrierNombreJoursVue] = useState<CalendrierNombreJoursVue>(
-        NB_JOURS_VUE_CALENDRIER_DEFAUT
-    );
     /** Filtres vue calendrier : ensemble vide = tout afficher (animateurs / groupes d’activité). */
     const [filtreCalendrierTokens, setFiltreCalendrierTokens] = useState<Set<string>>(() => new Set());
     const [filtreCalendrierGroupeIds, setFiltreCalendrierGroupeIds] = useState<Set<number>>(() => new Set());
@@ -378,17 +367,15 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
     const joursDuSejourPourFiltre = useMemo(() => enumererJoursDuSejour(sejour), [sejour.dateDebut, sejour.dateFin]);
 
-    useEffect(() => {
-        const bornes = bornesDebutFenetreCalendrier(joursDuSejourPourFiltre, calendrierNombreJoursVue);
-        if (!bornes) {
-            setCalendrierDebutYmd("");
-            return;
-        }
-        setCalendrierDebutYmd((prev) => {
-            if (!prev) return bornes.minStartYmd;
-            return clampYmdEntre(prev, bornes.minStartYmd, bornes.maxStartYmd);
-        });
-    }, [joursDuSejourPourFiltre, calendrierNombreJoursVue]);
+    const {
+        nombreJoursVue: calendrierNombreJoursVue,
+        setNombreJoursVue: setCalendrierNombreJoursVue,
+        joursFenetre: joursFenetreCalendrier,
+        libellePlage: libellePlageCalendrier,
+        peutReculer: peutDefilerCalendrierVersPasse,
+        peutAvancer: peutDefilerCalendrierVersFutur,
+        decalage: decalageFenetreCalendrier,
+    } = useCalendrierFenetreJours(joursDuSejourPourFiltre);
 
     useEffect(() => {
         setFiltreListeDate("");
@@ -467,63 +454,6 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         }
         return map;
     }, [activites, equipeTriéeFiltre]);
-
-    const bornesFenetreCalendrier = useMemo(
-        () => bornesDebutFenetreCalendrier(joursDuSejourPourFiltre, calendrierNombreJoursVue),
-        [joursDuSejourPourFiltre, calendrierNombreJoursVue]
-    );
-
-    const debutCalendrierEffectif = useMemo(() => {
-        const b = bornesFenetreCalendrier;
-        if (!b) return "";
-        if (!calendrierDebutYmd) return b.minStartYmd;
-        return clampYmdEntre(calendrierDebutYmd, b.minStartYmd, b.maxStartYmd);
-    }, [bornesFenetreCalendrier, calendrierDebutYmd]);
-
-    const joursFenetreCalendrier = useMemo(() => {
-        if (!debutCalendrierEffectif) return [];
-        const sejourSet = new Set(joursDuSejourPourFiltre.map((j) => j.ymd));
-        const out: { ymd: string; label: string; dansSejour: boolean }[] = [];
-        let ymd: string | null = debutCalendrierEffectif;
-        for (let i = 0; i < calendrierNombreJoursVue; i++) {
-            if (!ymd) break;
-            const d = parseYmdVersDateLocale(ymd);
-            if (!d) break;
-            out.push({
-                ymd,
-                label: libelleJourCourtPourBouton(d),
-                dansSejour: sejourSet.has(ymd),
-            });
-            ymd = addDaysToYmd(ymd, 1);
-        }
-        return out;
-    }, [debutCalendrierEffectif, joursDuSejourPourFiltre, calendrierNombreJoursVue]);
-
-    const peutDefilerCalendrierVersPasse =
-        bornesFenetreCalendrier != null && debutCalendrierEffectif > bornesFenetreCalendrier.minStartYmd;
-    const peutDefilerCalendrierVersFutur =
-        bornesFenetreCalendrier != null && debutCalendrierEffectif < bornesFenetreCalendrier.maxStartYmd;
-
-    const libellePlageCalendrier = useMemo(() => {
-        if (joursFenetreCalendrier.length === 0) return "";
-        const debut = parseYmdVersDateLocale(joursFenetreCalendrier[0].ymd);
-        const fin = parseYmdVersDateLocale(
-            joursFenetreCalendrier[joursFenetreCalendrier.length - 1].ymd
-        );
-        if (!debut || !fin) return "";
-        return `${formaterDate(debut)} — ${formaterDate(fin)}`;
-    }, [joursFenetreCalendrier]);
-
-    const decalageFenetreCalendrier = (delta: number) => {
-        if (!bornesFenetreCalendrier) return;
-        const b = bornesFenetreCalendrier;
-        setCalendrierDebutYmd((prev) => {
-            const base = prev ? clampYmdEntre(prev, b.minStartYmd, b.maxStartYmd) : b.minStartYmd;
-            const next = addDaysToYmd(base, delta);
-            if (!next) return base;
-            return clampYmdEntre(next, b.minStartYmd, b.maxStartYmd);
-        });
-    };
 
     const peutAjouterActivite =
         equipe.length > 0 && groupes.length > 0 && moments.length > 0 && typesActivite.length > 0;

@@ -15,6 +15,8 @@ import SejourDetailOutlet from "./Pages/_Directeur/DetailsSejour/SejourDetailOut
 import DetailsSejourOverview from "./Pages/_Directeur/DetailsSejour/DetailsSejourOverview";
 import DetailsSejourActivites from "./Pages/_Directeur/DetailsSejour/DetailsSejourActivites";
 import DetailsSejourParametrage from "./Pages/_Directeur/DetailsSejour/DetailsSejourParametrage";
+import DetailsSejourOrganisationLayout from "./Pages/_Directeur/DetailsSejour/DetailsSejourOrganisationLayout";
+import DetailsSejourOrganisation from "./Pages/_Directeur/DetailsSejour/DetailsSejourOrganisation";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Directeur/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 
@@ -84,6 +86,14 @@ const App: React.FC = () => {
             {
               path: "activites",
               element: <DetailsSejourActivites />,
+            },
+            {
+              path: "organisation",
+              element: <DetailsSejourOrganisationLayout />,
+              children: [
+                { index: true, element: <DetailsSejourOrganisation /> },
+                { path: ":grilleId", element: <DetailsSejourOrganisation /> },
+              ],
             },
           ],
         },
