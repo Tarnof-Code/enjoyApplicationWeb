@@ -1,9 +1,14 @@
 .actionsContainer {
     display: flex;
-    gap: 1rem;
+    gap: 4rem;
     align-items: center;
-    margin-bottom: 1rem;
+    justify-content: flex-start;
     flex-wrap: wrap;
+    margin-bottom: 1rem;
+
+    :global(h1.page-title) {
+        margin: 0;
+    }
 }
 
 .hint {

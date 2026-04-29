@@ -2001,6 +2001,7 @@ function ListePlanningsOrganisation({
             {!isEmbeddedEditor && (
                 <>
                     <div className={styles.actionsContainer}>
+                        <h1 className="page-title">Organisation</h1>
                         <Button color="success" onClick={openCreateMeta}>
                             Créer un planning
                         </Button>

@@ -304,6 +304,7 @@ const DetailsSejourParametrage: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
+            <h1 className={styles.overviewSectionTitle}>Paramétrage</h1>
             <div className={styles.accordion}>
                 {accordionOrder.map((panelId) => (
                     <DetailsSejourAccordionItem

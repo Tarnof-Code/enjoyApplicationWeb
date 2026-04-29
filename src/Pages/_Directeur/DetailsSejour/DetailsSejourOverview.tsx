@@ -13,7 +13,11 @@ import {
     GroupeDto,
 } from "../../../types/api";
 
-/** Accordéons sur la vue générale (lieux / moments / horaires / types → Paramétrage ; plannings organisation → page Organisation). */
+/**
+ * Accordéons vue générale — ordre par défaut affiché :
+ * 1 Informations générales → 2 Équipe → 3 Liste des enfants → 4 Groupes.
+ * (Réglages lieux/moments/horaires/types → Paramétrage ; plannings organisation → page Organisation.)
+ */
 const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4"] as const;
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
@@ -25,8 +29,10 @@ function overviewAccordionOrderStorageKey(sejourId: number) {
 }
 
 function readOverviewAccordionOrder(sejourId: number): string[] {
+    const defaultOrder = [...OVERVIEW_ACCORDION_IDS];
     try {
-        const raw = localStorage.getItem(overviewAccordionOrderStorageKey(sejourId));
+        const overviewKey = overviewAccordionOrderStorageKey(sejourId);
+        const raw = localStorage.getItem(overviewKey);
         if (raw) {
             const parsed = JSON.parse(raw) as unknown;
             if (Array.isArray(parsed)) return normalizeOverviewAccordionOrder(parsed as string[]);
@@ -35,14 +41,14 @@ function readOverviewAccordionOrder(sejourId: number): string[] {
         if (legacyRaw) {
             const parsed = JSON.parse(legacyRaw) as unknown;
             if (Array.isArray(parsed)) {
-                return normalizeOverviewAccordionOrder(
-                    (parsed as string[]).filter((id) => id !== "7")
-                );
+                // Ancienne clé mixte : après retrait de panneaux (ex. 7, 10), l’ordre stocké peut ne plus être 1→2→3→4 — migration vers l’ordre canonique.
+                localStorage.setItem(overviewKey, JSON.stringify(defaultOrder));
+                return defaultOrder;
             }
         }
-        return [...OVERVIEW_ACCORDION_IDS];
+        return defaultOrder;
     } catch {
-        return [...OVERVIEW_ACCORDION_IDS];
+        return defaultOrder;
     }
 }
 
@@ -337,6 +343,7 @@ const DetailsSejourOverview: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
+            <h1 className={styles.overviewSectionTitle}>Vue générale</h1>
             <div className={styles.accordion}>
                 {accordionOrder.map((panelId) => (
                     <DetailsSejourAccordionItem
