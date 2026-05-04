@@ -9,7 +9,8 @@ import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto } from "../../../t
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
 
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
-    const { sejourId, enfantId } = params;
+    const sejourId = params.id;
+    const enfantId = params.enfantId;
     if (!sejourId || !enfantId) throw new Error("Paramètres manquants");
     try {
         const [dossierRaw, enfants] = await Promise.all([
@@ -52,7 +53,7 @@ const DossierEnfant: React.FC = () => {
     const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined } | Error;
     const navigate = useNavigate();
     const location = useLocation();
-    const { sejourId, enfantId } = useParams();
+    const { id: sejourId, enfantId } = useParams();
     const [showEditModal, setShowEditModal] = useState(false);
     const returnState = location.state as DossierLocationState | null;
 

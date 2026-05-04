@@ -100,16 +100,12 @@ const App: React.FC = () => {
                 { path: ":grilleId", element: <DetailsSejourOrganisation /> },
               ],
             },
+            {
+              path: "enfants/:enfantId/dossier",
+              loader: dossierEnfantLoader,
+              element: <DossierEnfant />,
+            },
           ],
-        },
-        {
-          path: "/directeur/sejours/:sejourId/enfants/:enfantId/dossier",
-          loader: dossierEnfantLoader,
-          element: (
-            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
-              <DossierEnfant />
-            </ProtectedRoute>
-          ),
         },
         {
           path: "/profil",

@@ -1,7 +1,7 @@
 import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
 import React, { useState } from "react";
-import { NavLink, useNavigate, useMatch, useRouteLoaderData } from "react-router-dom";
+import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from "react-router-dom";
 import { accountService } from "../../services/account.service";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
@@ -65,6 +65,11 @@ const Admin_header: React.FC = () => {
     sejourLoaderRaw && !(sejourLoaderRaw instanceof Error) ? sejourLoaderRaw : undefined;
   const isSejourContext = role === RoleSysteme.DIRECTION && Boolean(sejourMatch && sejourDetailData);
   const sejourIdParam = sejourMatch?.params.id;
+  const { pathname } = useLocation();
+  const dossierEnfantCommeVueGenerale =
+    Boolean(sejourIdParam) &&
+    pathname.startsWith(`/directeur/sejours/${sejourIdParam}/enfants/`) &&
+    pathname.endsWith("/dossier");
 
   return (
     <header className={styles.main}>
@@ -120,7 +125,7 @@ const Admin_header: React.FC = () => {
                         to={`/directeur/sejours/${sejourIdParam}`}
                         end
                         className={({ isActive }) =>
-                          `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
+                          `${styles.directorSegment} ${isActive || dossierEnfantCommeVueGenerale ? styles.directorSegmentActive : ""}`
                         }
                       >
                         <FaThLarge size={14} aria-hidden />
