@@ -14,13 +14,14 @@
   - `/directeur/sejours/:id/organisation` : Liste des **plannings organisation** (`DetailsSejourOrganisationLayout` → `DetailsSejourOrganisation`, route **`index`** sous **`organisation`**)
   - `/directeur/sejours/:id/organisation/:grilleId` : **Éditeur** de grille pleine page (même composant **`DetailsSejourOrganisation`**, paramètre **`grilleId`**)
   - `/directeur/sejours/:id/activites` : Même loader parent ; **Activités** (`DetailsSejourActivites` / `ListeActivites`)
+  - `/directeur/sejours/:id/menus` : Même loader parent ; **Menus repas** (`DetailsSejourMenus`)
   - `/directeur/sejours/:id/parametrage` : Même loader parent ; **Paramétrage** (`DetailsSejourParametrage` : Lieux, Moments, Horaires, Types d’activité)
   - `/directeur/sejours/:sejourId/enfants/:enfantId/dossier` : Dossier d'un enfant (DIRECTION uniquement)
 - Utilisation de `useNavigate` pour la navigation programmatique.
 - Actions React Router pour les formulaires (ex: `loginAction` dans `Connexion.tsx`).
 - Layout (`Layout.tsx`) :
   - Header affiché uniquement si `pathname !== "/"` et `role !== null`
-  - Pour le directeur sur `/directeur/sejours/:id*`, le **Header** utilise **`useMatch`** + **`useRouteLoaderData("sejour-detail")`** (données valides, pas `Error`) pour le **fil** (nom du séjour en pill), les segments **Vue générale** / **Organisation** / **Activités** / **Paramétrage** et le lien **Mes séjours** (`Header.tsx`)
+  - Pour le directeur sur `/directeur/sejours/:id*`, le **Header** utilise **`useMatch`** + **`useRouteLoaderData("sejour-detail")`** (données valides, pas `Error`) pour le **fil** (nom du séjour en pill), les segments **Vue générale** / **Organisation** / **Activités** / **Menus** / **Paramétrage** et le lien **Mes séjours** (`Header.tsx`)
   - Footer actuellement commenté
   - Gestion automatique du padding-top du body selon la route
   - Récupération automatique du profil utilisateur si connecté mais rôle manquant dans Redux (avec gestion d'erreur 401 → logout)
