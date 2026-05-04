@@ -356,40 +356,43 @@ const DetailsSejourMenus: React.FC = () => {
             <header className={menuStyles.menusPageHeader}>
                 <h1 className={`${styles.overviewSectionTitle} ${menuStyles.menusPageTitle}`}>Menus du séjour</h1>
                 {joursDuSejourMenus.length > 0 && joursFenetreMenus.length > 0 ? (
-                    <div className={menuStyles.menusToolbar}>
-                        <div
-                            className={menuStyles.vueMenusToggle}
-                            role="group"
-                            aria-label="Mode d’affichage des menus"
-                        >
-                            <button
-                                type="button"
-                                className={`${menuStyles.vueMenusBtn} ${vueMenus === "calendrier" ? menuStyles.vueMenusBtnActive : ""}`}
-                                aria-pressed={vueMenus === "calendrier"}
-                                onClick={() => setVueMenus("calendrier")}
+                    <div className={menuStyles.menusHeaderActions}>
+                        <div className={menuStyles.menusToolbar}>
+                            <div
+                                className={menuStyles.vueMenusToggle}
+                                role="group"
+                                aria-label="Mode d’affichage des menus"
                             >
-                                Calendrier
-                            </button>
-                            <button
-                                type="button"
-                                className={`${menuStyles.vueMenusBtn} ${vueMenus === "liste" ? menuStyles.vueMenusBtnActive : ""}`}
-                                aria-pressed={vueMenus === "liste"}
-                                onClick={() => setVueMenus("liste")}
-                            >
-                                Liste
-                            </button>
-                        </div>
-                        <div className={menuStyles.menusPeriodeWrap} role="region" aria-label="Période des menus affichés">
-                            <CalendrierNavigationPeriode
-                                libellePlage={libellePlageMenus}
-                                peutReculer={peutReculerMenus}
-                                peutAvancer={peutAvancerMenus}
-                                onReculer={() => decalageFenetreMenus(-1)}
-                                onAvancer={() => decalageFenetreMenus(1)}
-                                nombreJoursVue={menusNombreJoursVue}
-                                onNombreJoursVueChange={setMenusNombreJoursVue}
-                            />
-                            {loading ? <span className={menuStyles.loadingHint}>Chargement…</span> : null}
+                                <button
+                                    type="button"
+                                    className={`${menuStyles.vueMenusBtn} ${vueMenus === "calendrier" ? menuStyles.vueMenusBtnActive : ""}`}
+                                    aria-pressed={vueMenus === "calendrier"}
+                                    onClick={() => setVueMenus("calendrier")}
+                                >
+                                    Calendrier
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${menuStyles.vueMenusBtn} ${vueMenus === "liste" ? menuStyles.vueMenusBtnActive : ""}`}
+                                    aria-pressed={vueMenus === "liste"}
+                                    onClick={() => setVueMenus("liste")}
+                                >
+                                    Liste
+                                </button>
+                            </div>
+                            <div className={menuStyles.menusPeriodeWrap} role="region" aria-label="Période des menus affichés">
+                                <div className={menuStyles.menusNavBloc}>
+                                    <CalendrierNavigationPeriode
+                                        libellePlage={libellePlageMenus}
+                                        peutReculer={peutReculerMenus}
+                                        peutAvancer={peutAvancerMenus}
+                                        onReculer={() => decalageFenetreMenus(-1)}
+                                        onAvancer={() => decalageFenetreMenus(1)}
+                                        nombreJoursVue={menusNombreJoursVue}
+                                        onNombreJoursVueChange={setMenusNombreJoursVue}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ) : null}
@@ -402,6 +405,7 @@ const DetailsSejourMenus: React.FC = () => {
                 </div>
             )}
 
+            <div className={menuStyles.menusMain} aria-busy={loading}>
             {vueMenus === "calendrier" && joursFenetreMenus.length > 0 ? (
                 <div className={menuStyles.calWrap}>
                     <div className={menuStyles.calScroll}>
@@ -566,6 +570,7 @@ const DetailsSejourMenus: React.FC = () => {
                       );
                   })
                 : null}
+            </div>
 
             <Modal isOpen={editorOpen} toggle={() => !submitting && setEditorOpen(false)} size="lg">
                 <ModalHeader toggle={() => !submitting && setEditorOpen(false)}>

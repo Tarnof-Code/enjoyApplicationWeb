@@ -369,7 +369,7 @@ $cal-table-border-strong: #c4cad4;
     margin-bottom: 0;
     margin-left: auto;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.35rem 0.5rem;
 
     .calendrierNavBtn {
@@ -457,7 +457,9 @@ $cal-table-border-strong: #c4cad4;
     color: #333;
     text-align: center;
     white-space: nowrap;
-    min-width: 0;
+    /** Réduit le « saut » quand la chaîne de dates change de longueur (toLocaleDateString) */
+    font-variant-numeric: tabular-nums;
+    min-width: 24ch;
 }
 
 /**

@@ -15,29 +15,41 @@
     border-bottom: 1px solid #e8e8e8;
 }
 
+/** Grille « titre | actions » : évite que la barre ne retombe sous le titre quand elle s’élargit ou que le titre et les actions rivalisent pour la largeur (comportement typique avec flex-wrap activités différent des menus). */
 .menusPageHeader {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.75rem 1rem;
     margin-bottom: 1.25rem;
 
     .menusPageTitle {
         margin-bottom: 0;
+        min-width: 0;
     }
+}
+
+.menusHeaderActions {
+    min-width: 0;
+    max-width: 100%;
+    justify-self: end;
 }
 
 .menusToolbar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.75rem 1.25rem;
-    margin-left: auto;
     min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .vueMenusToggle {
     display: inline-flex;
+    flex-shrink: 0;
     border: 1px solid #c8c8c8;
     border-radius: 8px;
     overflow: hidden;
@@ -75,21 +87,27 @@
     font-weight: 600;
 }
 
-.menusPageTitle {
-    flex: 0 1 auto;
+/** Retour léger lors du rechargement des menus (sans toucher au bandeau d’actions / à la mise en page). */
+.menusMain {
+    opacity: 1;
+    transition: opacity 0.12s ease;
+
+    &[aria-busy="true"] {
+        opacity: 0.92;
+    }
 }
 
 .menusPeriodeWrap {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.75rem 1rem;
     min-width: 0;
 }
 
-.loadingHint {
-    font-size: 0.9rem;
-    color: #666;
+.menusNavBloc {
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .pageError {
