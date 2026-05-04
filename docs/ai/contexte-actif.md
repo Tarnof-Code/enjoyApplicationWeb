@@ -6,6 +6,8 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 ## Journal (extraits)
 
+- **2026-05-04 (Memory Bank — pivot & routing doc) :** **`AI_MEMORY.md`** : synthèse **dossier enfant** enrichie (chemin **`/directeur/sejours/:id/enfants/:enfantId/dossier`**, **`dossierEnfantLoader`**, affichage **`ReferenceAlimentaireDto`**, retour **`location.state`**). **`documentation-ui-routing.md`** : paramètre séjour **` :id`** aligné sur **`App.tsx`** pour la route dossier.
+
 - **2026-05-04 (Menus — préférences d’affichage & Paramétrage) :** **`DetailsSejourParametrage.tsx`** : accordéons **`1`–`6`** (ajout **`5`** *Références alimentaires* — **`ListeReferencesAlimentaires`**, **`6`** *Affichage des menus* — **`ParametrageAffichageMenus`**) ; styles partagés **`DetailsSejour.module.scss`**. Persistance navigateur **`enjoy.detailsSejour.menuAffichage.{sejourId}`** via **`helpers/menuRepasAffichageSejour.ts`** (types de repas visibles, lignes de composition entrée / plat / fromage ou entremet / dessert) ; **`DetailsSejourMenus.tsx`** : lecture initiale + écoute **`enjoy-menu-affichage-changed`** pour refléter les changements sans recharger la route. Compléments **`helpers/menuRepas.ts`** pour la visibilité des champs de composition.
 
 - **2026-05-04 (Menus séjour → PlanningCalendrier + factorisation, 3ᵉ commit) :** **`DetailsSejourMenus.tsx`** et **`DetailsSejourMenus.module.scss`** s’appuient sur **`PlanningCalendrier`** (cartes, cases ajout, footer modal, clavier). Corps de formulaire extrait en **`MenuRepasFormulaireCorps`** ; logique / libellés / couleurs / construction payload dans **`helpers/menuRepas.ts`**.

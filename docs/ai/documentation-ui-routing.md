@@ -16,7 +16,7 @@
   - `/directeur/sejours/:id/activites` : Même loader parent ; **Activités** (`DetailsSejourActivites` / `ListeActivites`)
   - `/directeur/sejours/:id/menus` : Même loader parent ; **Menus repas** (`DetailsSejourMenus`)
   - `/directeur/sejours/:id/parametrage` : Même loader parent ; **Paramétrage** (`DetailsSejourParametrage` : Lieux, Moments, Horaires, Types d’activité, **Références alimentaires**, **Affichage des menus** — préférences locales pour l’onglet Menus)
-  - `/directeur/sejours/:sejourId/enfants/:enfantId/dossier` : Dossier d'un enfant (DIRECTION uniquement)
+  - `/directeur/sejours/:id/enfants/:enfantId/dossier` : Dossier d’un enfant — même arbre **`sejour-detail`** ; loader **`dossierEnfantLoader`**, composant **`DossierEnfant`** (DIRECTION uniquement)
 - Utilisation de `useNavigate` pour la navigation programmatique.
 - Actions React Router pour les formulaires (ex: `loginAction` dans `Connexion.tsx`).
 - Layout (`Layout.tsx`) :
