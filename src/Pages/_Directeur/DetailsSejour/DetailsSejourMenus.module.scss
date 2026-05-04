@@ -103,8 +103,12 @@
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+
+    @media (min-width: 62rem) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .card {
@@ -137,6 +141,11 @@
     font-size: 0.82rem;
     line-height: 1.35;
     color: #444;
+
+    .calMenusCarteMeta {
+        display: block;
+        margin-top: 0.35rem;
+    }
 }
 
 .refLabel {
@@ -297,13 +306,9 @@
     font-size: 1.1rem;
 }
 
-.calMenusTdHors {
-    vertical-align: middle;
-}
-
-/** Sous tableau à largeur égale par jour : évite que le contenu force une colonne plus large (`table-layout: fixed`). */
-.calMenusTdSizing {
+td.calMenusTdSizing {
     min-width: 0;
+    vertical-align: middle;
 }
 
 .calMenusCarteResume {

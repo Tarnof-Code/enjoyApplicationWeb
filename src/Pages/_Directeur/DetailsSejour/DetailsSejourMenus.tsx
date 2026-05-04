@@ -24,8 +24,6 @@ import {
     fusionnerRefsPourFormulaire,
     construireSaveMenuRepasRequest,
     estPetitDejeunerOuGouter,
-    ligneLibellesRefs,
-    ligneLibellesCompositionMenu,
     ligneMetaAllergenesRegimesCalendrier,
     resumeMenuCourt,
 } from "../../../helpers/menuRepas";
@@ -288,8 +286,7 @@ const DetailsSejourMenus: React.FC = () => {
     };
 
     const renduBlocInfosCarte = (menu: MenuRepasDto) => {
-        const ligneA = ligneLibellesRefs(menu.allergenes);
-        const ligneR = ligneLibellesCompositionMenu(menu.regimesEtPreferences);
+        const metaAllergRegimes = ligneMetaAllergenesRegimesCalendrier(menu);
 
         const lignesMenu: ReactNode[] = [];
         if (estPetitDejeunerOuGouter(menu.typeRepas)) {
@@ -317,22 +314,13 @@ const DetailsSejourMenus: React.FC = () => {
             });
         }
 
-        if (!lignesMenu.length && !ligneA && !ligneR) return null;
+        if (!lignesMenu.length && !metaAllergRegimes) return null;
 
         return (
             <div className={menuStyles.refBlock}>
                 {lignesMenu}
-                {ligneA ? (
-                    <div>
-                        <span className={menuStyles.refLabel}>Allergènes</span>
-                        <span>{ligneA}</span>
-                    </div>
-                ) : null}
-                {ligneR ? (
-                    <div>
-                        <span className={menuStyles.refLabel}>Régimes et préférences :</span>
-                        <span>{ligneR}</span>
-                    </div>
+                {metaAllergRegimes ? (
+                    <span className={menuStyles.calMenusCarteMeta}>{metaAllergRegimes}</span>
                 ) : null}
             </div>
         );
@@ -463,7 +451,7 @@ const DetailsSejourMenus: React.FC = () => {
                                                 return (
                                                     <td
                                                         key={`${col.ymd}-${type}`}
-                                                        className={`${planningCal.cellShell} ${planningCal.cellToneEmpty} ${planningCal.cellToneHorsSejour} ${menuStyles.calMenusTdSizing} ${menuStyles.calMenusTdHors}`}
+                                                        className={`${planningCal.cellShell} ${planningCal.cellToneEmpty} ${planningCal.cellToneHorsSejour} ${menuStyles.calMenusTdSizing}`}
                                                     >
                                                         <span className={menuStyles.calTdMuted}>—</span>
                                                     </td>
