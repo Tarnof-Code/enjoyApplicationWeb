@@ -6,6 +6,8 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 ## Journal (extraits)
 
+- **2026-05-04 (PlanningCalendrier — primitives seules, premier commit) :** Ajout du dossier **`src/components/PlanningCalendrier/`** : **`CalendrierCarteEditionAvecSuppression`**, **`CalendrierCelluleAjoutHint`**, **`PlanningModalFooterFormulaire`**, **`calendrierCelluleClavier.ts`**, **`PlanningCalendrier.module.scss`**. Objectif : mutualiser UI + a11y des tableaux « planning » (cartes cliquables, cases vides ajoutables au clavier, pied de modal). **Les écrans consommateurs** (ex. **`ListeActivitesCalendrier`**, **`DetailsSejourMenus`**) peuvent suivre dans des commits séparés.
+
 - **2026-05-04 (Menus repas & références alimentaires) :** Route **`/directeur/sejours/:id/menus`** dans **App.tsx** → **`DetailsSejourMenus`** pour la gestion des menus du séjour ; **`DetailsSejourMenus.module.scss`**. **Header** : segment **Menus** (`FaUtensils`) après **Activités**, avant **Paramétrage**. **`ListeReferencesAlimentaires`** (+ module SCSS) pour afficher et gérer les références alimentaires. Services **`references-alimentaires.service.ts`**, **`sejour-menu.service.ts`** ; helpers **`dateIsoLocal.ts`**, **`optionsReferencesAlimentaires.ts`** ; **`api.d.ts`** mis à jour. **Formulaire dossier enfant** : **`DossierEnfant`**, **`DossierEnfantForm`**, évolutions **`Form.tsx`** / **`Form.module.scss`** pour les données diététiques. **`DetailsSejourParametrage`** ajusté en cohérence avec la nouvelle section.
 
 - **2026-04-30 (titres avant contenu — vue générale, paramétrage, organisation) :** **`DetailsSejourOverview`** et **`DetailsSejourParametrage`** : `<h1>` (**Vue générale** / **Paramétrage**) au-dessus des accordéons, classe **`overviewSectionTitle`** (**`DetailsSejour.module.scss`**, même **`$police_titres`** / taille que **`page-title`** global utilisé par **`Liste`**). **`ListePlanningsOrganisation`** (liste `/organisation`) : titre **Organisation** en **`page-title`**, ligne d’actions **`actionsContainer`** (`flex-start`, **`gap`** titre ↔ bouton **Créer un planning**).
@@ -22,6 +24,8 @@ Application stabilisée sur React 19 avec React Compiler activé.
 - **Dernière mise à jour de la Memory Bank :** 2026-05-04 (pivot + fiches `docs/ai/`).
 
 ## Dernières réalisations (synthèse)
+
+- **`PlanningCalendrier/`** — primitives UI + SCSS pour calendriers/plannings tabulaires (premier dépôt de la refactor ; adoption incrémentale sur les autres fichiers ensuite).
 
 - **Menus repas (détail séjour)** — **`DetailsSejourMenus`** + **`DetailsSejourMenus.module.scss`** ; route **`/directeur/sejours/:id/menus`**. **`ListeReferencesAlimentaires`** pour le référentiel alimentaire. Services **`sejour-menu.service.ts`**, **`references-alimentaires.service.ts`** ; helpers **`dateIsoLocal`**, **`optionsReferencesAlimentaires`** ; contrat **`api.d.ts`**. **Dossier enfant** : champs diététiques via **`DossierEnfant`**, **`DossierEnfantForm`**, **`Form`** / **`Form.module.scss`**.
 
