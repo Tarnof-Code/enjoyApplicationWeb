@@ -5,6 +5,7 @@ import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
 import ListeTypesActivite from "../../../components/Liste/ListeTypesActivite";
 import ListeHoraires from "../../../components/Liste/ListeHoraires";
+import ListeReferencesAlimentaires from "../../../components/Liste/ListeReferencesAlimentaires";
 import {
     SejourDTO,
     EnfantDto,
@@ -20,8 +21,8 @@ import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChro
 import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
 import DetailsSejourAccordionItem from "../../../components/DetailsSejour/DetailsSejourAccordionItem";
 
-/** Ordre des blocs sur la page Paramétrage (1 Lieux … 4 Types). */
-const PARAM_ACCORDION_IDS = ["1", "2", "3", "4"] as const;
+/** Ordre des blocs sur la page Paramétrage (1 Lieux … 5 Références alimentaires). */
+const PARAM_ACCORDION_IDS = ["1", "2", "3", "4", "5"] as const;
 const PARAM_ACCORDION_ID_LIST = [...PARAM_ACCORDION_IDS];
 const PARAM_ACCORDION_ID_SET = new Set<string>(PARAM_ACCORDION_ID_LIST);
 
@@ -209,6 +210,8 @@ const DetailsSejourParametrage: React.FC = () => {
                 return `Horaires (${horaires.length})`;
             case "4":
                 return `Types d'activité (${typesActivite.length})`;
+            case "5":
+                return "Références alimentaires";
             default:
                 return "";
         }
@@ -297,6 +300,8 @@ const DetailsSejourParametrage: React.FC = () => {
                         }}
                     />
                 );
+            case "5":
+                return <ListeReferencesAlimentaires />;
             default:
                 return null;
         }

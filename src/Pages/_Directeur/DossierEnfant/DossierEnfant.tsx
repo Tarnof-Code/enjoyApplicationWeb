@@ -5,17 +5,22 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import styles from "./DossierEnfant.module.scss";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
-import { DossierEnfantDto, EnfantDto } from "../../../types/api";
+import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto } from "../../../types/api";
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
 
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     const { sejourId, enfantId } = params;
     if (!sejourId || !enfantId) throw new Error("Paramètres manquants");
     try {
-        const [dossier, enfants] = await Promise.all([
+        const [dossierRaw, enfants] = await Promise.all([
             sejourEnfantService.getDossierEnfant(parseInt(sejourId), parseInt(enfantId)),
             sejourEnfantService.getEnfantsDuSejour(parseInt(sejourId))
         ]);
+        const dossier: DossierEnfantDto = {
+            ...dossierRaw,
+            allergenes: dossierRaw.allergenes ?? [],
+            regimesEtPreferences: dossierRaw.regimesEtPreferences ?? [],
+        };
         const enfant = enfants.find((e: EnfantDto) => e.id === parseInt(enfantId));
         return { dossier, enfant };
     } catch (error) {
@@ -26,6 +31,15 @@ export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
 
 const formatValue = (value: string | null): string => {
     return value?.trim() || "—";
+};
+
+const formatReferencesLine = (refs: ReferenceAlimentaireDto[] | undefined): string => {
+    const list = refs ?? [];
+    if (!list.length) return "—";
+    return [...list]
+        .sort((a, b) => a.ordre - b.ordre || a.id - b.id)
+        .map((r) => r.libelle)
+        .join(", ");
 };
 
 interface DossierLocationState {
@@ -137,7 +151,15 @@ const DossierEnfant: React.FC = () => {
                             <span className={styles.value}>{formatValue(dossier.pai)}</span>
                         </div>
                         <div className={styles.infoGroup}>
-                            <span className={styles.label}>Informations alimentaires</span>
+                            <span className={styles.label}>Allergènes</span>
+                            <span className={styles.value}>{formatReferencesLine(dossier.allergenes)}</span>
+                        </div>
+                        <div className={styles.infoGroup}>
+                            <span className={styles.label}>Régimes et préférences alimentaires</span>
+                            <span className={styles.value}>{formatReferencesLine(dossier.regimesEtPreferences)}</span>
+                        </div>
+                        <div className={styles.infoGroup}>
+                            <span className={styles.label}>Informations alimentaires (complément)</span>
                             <span className={styles.value}>{formatValue(dossier.informationsAlimentaires)}</span>
                         </div>
                     </div>

@@ -15,13 +15,21 @@ import {
 } from "reactstrap";
 import styles from "./Form.module.scss";
 
+export interface CheckboxGroupOption {
+  value: number;
+  label: string;
+  disabled?: boolean;
+}
+
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'textarea' | 'number' | 'custom';
+  type: 'text' | 'email' | 'select' | 'date' | 'tel' | 'password' | 'textarea' | 'number' | 'custom' | 'checkbox-group';
   /** Obligatoire : boolean ou fonction (formData) => boolean pour un required conditionnel */
   required?: boolean | ((formData: Record<string, any>) => boolean);
   options?: { value: string; label: string }[];
+  /** Pour type checkbox-group : valeurs sélectionnées = number[] dans formData */
+  checkboxOptions?: CheckboxGroupOption[];
   validation?: (value: any, allValues?: Record<string, any>) => string | null;
   placeholder?: string;
   disabled?: boolean;
@@ -76,7 +84,13 @@ function Form({
     if (!isInitializedRef.current || hasDataChanged) {
       const initialFormData: Record<string, any> = {};
       fields.forEach(field => {
-        initialFormData[field.name] = initialData?.[field.name] || "";
+        if (field.type === 'checkbox-group') {
+          initialFormData[field.name] = Array.isArray(initialData?.[field.name])
+            ? [...(initialData[field.name] as number[])]
+            : [];
+        } else {
+          initialFormData[field.name] = initialData?.[field.name] ?? "";
+        }
       });
       setFormData(initialFormData);
       isInitializedRef.current = true;
@@ -127,7 +141,13 @@ function Form({
       const value = formData[field.name];
       const isVisible = !field.visible || field.visible(formData);
       const isRequired = typeof field.required === 'function' ? field.required(formData) : !!field.required;
-      if (isRequired && isVisible && (!value || value.toString().trim() === "")) {
+      if (field.type === 'checkbox-group') {
+        const ids = Array.isArray(value) ? value : [];
+        if (isRequired && isVisible && ids.length === 0) {
+          errors[field.name] = `${field.label} est requis`;
+          isValid = false;
+        }
+      } else if (isRequired && isVisible && (!value || value.toString().trim() === "")) {
         errors[field.name] = `${field.label} est requis`;
         isValid = false;
       }
@@ -168,14 +188,17 @@ function Form({
   };
 
   const renderField = (field: FormField) => {
-    const value = formData[field.name] || "";
+    const rawValue = formData[field.name];
+    const value = field.type === 'checkbox-group'
+      ? (Array.isArray(rawValue) ? rawValue : []) as number[]
+      : (rawValue ?? "");
     const error = validationErrors[field.name];
     const hasError = !!error;
 
     const inputProps = {
       id: field.name,
       name: field.name,
-      value: value,
+      value: field.type === 'checkbox-group' ? "" : value as string | number,
       onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => 
         handleFieldChange(field.name, e.target.value),
       className: hasError ? styles.errorInput : "",
@@ -200,6 +223,48 @@ function Form({
         />
       );
     }
+
+    if (field.type === 'checkbox-group') {
+      const selectedIds = value as number[];
+      const showCheckboxRequired = (!field.visible || field.visible(formData)) && isRequired;
+      return (
+        <FormGroup key={field.name} className={`${styles.form_group} ${styles.form_group_label_top}`}>
+          <Col lg={4}>
+            <Label className={styles.label}>
+              {field.label}
+              {showCheckboxRequired && <span className={styles.required}> *</span>}
+            </Label>
+          </Col>
+          <Col lg={8}>
+            <div className={styles.checkbox_group_field} role="group" aria-label={field.label}>
+              {(field.checkboxOptions ?? []).map((opt) => {
+                const checked = selectedIds.includes(opt.value);
+                return (
+                  <label key={opt.value} className={styles.checkbox_row_ref_alimentaire}>
+                    <Input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={field.disabled || loading || !!opt.disabled}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const next = e.target.checked
+                          ? [...selectedIds, opt.value]
+                          : selectedIds.filter((id) => id !== opt.value);
+                        handleFieldChange(field.name, next);
+                      }}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {hasError && (
+              <div className={styles.errorMessage}>{error}</div>
+            )}
+          </Col>
+        </FormGroup>
+      );
+    }
+
     const showRequired = (!field.visible || field.visible(formData)) && isRequired;
 
     return (
@@ -228,7 +293,15 @@ function Form({
             />
           ) : (
             <Input
-              type={field.type === 'password' ? 'password' : field.type === 'custom' ? 'text' : field.type === 'number' ? 'number' : field.type}
+              type={
+                field.type === 'password'
+                  ? 'password'
+                  : field.type === 'custom'
+                    ? 'text'
+                    : field.type === 'number'
+                      ? 'number'
+                      : field.type
+              }
               {...inputProps}
             />
           )}

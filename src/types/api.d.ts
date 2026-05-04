@@ -219,6 +219,70 @@ export interface ErrorResponse {
 }
 
 /**
+ * Référentiel alimentaire (allergène ou régime / préférence)
+ */
+export type ReferenceAlimentaireType = 'ALLERGENE' | 'REGIME_PREFERENCE';
+
+export interface ReferenceAlimentaireDto {
+  id: number;
+  type: ReferenceAlimentaireType;
+  libelle: string;
+  ordre: number;
+  actif: boolean;
+}
+
+/** Body POST `/references-alimentaires` */
+export interface SaveReferenceAlimentaireRequest {
+  type: ReferenceAlimentaireType;
+  libelle: string;
+  ordre: number;
+}
+
+/** Body PUT `/references-alimentaires/{id}` */
+export interface UpdateReferenceAlimentaireRequest {
+  libelle: string;
+  ordre: number;
+  actif: boolean;
+}
+
+/** Types de repas pour les menus du séjour */
+export type TypeRepas = 'PETIT_DEJEUNER' | 'DEJEUNER' | 'GOUTER' | 'DINER';
+
+export interface MenuRepasDto {
+  id: number;
+  /** Présent dans les réponses GET selon l’API */
+  sejourId?: number;
+  dateRepas: string;
+  typeRepas: TypeRepas;
+  detailPetitDejeunerOuGouter: string | null;
+  entree: string | null;
+  plat: string | null;
+  fromageOuEntremet: string | null;
+  dessert: string | null;
+  allergenes?: ReferenceAlimentaireDto[];
+  regimesEtPreferences?: ReferenceAlimentaireDto[];
+}
+
+/** GET `/sejours/{id}/references-alimentaires-agregees-enfants` — union des refs présentes sur au moins un dossier d’enfant inscrit au séjour */
+export interface ReferencesAlimentairesAgregeesEnfantsDto {
+  allergenes: ReferenceAlimentaireDto[];
+  regimesEtPreferences: ReferenceAlimentaireDto[];
+}
+
+/** POST / PUT — corps sans les tableaux imbriqués ; ids optionnels (PUT : null/absent = inchangé ; POST : vide si absent). */
+export interface SaveMenuRepasRequest {
+  dateRepas: string;
+  typeRepas: TypeRepas;
+  detailPetitDejeunerOuGouter: string | null;
+  entree: string | null;
+  plat: string | null;
+  fromageOuEntremet: string | null;
+  dessert: string | null;
+  allergeneIds?: number[] | null;
+  regimePreferenceIds?: number[] | null;
+}
+
+/**
  * Correspond à DossierEnfantDto.java
  * DTO pour les informations de dossier d'un enfant (contacts parents, médical, traitements)
  */
@@ -231,6 +295,10 @@ export interface DossierEnfantDto {
   telephoneParent2: string | null;
   informationsMedicales: string | null;
   pai: string | null;
+  /** Sélection issue du référentiel (GET) */
+  allergenes: ReferenceAlimentaireDto[];
+  regimesEtPreferences: ReferenceAlimentaireDto[];
+  /** Complément libre (précisions) */
   informationsAlimentaires: string | null;
   traitementMatin: string | null;
   traitementMidi: string | null;
@@ -242,9 +310,15 @@ export interface DossierEnfantDto {
 
 /**
  * Correspond à UpdateDossierEnfantRequest.java
- * Payload pour modifier un dossier enfant (tous les champs doivent être envoyés)
+ * Champs texte comme le DTO sans les tableaux imbriqués ; les ids alimentaires sont optionnels (omit / null = inchangé).
  */
-export type UpdateDossierEnfantRequest = Omit<DossierEnfantDto, 'id' | 'enfantId'>;
+export type UpdateDossierEnfantRequest = Omit<
+  DossierEnfantDto,
+  'id' | 'enfantId' | 'allergenes' | 'regimesEtPreferences'
+> & {
+  allergeneIds?: number[] | null;
+  regimePreferenceIds?: number[] | null;
+};
 
 /**
  * Correspond à ExcelImportResponse.java

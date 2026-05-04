@@ -16,6 +16,7 @@ import {
   FaChevronRight,
   FaSlidersH,
   FaTable,
+  FaUtensils,
 } from "react-icons/fa";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
@@ -142,6 +143,15 @@ const Admin_header: React.FC = () => {
                       >
                         <FaClipboardList size={14} aria-hidden />
                         Activités
+                      </NavLink>
+                      <NavLink
+                        to={`/directeur/sejours/${sejourIdParam}/menus`}
+                        className={({ isActive }) =>
+                          `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
+                        }
+                      >
+                        <FaUtensils size={14} aria-hidden />
+                        Menus
                       </NavLink>
                       <NavLink
                         to={`/directeur/sejours/${sejourIdParam}/parametrage`}
