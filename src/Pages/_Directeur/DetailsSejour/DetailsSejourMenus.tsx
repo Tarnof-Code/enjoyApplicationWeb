@@ -86,6 +86,10 @@ const DetailsSejourMenus: React.FC = () => {
         peutReculer: peutReculerMenus,
         peutAvancer: peutAvancerMenus,
         decalage: decalageFenetreMenus,
+        debutFenetreYmd: menusDebutFenetreYmd,
+        minDebutFenetreYmd: menusMinDebutFenetreYmd,
+        maxDebutFenetreYmd: menusMaxDebutFenetreYmd,
+        definirDebutFenetre: definirDebutFenetreMenus,
     } = useCalendrierFenetreJours(joursDuSejourMenus);
 
     /** Jours du séjour visibles dans la fenêtre (exclut les cases hors séjour si vue 7 j. sur une courte période). */
@@ -390,6 +394,10 @@ const DetailsSejourMenus: React.FC = () => {
                                         onAvancer={() => decalageFenetreMenus(1)}
                                         nombreJoursVue={menusNombreJoursVue}
                                         onNombreJoursVueChange={setMenusNombreJoursVue}
+                                        debutFenetreYmd={menusDebutFenetreYmd}
+                                        minDebutFenetreYmd={menusMinDebutFenetreYmd}
+                                        maxDebutFenetreYmd={menusMaxDebutFenetreYmd}
+                                        onChangerDebutFenetre={definirDebutFenetreMenus}
                                     />
                                 </div>
                             </div>

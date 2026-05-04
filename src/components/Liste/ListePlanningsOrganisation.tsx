@@ -855,6 +855,10 @@ function ListePlanningsOrganisation({
         peutReculer: planningPeutReculer,
         peutAvancer: planningPeutAvancer,
         decalage: planningDecalage,
+        debutFenetreYmd: planningDebutFenetreYmd,
+        minDebutFenetreYmd: planningMinDebutFenetreYmd,
+        maxDebutFenetreYmd: planningMaxDebutFenetreYmd,
+        definirDebutFenetre: definirDebutFenetrePlanning,
     } = useCalendrierFenetreJours(joursDuSejourPlanning);
 
     const membresPourCellulesModal = useMemo(
@@ -1681,6 +1685,10 @@ function ListePlanningsOrganisation({
                                     onAvancer={() => planningDecalage(1)}
                                     nombreJoursVue={planningNombreJoursVue}
                                     onNombreJoursVueChange={setPlanningNombreJoursVue}
+                                    debutFenetreYmd={planningDebutFenetreYmd}
+                                    minDebutFenetreYmd={planningMinDebutFenetreYmd}
+                                    maxDebutFenetreYmd={planningMaxDebutFenetreYmd}
+                                    onChangerDebutFenetre={definirDebutFenetrePlanning}
                                 />
                             :   null}
                         </div>

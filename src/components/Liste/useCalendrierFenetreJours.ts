@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import formaterDate from "../../helpers/formaterDate";
 import {
     NB_JOURS_VUE_CALENDRIER_DEFAUT,
@@ -87,11 +87,24 @@ export function useCalendrierFenetreJours(joursDuSejour: { ymd: string }[]) {
         });
     };
 
+    const definirDebutFenetre = useCallback(
+        (ymd: string) => {
+            const b = bornesFenetre;
+            if (!b || !ymd) return;
+            setDebutYmd(clampYmdEntre(ymd, b.minStartYmd, b.maxStartYmd));
+        },
+        [bornesFenetre],
+    );
+
     return {
         nombreJoursVue,
         setNombreJoursVue,
         joursFenetre,
         libellePlage,
+        debutFenetreYmd: debutEffectif,
+        minDebutFenetreYmd: bornesFenetre?.minStartYmd ?? "",
+        maxDebutFenetreYmd: bornesFenetre?.maxStartYmd ?? "",
+        definirDebutFenetre,
         peutReculer,
         peutAvancer,
         decalage,

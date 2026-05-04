@@ -376,6 +376,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         peutReculer: peutDefilerCalendrierVersPasse,
         peutAvancer: peutDefilerCalendrierVersFutur,
         decalage: decalageFenetreCalendrier,
+        debutFenetreYmd: calDebutFenetreYmd,
+        minDebutFenetreYmd: calMinDebutFenetreYmd,
+        maxDebutFenetreYmd: calMaxDebutFenetreYmd,
+        definirDebutFenetre: definirDebutFenetreCalendrier,
     } = useCalendrierFenetreJours(joursDuSejourPourFiltre);
 
     useEffect(() => {
@@ -691,6 +695,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             onAvancer={() => decalageFenetreCalendrier(1)}
                             nombreJoursVue={calendrierNombreJoursVue}
                             onNombreJoursVueChange={setCalendrierNombreJoursVue}
+                            debutFenetreYmd={calDebutFenetreYmd}
+                            minDebutFenetreYmd={calMinDebutFenetreYmd}
+                            maxDebutFenetreYmd={calMaxDebutFenetreYmd}
+                            onChangerDebutFenetre={definirDebutFenetreCalendrier}
                         />
                     ) : null}
                 </div>

@@ -22,6 +22,11 @@ export type CalendrierNavigationPeriodeProps = {
     onAvancer: () => void;
     nombreJoursVue: CalendrierNombreJoursVue;
     onNombreJoursVueChange: (n: CalendrierNombreJoursVue) => void;
+    /** Début de fenêtre (AAAA-MM-JJ) : si renseigné avec les bornes et le callback, la plage ouvre un sélecteur de date. */
+    debutFenetreYmd?: string;
+    minDebutFenetreYmd?: string;
+    maxDebutFenetreYmd?: string;
+    onChangerDebutFenetre?: (ymd: string) => void;
 };
 
 export function CalendrierNavigationPeriode({
@@ -32,7 +37,35 @@ export function CalendrierNavigationPeriode({
     onAvancer,
     nombreJoursVue,
     onNombreJoursVueChange,
+    debutFenetreYmd,
+    minDebutFenetreYmd,
+    maxDebutFenetreYmd,
+    onChangerDebutFenetre,
 }: CalendrierNavigationPeriodeProps) {
+    const dateDebutPickerRef = useRef<HTMLInputElement>(null);
+
+    const plageSelectable =
+        Boolean(
+            debutFenetreYmd &&
+                minDebutFenetreYmd &&
+                maxDebutFenetreYmd &&
+                onChangerDebutFenetre,
+        );
+
+    const ouvrirSelecteurDebutFenetre = () => {
+        const el = dateDebutPickerRef.current;
+        if (!el) return;
+        if (typeof el.showPicker === "function") {
+            try {
+                el.showPicker();
+                return;
+            } catch {
+                /* certains navigateurs lancent si non geste utilisateur ou policy */
+            }
+        }
+        el.click();
+    };
+
     return (
         <div
             className={`${styles.calendrierNav} ${styles.calendrierNavDansBarre}`}
@@ -72,7 +105,34 @@ export function CalendrierNavigationPeriode({
             >
                 ‹
             </button>
-            <span className={styles.calendrierPlage}>{libellePlage}</span>
+            {plageSelectable ? (
+                <div className={styles.calendrierPlagePickWrap}>
+                    <input
+                        ref={dateDebutPickerRef}
+                        type="date"
+                        className={styles.calendrierPlageDateHidden}
+                        min={minDebutFenetreYmd}
+                        max={maxDebutFenetreYmd}
+                        value={debutFenetreYmd}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            if (v && onChangerDebutFenetre) onChangerDebutFenetre(v);
+                        }}
+                        tabIndex={-1}
+                        aria-hidden
+                    />
+                    <button
+                        type="button"
+                        className={`${styles.calendrierPlage} ${styles.calendrierPlageBtn}`}
+                        onClick={ouvrirSelecteurDebutFenetre}
+                        aria-label={`Choisir la date de début de la période affichée (${libellePlage})`}
+                    >
+                        {libellePlage}
+                    </button>
+                </div>
+            ) : (
+                <span className={styles.calendrierPlage}>{libellePlage}</span>
+            )}
             <button
                 type="button"
                 className={styles.calendrierNavBtn}
