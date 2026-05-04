@@ -6,6 +6,8 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 ## Journal (extraits)
 
+- **2026-05-04 (Menus séjour → PlanningCalendrier + factorisation, 3ᵉ commit) :** **`DetailsSejourMenus.tsx`** et **`DetailsSejourMenus.module.scss`** s’appuient sur **`PlanningCalendrier`** (cartes, cases ajout, footer modal, clavier). Corps de formulaire extrait en **`MenuRepasFormulaireCorps`** ; logique / libellés / couleurs / construction payload dans **`helpers/menuRepas.ts`**.
+
 - **2026-05-04 (Liste des activités → PlanningCalendrier, 2ᵉ commit) :** **`ListeActivites.tsx`**, **`ListeActivitesCalendrier.tsx`** et **`ListeActivites.module.scss`** passent sur les composants et styles **`PlanningCalendrier`** (cartes édition/suppression, indications d’ajout sur cases vides, pied de modal **`PlanningModalFooterFormulaire`** où c’est factorisé, **`proprietesTdAjoutPlanning`** / clavier sur les **`td`** ajout).
 
 - **2026-05-04 (PlanningCalendrier — primitives seules, premier commit) :** Ajout du dossier **`src/components/PlanningCalendrier/`** : **`CalendrierCarteEditionAvecSuppression`**, **`CalendrierCelluleAjoutHint`**, **`PlanningModalFooterFormulaire`**, **`calendrierCelluleClavier.ts`**, **`PlanningCalendrier.module.scss`**. Objectif : mutualiser UI + a11y des tableaux « planning » (cartes cliquables, cases vides ajoutables au clavier, pied de modal). **Les écrans consommateurs** (ex. **`ListeActivitesCalendrier`**, **`DetailsSejourMenus`**) peuvent suivre dans des commits séparés.
@@ -27,7 +29,7 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 ## Dernières réalisations (synthèse)
 
-- **`PlanningCalendrier/`** — primitives puis **migration** : **`ListeActivites`** / **`ListeActivitesCalendrier`** utilisent les composants et styles partagés ; **`DetailsSejourMenus*`** peut suivre dans un commit dédié.
+- **`PlanningCalendrier/`** — primitives ; consommateurs **`ListeActivites*`** et **`DetailsSejourMenus*`** (+ **`MenuRepasFormulaireCorps`**, **`menuRepas.ts`**).
 
 - **Menus repas (détail séjour)** — **`DetailsSejourMenus`** + **`DetailsSejourMenus.module.scss`** ; route **`/directeur/sejours/:id/menus`**. **`ListeReferencesAlimentaires`** pour le référentiel alimentaire. Services **`sejour-menu.service.ts`**, **`references-alimentaires.service.ts`** ; helpers **`dateIsoLocal`**, **`optionsReferencesAlimentaires`** ; contrat **`api.d.ts`**. **Dossier enfant** : champs diététiques via **`DossierEnfant`**, **`DossierEnfantForm`**, **`Form`** / **`Form.module.scss`**.
 

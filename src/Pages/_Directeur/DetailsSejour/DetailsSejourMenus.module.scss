@@ -27,6 +27,54 @@
     }
 }
 
+.menusToolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    margin-left: auto;
+    min-width: 0;
+}
+
+.vueMenusToggle {
+    display: inline-flex;
+    border: 1px solid #c8c8c8;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.vueMenusBtn {
+    margin: 0;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        background: #f0f4f8;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #0d6efd;
+        outline-offset: -2px;
+    }
+}
+
+.vueMenusBtn + .vueMenusBtn {
+    border-left: 1px solid #c8c8c8;
+}
+
+.vueMenusBtnActive {
+    background: #e7f1ff;
+    color: #0b5ed7;
+    font-weight: 600;
+}
+
 .menusPageTitle {
     flex: 0 1 auto;
 }
@@ -36,7 +84,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem 1rem;
-    margin-left: auto;
     min-width: 0;
 }
 
@@ -162,4 +209,115 @@
         margin-top: 0.2rem;
         flex-shrink: 0;
     }
+}
+
+/* —— Vue calendrier (planning repas × jours) —— */
+
+.calScroll {
+    overflow-x: auto;
+    margin-bottom: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.calTable {
+    width: 100%;
+    min-width: 520px;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+/** Colonne « type de repas » : largeur fixe ; le reste est partagé à parts égales entre les jours (voir `.calColJour`). */
+.calColCorner {
+    width: 7.5rem;
+}
+
+.calColJour {
+    width: calc((100% - 7.5rem) / var(--cal-menus-nb-jours, 1));
+}
+
+.calCorner {
+    width: 7.5rem;
+    min-width: 7rem;
+    background: #f4f6f8;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.calThJour {
+    padding: 0.55rem 0.5rem;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    background: #f4f6f8;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: bottom;
+    line-height: 1.25;
+
+    &:last-child {
+        border-right: none;
+    }
+}
+
+.calThHorsSejour {
+    color: #888;
+    background: #ececec;
+}
+
+.calHorsSejourHint {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #999;
+    margin-top: 0.2rem;
+}
+
+.calThRepas {
+    padding: 0.55rem 0.65rem;
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #222;
+    background: #fafbfc;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    white-space: nowrap;
+    width: 7.5rem;
+    min-width: 7rem;
+}
+
+.calTdMuted {
+    color: #bbb;
+    font-size: 1.1rem;
+}
+
+.calMenusTdHors {
+    vertical-align: middle;
+}
+
+/** Sous tableau à largeur égale par jour : évite que le contenu force une colonne plus large (`table-layout: fixed`). */
+.calMenusTdSizing {
+    min-width: 0;
+}
+
+.calMenusCarteResume {
+    font-weight: 600;
+    word-break: break-word;
+    font-size: 0.84rem;
+}
+
+.calMenusCarteMeta {
+    font-size: 0.74rem;
+    color: #b91c1c;
+    line-height: 1.25;
+}
+
+.calWrap {
+    margin-bottom: 1.5rem;
 }

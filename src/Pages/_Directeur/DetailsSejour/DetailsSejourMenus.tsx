@@ -1,126 +1,36 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouteLoaderData, useNavigate } from "react-router-dom";
-import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import styles from "./DetailsSejour.module.scss";
 import menuStyles from "./DetailsSejourMenus.module.scss";
+import { MenuRepasFormulaireCorps } from "../../../components/Menus/MenuRepasFormulaireCorps";
+import { CalendrierCarteEditionAvecSuppression } from "../../../components/PlanningCalendrier/CalendrierCarteEditionAvecSuppression";
+import { CalendrierCelluleAjoutHint } from "../../../components/PlanningCalendrier/CalendrierCelluleAjoutHint";
+import { proprietesTdAjoutPlanning } from "../../../components/PlanningCalendrier/calendrierCelluleClavier";
+import planningCal from "../../../components/PlanningCalendrier/PlanningCalendrier.module.scss";
+import { PlanningModalFooterFormulaire } from "../../../components/PlanningCalendrier/PlanningModalFooterFormulaire";
 import { CalendrierNavigationPeriode } from "../../../components/Liste/ListeActivitesCalendrier";
-import { enumererJoursDuSejour } from "../../../components/Liste/listeActivitesUtils";
+import { enumererJoursDuSejour, libelleJourCourtPourBouton, parseYmdVersDateLocale } from "../../../components/Liste/listeActivitesUtils";
 import { useCalendrierFenetreJours } from "../../../components/Liste/useCalendrierFenetreJours";
-import { MenuRepasDto, ReferenceAlimentaireDto, SaveMenuRepasRequest, SejourDTO, TypeRepas } from "../../../types/api";
-import { dateVersChaineISO, normaliserDateRepasISO } from "../../../helpers/dateIsoLocal";
+import type { MenuRepasDto, ReferenceAlimentaireDto, SaveMenuRepasRequest, SejourDTO, TypeRepas } from "../../../types/api";
+import { normaliserDateRepasISO } from "../../../helpers/dateIsoLocal";
 import formaterDate from "../../../helpers/formaterDate";
+import {
+    TYPES_REPAS,
+    LABELS_TYPE_REPAS,
+    couleurFondCarteMenuPourTypeRepas,
+    indexerMenusParJourEtType,
+    jourISOdepuisDateRepasApi,
+    fusionnerRefsPourFormulaire,
+    construireSaveMenuRepasRequest,
+    estPetitDejeunerOuGouter,
+    ligneLibellesRefs,
+    ligneLibellesCompositionMenu,
+    ligneMetaAllergenesRegimesCalendrier,
+    resumeMenuCourt,
+} from "../../../helpers/menuRepas";
 import { optionsCheckboxReferencesAlimentaires } from "../../../helpers/optionsReferencesAlimentaires";
-import { trierReferencesAlimentaires } from "../../../services/references-alimentaires.service";
 import { sejourMenuService } from "../../../services/sejour-menu.service";
-
-const TYPES_REPAS: TypeRepas[] = ["PETIT_DEJEUNER", "DEJEUNER", "GOUTER", "DINER"];
-
-const TYPES_REPAS_SET = new Set<TypeRepas>(TYPES_REPAS);
-
-/** Jour `YYYY-MM-DD` pour indexer les cartes (chaîne ISO, timestamp, tableau type Jackson LocalDate `[année, mois, jour]`, etc.). */
-function jourISOdepuisDateRepasApi(v: unknown): string {
-    if (v == null) return "";
-    if (typeof v === "string") return normaliserDateRepasISO(v);
-    if (typeof v === "number" && Number.isFinite(v)) return dateVersChaineISO(new Date(v));
-    if (Array.isArray(v) && v.length >= 3) {
-        const y = Number(v[0]);
-        const mo = Number(v[1]);
-        const d = Number(v[2]);
-        if ([y, mo, d].every((n) => Number.isFinite(n))) {
-            return dateVersChaineISO(new Date(y, mo - 1, d));
-        }
-    }
-    return "";
-}
-
-/** Même clés que `TYPES_REPAS` (enum JSON `{ name }`, libellés, casse). */
-function typeRepasNormalisePourCarte(v: unknown): TypeRepas | null {
-    let brut: unknown = v;
-    if (brut && typeof brut === "object" && "name" in (brut as object)) {
-        brut = (brut as { name?: unknown }).name;
-    }
-    if (typeof brut !== "string") return null;
-    let s = brut
-        .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .trim()
-        .toUpperCase()
-        .replace(/[\s-]+/g, "_");
-    if (s === "PETITDEJEUNER") s = "PETIT_DEJEUNER";
-    if (TYPES_REPAS_SET.has(s as TypeRepas)) return s as TypeRepas;
-    return null;
-}
-
-const LABELS_TYPE_REPAS: Record<TypeRepas, string> = {
-    PETIT_DEJEUNER: "Petit-déjeuner",
-    DEJEUNER: "Déjeuner",
-    GOUTER: "Goûter",
-    DINER: "Dîner",
-};
-
-function estPetitDejeunerOuGouter(t: TypeRepas): boolean {
-    return t === "PETIT_DEJEUNER" || t === "GOUTER";
-}
-
-function chaineOuNull(v: string): string | null {
-    const t = v.trim();
-    return t === "" ? null : t;
-}
-
-function ligneLibellesRefs(refs: ReferenceAlimentaireDto[] | undefined): string {
-    const list = refs ?? [];
-    if (!list.length) return "";
-    return trierReferencesAlimentaires(list)
-        .map((r) => r.libelle)
-        .join(", ");
-}
-
-const SUFFIX_LIBELLE_INACTIF = " (inactif)";
-
-/** Libellés « Sans porc », « Sans viande » → « Porc », « Viande » pour la lecture menus (ce que le plat évoque). */
-function libelleCompositionPlatPourAffichage(libelle: string): string {
-    const t = libelle.trim();
-    const m = /^Sans\s+/i.exec(t);
-    if (m) {
-        const rest = t.slice(m[0].length).trim();
-        if (!rest) return t;
-        return rest.charAt(0).toUpperCase() + rest.slice(1);
-    }
-    return t;
-}
-
-function libelleCompositionCheckboxPourAffichage(texteOption: string): string {
-    if (texteOption.endsWith(SUFFIX_LIBELLE_INACTIF)) {
-        const base = texteOption.slice(0, -SUFFIX_LIBELLE_INACTIF.length);
-        return `${libelleCompositionPlatPourAffichage(base)}${SUFFIX_LIBELLE_INACTIF}`;
-    }
-    return libelleCompositionPlatPourAffichage(texteOption);
-}
-
-function ligneLibellesCompositionMenu(refs: ReferenceAlimentaireDto[] | undefined): string {
-    const list = refs ?? [];
-    if (!list.length) return "";
-    return trierReferencesAlimentaires(list)
-        .map((r) => libelleCompositionPlatPourAffichage(r.libelle))
-        .join(", ");
-}
-
-/** Agrégation dossiers enfants du séjour + références déjà sur le menu édité (références hors périmètre dossiers mais encore sur le plat). */
-function fusionnerRefsPourFormulaire(
-    base: ReferenceAlimentaireDto[],
-    supplementaires?: ReferenceAlimentaireDto[] | undefined,
-): ReferenceAlimentaireDto[] {
-    const map = new Map<number, ReferenceAlimentaireDto>();
-    for (const r of base) {
-        map.set(r.id, r);
-    }
-    for (const r of supplementaires ?? []) {
-        if (!map.has(r.id)) {
-            map.set(r.id, r);
-        }
-    }
-    return trierReferencesAlimentaires([...map.values()]);
-}
 
 type LoaderOk = { sejour: SejourDTO };
 
@@ -159,6 +69,9 @@ const DetailsSejourMenus: React.FC = () => {
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<MenuRepasDto | null>(null);
     const [deleting, setDeleting] = useState(false);
+
+    /** Affichage liste (cartes par jour) ou grille type planning (repas × jours). */
+    const [vueMenus, setVueMenus] = useState<"liste" | "calendrier">("calendrier");
 
     const sejour = loaderData && !(loaderData instanceof Error) ? loaderData.sejour : undefined;
 
@@ -246,18 +159,7 @@ const DetailsSejourMenus: React.FC = () => {
         void chargerMenus();
     }, [chargerMenus]);
 
-    const menusParJourEtType = useMemo(() => {
-        const outer = new Map<string, Map<TypeRepas, MenuRepasDto>>();
-        menus.forEach((m) => {
-            const d = jourISOdepuisDateRepasApi(m.dateRepas as unknown);
-            if (!d) return;
-            const type = typeRepasNormalisePourCarte(m.typeRepas as unknown);
-            if (!type) return;
-            if (!outer.has(d)) outer.set(d, new Map());
-            outer.get(d)!.set(type, { ...m, dateRepas: d, typeRepas: type });
-        });
-        return outer;
-    }, [menus]);
+    const menusParJourEtType = useMemo(() => indexerMenusParJourEtType(menus), [menus]);
 
     const typeRepasCourant = editingMenu?.typeRepas ?? creatingType;
     /** À la création, champs compacts sur une ligne ; à l’édition, hauteur plus confortable. */
@@ -323,33 +225,17 @@ const DetailsSejourMenus: React.FC = () => {
 
     const construirePayload = (): SaveMenuRepasRequest | null => {
         if (!typeRepasCourant || !modalDateRepasStr) return null;
-        const idsAllerg = [...fAllergeneIds];
-        const idsRegimes = [...fRegimePreferenceIds];
-
-        if (estPetitDejeunerOuGouter(typeRepasCourant)) {
-            return {
-                dateRepas: modalDateRepasStr,
-                typeRepas: typeRepasCourant,
-                detailPetitDejeunerOuGouter: chaineOuNull(fDetail),
-                entree: null,
-                plat: null,
-                fromageOuEntremet: null,
-                dessert: null,
-                allergeneIds: idsAllerg,
-                regimePreferenceIds: idsRegimes,
-            };
-        }
-        return {
+        return construireSaveMenuRepasRequest({
             dateRepas: modalDateRepasStr,
             typeRepas: typeRepasCourant,
-            detailPetitDejeunerOuGouter: null,
-            entree: chaineOuNull(fEntree),
-            plat: chaineOuNull(fPlat),
-            fromageOuEntremet: chaineOuNull(fFromage),
-            dessert: chaineOuNull(fDessert),
-            allergeneIds: idsAllerg,
-            regimePreferenceIds: idsRegimes,
-        };
+            fDetail,
+            fEntree,
+            fPlat,
+            fFromage,
+            fDessert,
+            fAllergeneIds,
+            fRegimePreferenceIds,
+        });
     };
 
     const toggleSel = (ids: number[], id: number, checked: boolean): number[] => {
@@ -452,69 +338,11 @@ const DetailsSejourMenus: React.FC = () => {
         );
     };
 
-    const renduCasesRefsModal = () => (
-        <>
-            {refsErreur ? (
-                <p className={menuStyles.modalError}>{refsErreur} Les menus peuvent être enregistrés sans ces sélections.</p>
-            ) : null}
-            <FormGroup className={menuStyles.checkboxSection}>
-                <Label>Allergènes</Label>
-                <div className={menuStyles.checkboxScroll} role="group" aria-label="Allergènes du menu">
-                    {allergCheckboxOptions.length === 0 ? (
-                        refsErreur ? null : !refsChargeTerminee ? (
-                            <span className={menuStyles.fieldHint}>Chargement…</span>
-                        ) : (
-                            <span className={menuStyles.fieldHint}>
-                                Aucune allergène relevée sur les dossiers des enfants inscrits à ce séjour.
-                            </span>
-                        )
-                    ) : (
-                        allergCheckboxOptions.map((opt) => (
-                            <label key={opt.value} className={menuStyles.checkboxRow}>
-                                <Input
-                                    type="checkbox"
-                                    checked={fAllergeneIds.includes(opt.value)}
-                                    disabled={submitting}
-                                    onChange={(e) =>
-                                        setFAllergeneIds((prev) => toggleSel(prev, opt.value, e.target.checked))
-                                    }
-                                />
-                                <span>{opt.label}</span>
-                            </label>
-                        ))
-                    )}
-                </div>
-            </FormGroup>
-            <FormGroup className={menuStyles.checkboxSection}>
-                <Label>Régimes</Label>
-                <div className={menuStyles.checkboxScroll} role="group" aria-label="Régimes et préférences">
-                    {regimeCheckboxOptions.length === 0 ? (
-                        refsErreur ? null : !refsChargeTerminee ? (
-                            <span className={menuStyles.fieldHint}>Chargement…</span>
-                        ) : (
-                            <span className={menuStyles.fieldHint}>
-                                Aucun régime ou préférence relevé sur les dossiers des enfants inscrits à ce séjour.
-                            </span>
-                        )
-                    ) : (
-                        regimeCheckboxOptions.map((opt) => (
-                            <label key={opt.value} className={menuStyles.checkboxRow}>
-                                <Input
-                                    type="checkbox"
-                                    checked={fRegimePreferenceIds.includes(opt.value)}
-                                    disabled={submitting}
-                                    onChange={(e) =>
-                                        setFRegimePreferenceIds((prev) => toggleSel(prev, opt.value, e.target.checked))
-                                    }
-                                />
-                                <span>{libelleCompositionCheckboxPourAffichage(opt.label)}</span>
-                            </label>
-                        ))
-                    )}
-                </div>
-            </FormGroup>
-        </>
-    );
+    const demanderSuppressionMenu = (m: MenuRepasDto) => {
+        setModalError(null);
+        setPendingDelete(m);
+        setDeleteOpen(true);
+    };
 
     if (loaderData === undefined) {
         return (
@@ -540,17 +368,41 @@ const DetailsSejourMenus: React.FC = () => {
             <header className={menuStyles.menusPageHeader}>
                 <h1 className={`${styles.overviewSectionTitle} ${menuStyles.menusPageTitle}`}>Menus du séjour</h1>
                 {joursDuSejourMenus.length > 0 && joursFenetreMenus.length > 0 ? (
-                    <div className={menuStyles.menusPeriodeWrap} role="region" aria-label="Période des menus affichés">
-                        <CalendrierNavigationPeriode
-                            libellePlage={libellePlageMenus}
-                            peutReculer={peutReculerMenus}
-                            peutAvancer={peutAvancerMenus}
-                            onReculer={() => decalageFenetreMenus(-1)}
-                            onAvancer={() => decalageFenetreMenus(1)}
-                            nombreJoursVue={menusNombreJoursVue}
-                            onNombreJoursVueChange={setMenusNombreJoursVue}
-                        />
-                        {loading ? <span className={menuStyles.loadingHint}>Chargement…</span> : null}
+                    <div className={menuStyles.menusToolbar}>
+                        <div
+                            className={menuStyles.vueMenusToggle}
+                            role="group"
+                            aria-label="Mode d’affichage des menus"
+                        >
+                            <button
+                                type="button"
+                                className={`${menuStyles.vueMenusBtn} ${vueMenus === "calendrier" ? menuStyles.vueMenusBtnActive : ""}`}
+                                aria-pressed={vueMenus === "calendrier"}
+                                onClick={() => setVueMenus("calendrier")}
+                            >
+                                Calendrier
+                            </button>
+                            <button
+                                type="button"
+                                className={`${menuStyles.vueMenusBtn} ${vueMenus === "liste" ? menuStyles.vueMenusBtnActive : ""}`}
+                                aria-pressed={vueMenus === "liste"}
+                                onClick={() => setVueMenus("liste")}
+                            >
+                                Liste
+                            </button>
+                        </div>
+                        <div className={menuStyles.menusPeriodeWrap} role="region" aria-label="Période des menus affichés">
+                            <CalendrierNavigationPeriode
+                                libellePlage={libellePlageMenus}
+                                peutReculer={peutReculerMenus}
+                                peutAvancer={peutAvancerMenus}
+                                onReculer={() => decalageFenetreMenus(-1)}
+                                onAvancer={() => decalageFenetreMenus(1)}
+                                nombreJoursVue={menusNombreJoursVue}
+                                onNombreJoursVueChange={setMenusNombreJoursVue}
+                            />
+                            {loading ? <span className={menuStyles.loadingHint}>Chargement…</span> : null}
+                        </div>
                     </div>
                 ) : null}
             </header>
@@ -562,56 +414,170 @@ const DetailsSejourMenus: React.FC = () => {
                 </div>
             )}
 
-            {datesListe.map((dayISO) => {
-                const menuParType = menusParJourEtType.get(dayISO) ?? new Map<TypeRepas, MenuRepasDto>();
-                const afficherTitreJour = datesListe.length > 1;
-                return (
-                    <section key={dayISO} className={menuStyles.daySection}>
-                        {afficherTitreJour ? (
-                            <h2 className={menuStyles.dayTitle}>{formaterDate(`${dayISO}T12:00:00`)}</h2>
-                        ) : null}
-                        <div className={menuStyles.grid}>
-                            {TYPES_REPAS.map((type) => {
-                                const menu = menuParType.get(type);
-                                return (
-                                    <article key={`${dayISO}-${type}`} className={menuStyles.card}>
-                                        <h2 className={menuStyles.cardTitle}>{LABELS_TYPE_REPAS[type]}</h2>
-                                        {menu ? (
-                                            <>
-                                                {renduBlocInfosCarte(menu)}
-                                                <div className={menuStyles.cardActions}>
-                                                    <Button color="primary" size="sm" onClick={() => ouvrirEdition(menu)}>
-                                                        Modifier
-                                                    </Button>
-                                                    <Button
-                                                        color="danger"
-                                                        size="sm"
-                                                        outline
-                                                        onClick={() => {
-                                                            setModalError(null);
-                                                            setPendingDelete(menu);
-                                                            setDeleteOpen(true);
-                                                        }}
+            {vueMenus === "calendrier" && joursFenetreMenus.length > 0 ? (
+                <div className={menuStyles.calWrap}>
+                    <div className={menuStyles.calScroll}>
+                        <table
+                            className={menuStyles.calTable}
+                            style={
+                                {
+                                    "--cal-menus-nb-jours": String(Math.max(1, joursFenetreMenus.length)),
+                                } as CSSProperties
+                            }
+                        >
+                            <colgroup>
+                                <col className={menuStyles.calColCorner} />
+                                {joursFenetreMenus.map((col) => (
+                                    <col key={col.ymd} className={menuStyles.calColJour} />
+                                ))}
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th scope="col" className={menuStyles.calCorner} />
+                                    {joursFenetreMenus.map((col) => {
+                                        const d = parseYmdVersDateLocale(col.ymd);
+                                        const libelle = d ? libelleJourCourtPourBouton(d) : col.ymd;
+                                        return (
+                                            <th
+                                                key={col.ymd}
+                                                scope="col"
+                                                className={`${menuStyles.calThJour} ${!col.dansSejour ? menuStyles.calThHorsSejour : ""}`}
+                                            >
+                                                {libelle}
+                                                {!col.dansSejour ? (
+                                                    <span className={menuStyles.calHorsSejourHint}>Hors séjour</span>
+                                                ) : null}
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {TYPES_REPAS.map((type) => (
+                                    <tr key={type}>
+                                        <th scope="row" className={menuStyles.calThRepas}>
+                                            {LABELS_TYPE_REPAS[type]}
+                                        </th>
+                                        {joursFenetreMenus.map((col) => {
+                                            if (!col.dansSejour) {
+                                                return (
+                                                    <td
+                                                        key={`${col.ymd}-${type}`}
+                                                        className={`${planningCal.cellShell} ${planningCal.cellToneEmpty} ${planningCal.cellToneHorsSejour} ${menuStyles.calMenusTdSizing} ${menuStyles.calMenusTdHors}`}
                                                     >
-                                                        Supprimer
-                                                    </Button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <p className={menuStyles.empty}>Aucun menu renseigné.</p>
-                                                <Button color="success" size="sm" onClick={() => ouvrirCreation(type, dayISO)}>
-                                                    Ajouter
-                                                </Button>
-                                            </>
-                                        )}
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    </section>
-                );
-            })}
+                                                        <span className={menuStyles.calTdMuted}>—</span>
+                                                    </td>
+                                                );
+                                            }
+                                            const datePourAria = formaterDate(`${col.ymd}T12:00:00`);
+                                            const menu = menusParJourEtType.get(col.ymd)?.get(type);
+                                            if (!menu) {
+                                                const ouvrirCellule = () => ouvrirCreation(type, col.ymd);
+                                                return (
+                                                    <td
+                                                        key={`${col.ymd}-${type}`}
+                                                        className={`${planningCal.cellShell} ${planningCal.cellToneEmpty} ${planningCal.cellAjoutClic} ${menuStyles.calMenusTdSizing}`}
+                                                        {...proprietesTdAjoutPlanning(
+                                                            true,
+                                                            `Ajouter le menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`,
+                                                            ouvrirCellule,
+                                                        )}
+                                                    >
+                                                        <CalendrierCelluleAjoutHint />
+                                                    </td>
+                                                );
+                                            }
+                                            const resume = resumeMenuCourt(menu);
+                                            const meta = ligneMetaAllergenesRegimesCalendrier(menu);
+                                            const editionDesactivee = deleting && pendingDelete?.id === menu.id;
+                                            return (
+                                                <td
+                                                    key={`${col.ymd}-${type}`}
+                                                    className={`${planningCal.cellShell} ${planningCal.cellToneFilled} ${menuStyles.calMenusTdSizing}`}
+                                                >
+                                                    <CalendrierCarteEditionAvecSuppression
+                                                        onEdit={() => ouvrirEdition(menu)}
+                                                        editDisabled={editionDesactivee}
+                                                        editAriaLabel={`Modifier le menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`}
+                                                        mainButtonStyle={
+                                                            {
+                                                                "--plan-cal-carte-bg": couleurFondCarteMenuPourTypeRepas(type),
+                                                            } as CSSProperties
+                                                        }
+                                                        onDeleteClick={() => demanderSuppressionMenu(menu)}
+                                                        deleteAriaLabel={`Supprimer le menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`}
+                                                        deleteDisabled={editionDesactivee}
+                                                    >
+                                                        <span className={menuStyles.calMenusCarteResume}>{resume}</span>
+                                                        {meta ? (
+                                                            <span className={menuStyles.calMenusCarteMeta}>{meta}</span>
+                                                        ) : null}
+                                                    </CalendrierCarteEditionAvecSuppression>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    {menus.length === 0 && !loading && !pageError ? (
+                        <p className={planningCal.footnote}>
+                            Aucun menu renseigné sur cette plage — cliquez dans une case (jour et type de repas) pour en
+                            ajouter un.
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
+
+            {vueMenus === "liste"
+                ? datesListe.map((dayISO) => {
+                      const menuParType = menusParJourEtType.get(dayISO) ?? new Map<TypeRepas, MenuRepasDto>();
+                      const afficherTitreJour = datesListe.length > 1;
+                      return (
+                          <section key={dayISO} className={menuStyles.daySection}>
+                              {afficherTitreJour ? (
+                                  <h2 className={menuStyles.dayTitle}>{formaterDate(`${dayISO}T12:00:00`)}</h2>
+                              ) : null}
+                              <div className={menuStyles.grid}>
+                                  {TYPES_REPAS.map((type) => {
+                                      const menu = menuParType.get(type);
+                                      return (
+                                          <article key={`${dayISO}-${type}`} className={menuStyles.card}>
+                                              <h2 className={menuStyles.cardTitle}>{LABELS_TYPE_REPAS[type]}</h2>
+                                              {menu ? (
+                                                  <>
+                                                      {renduBlocInfosCarte(menu)}
+                                                      <div className={menuStyles.cardActions}>
+                                                          <Button color="primary" size="sm" onClick={() => ouvrirEdition(menu)}>
+                                                              Modifier
+                                                          </Button>
+                                                          <Button
+                                                              color="danger"
+                                                              size="sm"
+                                                              outline
+                                                              onClick={() => demanderSuppressionMenu(menu)}
+                                                          >
+                                                              Supprimer
+                                                          </Button>
+                                                      </div>
+                                                  </>
+                                              ) : (
+                                                  <>
+                                                      <p className={menuStyles.empty}>Aucun menu renseigné.</p>
+                                                      <Button color="success" size="sm" onClick={() => ouvrirCreation(type, dayISO)}>
+                                                          Ajouter
+                                                      </Button>
+                                                  </>
+                                              )}
+                                          </article>
+                                      );
+                                  })}
+                              </div>
+                          </section>
+                      );
+                  })
+                : null}
 
             <Modal isOpen={editorOpen} toggle={() => !submitting && setEditorOpen(false)} size="lg">
                 <ModalHeader toggle={() => !submitting && setEditorOpen(false)}>
@@ -623,77 +589,62 @@ const DetailsSejourMenus: React.FC = () => {
                     <span className={menuStyles.modalDateMuted}> ({modalDateRepasStr})</span>
                 </ModalHeader>
                 <ModalBody>
-                    {typeRepasCourant && estPetitDejeunerOuGouter(typeRepasCourant) ? (
-                        <FormGroup>
-                            <Input
-                                id="menu-detail"
-                                type="textarea"
-                                rows={menuFormCompact ? 1 : 6}
-                                value={fDetail}
-                                onChange={(e) => setFDetail(e.target.value)}
-                                disabled={submitting}
-                                placeholder="Contenu"
-                            />
-                        </FormGroup>
-                    ) : (
-                        <>
-                            <FormGroup>
-                                <Label for="menu-entree">Entrée</Label>
-                                <Input
-                                    id="menu-entree"
-                                    type="textarea"
-                                    rows={menuFormCompact ? 1 : 2}
-                                    value={fEntree}
-                                    onChange={(e) => setFEntree(e.target.value)}
-                                    disabled={submitting}
-                                />
-                            </FormGroup>
-                            <FormGroup>
-                                <Label for="menu-plat">Plat</Label>
-                                <Input
-                                    id="menu-plat"
-                                    type="textarea"
-                                    rows={menuFormCompact ? 1 : 2}
-                                    value={fPlat}
-                                    onChange={(e) => setFPlat(e.target.value)}
-                                    disabled={submitting}
-                                />
-                            </FormGroup>
-                            <FormGroup>
-                                <Label for="menu-fromage">Fromage ou entremet</Label>
-                                <Input
-                                    id="menu-fromage"
-                                    type="textarea"
-                                    rows={menuFormCompact ? 1 : 2}
-                                    value={fFromage}
-                                    onChange={(e) => setFFromage(e.target.value)}
-                                    disabled={submitting}
-                                />
-                            </FormGroup>
-                            <FormGroup>
-                                <Label for="menu-dessert">Dessert</Label>
-                                <Input
-                                    id="menu-dessert"
-                                    type="textarea"
-                                    rows={menuFormCompact ? 1 : 2}
-                                    value={fDessert}
-                                    onChange={(e) => setFDessert(e.target.value)}
-                                    disabled={submitting}
-                                />
-                            </FormGroup>
-                        </>
-                    )}
-                    {renduCasesRefsModal()}
-                    {modalError && <p className={menuStyles.modalError}>{modalError}</p>}
+                    <MenuRepasFormulaireCorps
+                        typeRepasCourant={typeRepasCourant}
+                        menuFormCompact={menuFormCompact}
+                        fDetail={fDetail}
+                        onChangeDetail={setFDetail}
+                        fEntree={fEntree}
+                        onChangeEntree={setFEntree}
+                        fPlat={fPlat}
+                        onChangePlat={setFPlat}
+                        fFromage={fFromage}
+                        onChangeFromage={setFFromage}
+                        fDessert={fDessert}
+                        onChangeDessert={setFDessert}
+                        fAllergeneIds={fAllergeneIds}
+                        onToggleAllergene={(id, checked) =>
+                            setFAllergeneIds((prev) => toggleSel(prev, id, checked))
+                        }
+                        fRegimePreferenceIds={fRegimePreferenceIds}
+                        onToggleRegime={(id, checked) =>
+                            setFRegimePreferenceIds((prev) => toggleSel(prev, id, checked))
+                        }
+                        allergCheckboxOptions={allergCheckboxOptions}
+                        regimeCheckboxOptions={regimeCheckboxOptions}
+                        refsErreur={refsErreur}
+                        refsChargeTerminee={refsChargeTerminee}
+                        submitting={submitting}
+                        css={{
+                            checkboxSection: menuStyles.checkboxSection,
+                            checkboxScroll: menuStyles.checkboxScroll,
+                            checkboxRow: menuStyles.checkboxRow,
+                            fieldHint: menuStyles.fieldHint,
+                            modalError: menuStyles.modalError,
+                        }}
+                    />
                 </ModalBody>
-                <ModalFooter>
-                    <Button color="secondary" onClick={() => setEditorOpen(false)} disabled={submitting}>
-                        Annuler
-                    </Button>
-                    <Button color="success" onClick={() => void enregistrer()} disabled={submitting}>
-                        {submitting ? "Enregistrement…" : "Enregistrer"}
-                    </Button>
-                </ModalFooter>
+                <PlanningModalFooterFormulaire
+                    messageErreur={modalError ?? undefined}
+                    actions={
+                        <>
+                            <Button color="secondary" onClick={() => setEditorOpen(false)} disabled={submitting}>
+                                Annuler
+                            </Button>
+                            <Button
+                                color={editingMenu == null ? "success" : "primary"}
+                                onClick={() => void enregistrer()}
+                                disabled={submitting}
+                            >
+                                {submitting
+                                    ? "Enregistrement…"
+                                    : editingMenu == null
+                                      ? "Créer"
+                                      : "Enregistrer"}
+                            </Button>
+                        </>
+                    }
+                />
             </Modal>
 
             <Modal isOpen={deleteOpen} toggle={() => !deleting && setDeleteOpen(false)}>
