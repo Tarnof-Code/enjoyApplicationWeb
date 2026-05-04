@@ -6,6 +6,8 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 ## Journal (extraits)
 
+- **2026-05-04 (Liste des activités → PlanningCalendrier, 2ᵉ commit) :** **`ListeActivites.tsx`**, **`ListeActivitesCalendrier.tsx`** et **`ListeActivites.module.scss`** passent sur les composants et styles **`PlanningCalendrier`** (cartes édition/suppression, indications d’ajout sur cases vides, pied de modal **`PlanningModalFooterFormulaire`** où c’est factorisé, **`proprietesTdAjoutPlanning`** / clavier sur les **`td`** ajout).
+
 - **2026-05-04 (PlanningCalendrier — primitives seules, premier commit) :** Ajout du dossier **`src/components/PlanningCalendrier/`** : **`CalendrierCarteEditionAvecSuppression`**, **`CalendrierCelluleAjoutHint`**, **`PlanningModalFooterFormulaire`**, **`calendrierCelluleClavier.ts`**, **`PlanningCalendrier.module.scss`**. Objectif : mutualiser UI + a11y des tableaux « planning » (cartes cliquables, cases vides ajoutables au clavier, pied de modal). **Les écrans consommateurs** (ex. **`ListeActivitesCalendrier`**, **`DetailsSejourMenus`**) peuvent suivre dans des commits séparés.
 
 - **2026-05-04 (Menus repas & références alimentaires) :** Route **`/directeur/sejours/:id/menus`** dans **App.tsx** → **`DetailsSejourMenus`** pour la gestion des menus du séjour ; **`DetailsSejourMenus.module.scss`**. **Header** : segment **Menus** (`FaUtensils`) après **Activités**, avant **Paramétrage**. **`ListeReferencesAlimentaires`** (+ module SCSS) pour afficher et gérer les références alimentaires. Services **`references-alimentaires.service.ts`**, **`sejour-menu.service.ts`** ; helpers **`dateIsoLocal.ts`**, **`optionsReferencesAlimentaires.ts`** ; **`api.d.ts`** mis à jour. **Formulaire dossier enfant** : **`DossierEnfant`**, **`DossierEnfantForm`**, évolutions **`Form.tsx`** / **`Form.module.scss`** pour les données diététiques. **`DetailsSejourParametrage`** ajusté en cohérence avec la nouvelle section.
@@ -25,7 +27,7 @@ Application stabilisée sur React 19 avec React Compiler activé.
 
 ## Dernières réalisations (synthèse)
 
-- **`PlanningCalendrier/`** — primitives UI + SCSS pour calendriers/plannings tabulaires (premier dépôt de la refactor ; adoption incrémentale sur les autres fichiers ensuite).
+- **`PlanningCalendrier/`** — primitives puis **migration** : **`ListeActivites`** / **`ListeActivitesCalendrier`** utilisent les composants et styles partagés ; **`DetailsSejourMenus*`** peut suivre dans un commit dédié.
 
 - **Menus repas (détail séjour)** — **`DetailsSejourMenus`** + **`DetailsSejourMenus.module.scss`** ; route **`/directeur/sejours/:id/menus`**. **`ListeReferencesAlimentaires`** pour le référentiel alimentaire. Services **`sejour-menu.service.ts`**, **`references-alimentaires.service.ts`** ; helpers **`dateIsoLocal`**, **`optionsReferencesAlimentaires`** ; contrat **`api.d.ts`**. **Dossier enfant** : champs diététiques via **`DossierEnfant`**, **`DossierEnfantForm`**, **`Form`** / **`Form.module.scss`**.
 

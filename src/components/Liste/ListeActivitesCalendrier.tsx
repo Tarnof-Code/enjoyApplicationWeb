@@ -1,8 +1,10 @@
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, MomentDto } from "../../types/api";
+import { CalendrierCarteEditionAvecSuppression } from "../PlanningCalendrier/CalendrierCarteEditionAvecSuppression";
+import { CalendrierCelluleAjoutHint } from "../PlanningCalendrier/CalendrierCelluleAjoutHint";
+import { proprietesTdAjoutPlanning } from "../PlanningCalendrier/calendrierCelluleClavier";
+import planningCal from "../PlanningCalendrier/PlanningCalendrier.module.scss";
 import type { MembreEquipeSejour } from "./listeActivitesTypes";
 import {
     CALENDRIER_NOMBRES_JOURS_VUE,
@@ -366,9 +368,9 @@ export function CalendrierPlanning({
         <div className={styles.calendrierWrap}>
             {joursFenetreCalendrier.length > 0 ? (
                 equipePourCalendrier.length === 0 ? (
-                    <p className={styles.calendrierFootnote}>Aucun animateur ne correspond aux filtres sélectionnés.</p>
+                    <p className={planningCal.footnote}>Aucun animateur ne correspond aux filtres sélectionnés.</p>
                 ) : calendrierFiltreExclutTousLesGroupes ? (
-                    <p className={styles.calendrierFootnote}>
+                    <p className={planningCal.footnote}>
                         Aucun groupe ne fait partie du filtre — aucune activité ne peut s’afficher. Sélectionnez au moins
                         un groupe pour voir le planning.
                     </p>
@@ -444,128 +446,95 @@ export function CalendrierPlanning({
                                                     brutesFiltreesGroupe,
                                                     momentsTriés
                                                 );
-                                                const classeCellule =
+                                                const classeTone =
                                                     dansCellule.length > 0
-                                                        ? styles.calendrierCellFilled
-                                                        : styles.calendrierCellEmpty;
+                                                        ? planningCal.cellToneFilled
+                                                        : planningCal.cellToneEmpty;
                                                 const celluleAjoutClic =
                                                     dansSejour && peutAjouterActivite && dansCellule.length === 0;
+                                                const ouvrirNouvelleActiviteCellule = () =>
+                                                    onOpenNouvelleActivite({
+                                                        dateYmd: ymd,
+                                                        animateurTokenId: membre.tokenId,
+                                                    });
                                                 return (
                                                     <td
                                                         key={ymd}
-                                                        className={`${classeCellule} ${
-                                                            !dansSejour ? styles.calendrierCellHorsSejour : ""
-                                                        } ${celluleAjoutClic ? styles.calendrierCellAjoutClic : ""}`}
-                                                        {...(celluleAjoutClic
-                                                            ? {
-                                                                  role: "button",
-                                                                  tabIndex: 0,
-                                                                  "aria-label": `Ajouter une activité le ${ymd} pour ${membre.prenom} ${membre.nom}`,
-                                                                  onClick: () =>
-                                                                      onOpenNouvelleActivite({
-                                                                          dateYmd: ymd,
-                                                                          animateurTokenId: membre.tokenId,
-                                                                      }),
-                                                                  onKeyDown: (e: React.KeyboardEvent) => {
-                                                                      if (e.key === "Enter" || e.key === " ") {
-                                                                          e.preventDefault();
-                                                                          onOpenNouvelleActivite({
-                                                                              dateYmd: ymd,
-                                                                              animateurTokenId: membre.tokenId,
-                                                                          });
-                                                                      }
-                                                                  },
-                                                              }
-                                                            : {})}
+                                                        className={`${planningCal.cellShell} ${classeTone} ${
+                                                            !dansSejour ? planningCal.cellToneHorsSejour : ""
+                                                        } ${celluleAjoutClic ? planningCal.cellAjoutClic : ""}`}
+                                                        {...proprietesTdAjoutPlanning(
+                                                            celluleAjoutClic,
+                                                            `Ajouter une activité le ${ymd} pour ${membre.prenom} ${membre.nom}`,
+                                                            ouvrirNouvelleActiviteCellule,
+                                                        )}
                                                     >
-                                                        {celluleAjoutClic ? (
-                                                            <span
-                                                                className={styles.calendrierCellAjoutHint}
-                                                                aria-hidden
-                                                            >
-                                                                Cliquer pour ajouter
-                                                            </span>
-                                                        ) : null}
+                                                        {celluleAjoutClic ? <CalendrierCelluleAjoutHint /> : null}
                                                         {dansCellule.map((a) => (
-                                                            <div
+                                                            <CalendrierCarteEditionAvecSuppression
                                                                 key={a.id}
-                                                                className={styles.calendrierActiviteCard}
+                                                                onEdit={() => onOpenEdit(a)}
+                                                                editDisabled={deletingActiviteId === a.id}
+                                                                editAriaLabel={`Éditer l’activité « ${a.nom} »`}
+                                                                mainButtonStyle={
+                                                                    {
+                                                                        "--plan-cal-carte-bg":
+                                                                            couleurFondCalendrierPourTypeActivite(
+                                                                                a.typeActivite?.id,
+                                                                            ),
+                                                                    } as React.CSSProperties
+                                                                }
+                                                                onDeleteClick={() => onDelete(a.id)}
+                                                                deleteAriaLabel={`Supprimer l’activité « ${a.nom} »`}
+                                                                deleteDisabled={deletingActiviteId === a.id}
                                                             >
-                                                                <button
-                                                                    type="button"
-                                                                    className={styles.calendrierActiviteBtn}
-                                                                    style={
-                                                                        {
-                                                                            "--cal-act-type-bg":
-                                                                                couleurFondCalendrierPourTypeActivite(
-                                                                                    a.typeActivite?.id
-                                                                                ),
-                                                                        } as React.CSSProperties
-                                                                    }
-                                                                    onClick={() => onOpenEdit(a)}
-                                                                    disabled={deletingActiviteId === a.id}
-                                                                >
-                                                                    {a.moment ? (
-                                                                        <span className={styles.calendrierActiviteMoment}>
-                                                                            {a.moment.nom}
-                                                                        </span>
-                                                                    ) : null}
-                                                                    <span className={styles.calendrierActiviteNom}>
-                                                                        {a.nom}
+                                                                {a.moment ? (
+                                                                    <span className={styles.calendrierActiviteMoment}>
+                                                                        {a.moment.nom}
                                                                     </span>
-                                                                    {a.lieu ? (
-                                                                        <span className={styles.calendrierActiviteLieu}>
-                                                                            Lieu : {a.lieu.nom}
-                                                                        </span>
-                                                                    ) : null}
-                                                                    {(() => {
-                                                                        const autresAnimateurs = (
-                                                                            a.membres ?? []
-                                                                        ).filter((m) => m.tokenId !== membre.tokenId);
-                                                                        if (autresAnimateurs.length === 0) return null;
-                                                                        return (
-                                                                            <span
-                                                                                className={styles.calendrierActiviteAvec}
-                                                                            >
-                                                                                Avec :{" "}
-                                                                                {autresAnimateurs
-                                                                                    .map((m) =>
-                                                                                        `${m.prenom} ${m.nom}`.trim()
-                                                                                    )
-                                                                                    .join(", ")}
-                                                                            </span>
-                                                                        );
-                                                                    })()}
-                                                                    {a.groupeIds?.length ? (
+                                                                ) : null}
+                                                                <span className={styles.calendrierActiviteNom}>
+                                                                    {a.nom}
+                                                                </span>
+                                                                {a.lieu ? (
+                                                                    <span className={styles.calendrierActiviteLieu}>
+                                                                        Lieu : {a.lieu.nom}
+                                                                    </span>
+                                                                ) : null}
+                                                                {(() => {
+                                                                    const autresAnimateurs = (a.membres ?? []).filter(
+                                                                        (m) => m.tokenId !== membre.tokenId,
+                                                                    );
+                                                                    if (autresAnimateurs.length === 0) return null;
+                                                                    return (
                                                                         <span
-                                                                            className={styles.calendrierActiviteGroupes}
+                                                                            className={styles.calendrierActiviteAvec}
                                                                         >
-                                                                            Groupes :{" "}
-                                                                            {a.groupeIds
-                                                                                .map(
-                                                                                    (id) =>
-                                                                                        groupes.find((g) => g.id === id)
-                                                                                            ?.nom
+                                                                            Avec :{" "}
+                                                                            {autresAnimateurs
+                                                                                .map((m) =>
+                                                                                    `${m.prenom} ${m.nom}`.trim(),
                                                                                 )
-                                                                                .filter(Boolean)
-                                                                                .join(", ") || "—"}
+                                                                                .join(", ")}
                                                                         </span>
-                                                                    ) : null}
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className={styles.calendrierActiviteDeleteBtn}
-                                                                    aria-label={`Supprimer l’activité « ${a.nom} »`}
-                                                                    title="Supprimer"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        onDelete(a.id);
-                                                                    }}
-                                                                    disabled={deletingActiviteId === a.id}
-                                                                >
-                                                                    <FontAwesomeIcon icon={faTrash} />
-                                                                </button>
-                                                            </div>
+                                                                    );
+                                                                })()}
+                                                                {a.groupeIds?.length ? (
+                                                                    <span
+                                                                        className={styles.calendrierActiviteGroupes}
+                                                                    >
+                                                                        Groupes :{" "}
+                                                                        {a.groupeIds
+                                                                            .map(
+                                                                                (id) =>
+                                                                                    groupes.find((g) => g.id === id)
+                                                                                        ?.nom,
+                                                                            )
+                                                                            .filter(Boolean)
+                                                                            .join(", ") || "—"}
+                                                                    </span>
+                                                                ) : null}
+                                                            </CalendrierCarteEditionAvecSuppression>
                                                         ))}
                                                         {dansSejour && peutAjouterActivite && dansCellule.length > 0 ? (
                                                             <button
@@ -592,10 +561,10 @@ export function CalendrierPlanning({
                     </div>
                 )
             ) : (
-                <p className={styles.calendrierFootnote}>Période du calendrier indisponible.</p>
+                <p className={planningCal.footnote}>Période du calendrier indisponible.</p>
             )}
             {activitesCount === 0 && !calendrierFiltreExclutTousLesGroupes ? (
-                <p className={styles.calendrierFootnote}>
+                <p className={planningCal.footnote}>
                     Aucune activité planifiée — cliquez dans une case (jour et animateur) pour en ajouter une.
                 </p>
             ) : null}

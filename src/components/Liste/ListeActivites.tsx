@@ -6,6 +6,7 @@ import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/Emplac
 import { sejourActiviteService } from "../../services/sejour-activite.service";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import styles from "./ListeActivites.module.scss";
+import { PlanningModalFooterFormulaire } from "../PlanningCalendrier/PlanningModalFooterFormulaire";
 import {
     CalendrierFiltresPlanning,
     CalendrierNavigationPeriode,
@@ -1050,23 +1051,23 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         </div>
                     </FormGroup>
                 </ModalBody>
-                <ModalFooter className={styles.modalFooter}>
-                    <div className={styles.modalFooterMessage} aria-live="polite">
-                        {errorMessage ? <span className={styles.modalFooterError}>{errorMessage}</span> : null}
-                    </div>
-                    <div className={styles.modalFooterActions}>
-                        <Button color="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>
-                            Annuler
-                        </Button>
-                        <Button
-                            color={editingActiviteId == null ? "success" : "primary"}
-                            onClick={handleSubmit}
-                            disabled={submitting}
-                        >
-                            {submitting ? "Enregistrement…" : editingActiviteId == null ? "Créer" : "Enregistrer"}
-                        </Button>
-                    </div>
-                </ModalFooter>
+                <PlanningModalFooterFormulaire
+                    messageErreur={errorMessage ?? undefined}
+                    actions={
+                        <>
+                            <Button color="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>
+                                Annuler
+                            </Button>
+                            <Button
+                                color={editingActiviteId == null ? "success" : "primary"}
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                            >
+                                {submitting ? "Enregistrement…" : editingActiviteId == null ? "Créer" : "Enregistrer"}
+                            </Button>
+                        </>
+                    }
+                />
             </Modal>
 
             <Modal isOpen={deleteModalOpen} toggle={() => !deletingActiviteId && setDeleteModalOpen(false)}>
