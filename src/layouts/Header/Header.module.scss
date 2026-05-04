@@ -50,13 +50,13 @@
   text-align: center;
   margin: 1rem 0 1rem 0;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1199.98px) {
     flex-direction: row;
     margin-bottom: 0.5em;
   }
 
   svg {
-    @media (max-width: 768px) {
+    @media (max-width: 1199.98px) {
       margin-right: 1em;
     }
   }
@@ -190,7 +190,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1199.98px) {
   .directorContextRow {
     width: 100%;
     flex-direction: column;

@@ -68,7 +68,7 @@ const Admin_header: React.FC = () => {
 
   return (
     <header className={styles.main}>
-      <Navbar expand="md" dark className={styles.navbar}>
+      <Navbar expand="xl" dark className={styles.navbar}>
         <NavLink to={"/"} className={`${styles.brand} ${styles.link}`}>
           {import.meta.env.VITE_APP_NAME || "Enjoy"}
         </NavLink>
