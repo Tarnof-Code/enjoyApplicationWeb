@@ -206,6 +206,83 @@
     font-size: 0.9rem;
 }
 
+.paramRepasBloc {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 1.25rem;
+    max-width: 52rem;
+}
+
+.paramRepasFieldset {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    margin: 0;
+    flex: 1 1 260px;
+    min-width: min(260px, 100%);
+}
+
+@media (max-width: 600px) {
+    .paramRepasBloc {
+        flex-direction: column;
+    }
+
+    .paramRepasFieldset {
+        flex: none;
+        min-width: unset;
+        width: 100%;
+    }
+}
+
+.paramRepasLegend {
+    float: unset;
+    width: auto;
+    padding: 0 0.35rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #222;
+}
+
+.paramRepasResetLink {
+    display: inline-block;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    color: #007bff;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover {
+        text-decoration: underline;
+        color: #0056b3;
+    }
+}
+
+.paramRepasResetLink.paramRepasResetLinkTrailing {
+    margin: 0.6rem 0 0;
+}
+
+.paramRepasCheckboxRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+    font-weight: 500;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    input[type="checkbox"] {
+        flex-shrink: 0;
+        margin-top: 0.2rem;
+    }
+}
+
 .error {
     color: #dc3545;
     font-size: 1.2rem;

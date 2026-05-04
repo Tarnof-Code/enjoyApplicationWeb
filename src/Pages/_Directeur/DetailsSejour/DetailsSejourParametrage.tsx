@@ -20,9 +20,10 @@ import {
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
 import DetailsSejourAccordionItem from "../../../components/DetailsSejour/DetailsSejourAccordionItem";
+import ParametrageAffichageMenus from "./ParametrageAffichageMenus";
 
-/** Ordre des blocs sur la page Paramétrage (1 Lieux … 5 Références alimentaires). */
-const PARAM_ACCORDION_IDS = ["1", "2", "3", "4", "5"] as const;
+/** Ordre des blocs sur la page Paramétrage (1 Lieux … 6 Repas / menus). */
+const PARAM_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6"] as const;
 const PARAM_ACCORDION_ID_LIST = [...PARAM_ACCORDION_IDS];
 const PARAM_ACCORDION_ID_SET = new Set<string>(PARAM_ACCORDION_ID_LIST);
 
@@ -212,6 +213,8 @@ const DetailsSejourParametrage: React.FC = () => {
                 return `Types d'activité (${typesActivite.length})`;
             case "5":
                 return "Références alimentaires";
+            case "6":
+                return "Affichage des menus";
             default:
                 return "";
         }
@@ -302,6 +305,8 @@ const DetailsSejourParametrage: React.FC = () => {
                 );
             case "5":
                 return <ListeReferencesAlimentaires />;
+            case "6":
+                return <ParametrageAffichageMenus sejourId={sejour.id} />;
             default:
                 return null;
         }

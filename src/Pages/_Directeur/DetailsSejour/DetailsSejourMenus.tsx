@@ -26,7 +26,12 @@ import {
     estPetitDejeunerOuGouter,
     ligneMetaAllergenesRegimesCalendrier,
     resumeMenuCourt,
+    type ResumeMenuCourtChampsVisibles,
 } from "../../../helpers/menuRepas";
+import {
+    cleLocalStorageAffichageMenus,
+    lirePreferencesAffichageMenusSejour,
+} from "../../../helpers/menuRepasAffichageSejour";
 import { optionsCheckboxReferencesAlimentaires } from "../../../helpers/optionsReferencesAlimentaires";
 import { sejourMenuService } from "../../../services/sejour-menu.service";
 
@@ -71,7 +76,37 @@ const DetailsSejourMenus: React.FC = () => {
     /** Affichage liste (cartes par jour) ou grille type planning (repas × jours). */
     const [vueMenus, setVueMenus] = useState<"liste" | "calendrier">("calendrier");
 
+    /** Relecture préférences depuis le stockage après changements (paramétrage, autre onglet). */
+    const [preferencesMenusNonce, setPreferencesMenusNonce] = useState(0);
+
     const sejour = loaderData && !(loaderData instanceof Error) ? loaderData.sejour : undefined;
+
+    const prefsAffichageMenus = useMemo(
+        () => (sejour ? lirePreferencesAffichageMenusSejour(sejour.id) : null),
+        [sejour?.id, preferencesMenusNonce],
+    );
+
+    useEffect(() => {
+        const id = sejour?.id;
+        const onPersoMenus = (ev: Event) => {
+            const d = (ev as CustomEvent<{ sejourId?: number }>).detail;
+            if (d?.sejourId === id) setPreferencesMenusNonce((n) => n + 1);
+        };
+        window.addEventListener("enjoy-menu-affichage-changed", onPersoMenus);
+        const onStorage = (e: StorageEvent) => {
+            if (id !== undefined && e.key === cleLocalStorageAffichageMenus(id))
+                setPreferencesMenusNonce((n) => n + 1);
+        };
+        window.addEventListener("storage", onStorage);
+        return () => {
+            window.removeEventListener("enjoy-menu-affichage-changed", onPersoMenus);
+            window.removeEventListener("storage", onStorage);
+        };
+    }, [sejour?.id]);
+
+    const typesRepasPourAffichageMenus = prefsAffichageMenus?.typesRepasVisibles ?? TYPES_REPAS;
+    const champsComposeMenusVisibles =
+        prefsAffichageMenus?.champsComposeVisibles ?? null;
 
     const joursDuSejourMenus = useMemo(
         () => (sejour ? enumererJoursDuSejour(sejour) : []),
@@ -289,8 +324,9 @@ const DetailsSejourMenus: React.FC = () => {
         }
     };
 
-    const renduBlocInfosCarte = (menu: MenuRepasDto) => {
+    const renduBlocInfosCarte = (menu: MenuRepasDto, cv: ResumeMenuCourtChampsVisibles | null) => {
         const metaAllergRegimes = ligneMetaAllergenesRegimesCalendrier(menu);
+        const lignesMontreCle = (cle: keyof ResumeMenuCourtChampsVisibles) => cv == null || cv[cle];
 
         const lignesMenu: ReactNode[] = [];
         if (estPetitDejeunerOuGouter(menu.typeRepas)) {
@@ -301,16 +337,16 @@ const DetailsSejourMenus: React.FC = () => {
                 </div>,
             );
         } else {
-            (
-                [
-                    { label: "Entrée :", val: menu.entree },
-                    { label: "Plat :", val: menu.plat },
-                    { label: "Fromage ou entremet :", val: menu.fromageOuEntremet },
-                    { label: "Dessert :", val: menu.dessert },
-                ] as const
-            ).forEach(({ label, val }) => {
+            const lignesPossibles = [
+                { cle: "entree" as const, label: "Entrée :", val: menu.entree },
+                { cle: "plat" as const, label: "Plat :", val: menu.plat },
+                { cle: "fromageOuEntremet" as const, label: "Fromage ou entremet :", val: menu.fromageOuEntremet },
+                { cle: "dessert" as const, label: "Dessert :", val: menu.dessert },
+            ] as const;
+            lignesPossibles.forEach(({ cle, label, val }) => {
+                if (!lignesMontreCle(cle)) return;
                 lignesMenu.push(
-                    <div key={label}>
+                    <div key={cle}>
                         <span className={menuStyles.refLabel}>{label}</span>
                         <span>{val?.trim() || "—"}</span>
                     </div>,
@@ -453,7 +489,7 @@ const DetailsSejourMenus: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {TYPES_REPAS.map((type) => (
+                                {typesRepasPourAffichageMenus.map((type) => (
                                     <tr key={type}>
                                         <th scope="row" className={menuStyles.calThRepas}>
                                             {LABELS_TYPE_REPAS[type]}
@@ -487,7 +523,7 @@ const DetailsSejourMenus: React.FC = () => {
                                                     </td>
                                                 );
                                             }
-                                            const resume = resumeMenuCourt(menu);
+                                            const resume = resumeMenuCourt(menu, champsComposeMenusVisibles);
                                             const meta = ligneMetaAllergenesRegimesCalendrier(menu);
                                             const editionDesactivee = deleting && pendingDelete?.id === menu.id;
                                             return (
@@ -540,14 +576,14 @@ const DetailsSejourMenus: React.FC = () => {
                                   <h2 className={menuStyles.dayTitle}>{formaterDate(`${dayISO}T12:00:00`)}</h2>
                               ) : null}
                               <div className={menuStyles.grid}>
-                                  {TYPES_REPAS.map((type) => {
+                                  {typesRepasPourAffichageMenus.map((type) => {
                                       const menu = menuParType.get(type);
                                       return (
                                           <article key={`${dayISO}-${type}`} className={menuStyles.card}>
                                               <h2 className={menuStyles.cardTitle}>{LABELS_TYPE_REPAS[type]}</h2>
                                               {menu ? (
                                                   <>
-                                                      {renduBlocInfosCarte(menu)}
+                                                      {renduBlocInfosCarte(menu, champsComposeMenusVisibles)}
                                                       <div className={menuStyles.cardActions}>
                                                           <Button color="primary" size="sm" onClick={() => ouvrirEdition(menu)}>
                                                               Modifier
@@ -616,6 +652,7 @@ const DetailsSejourMenus: React.FC = () => {
                         refsErreur={refsErreur}
                         refsChargeTerminee={refsChargeTerminee}
                         submitting={submitting}
+                        champsComposeVisibles={champsComposeMenusVisibles}
                         css={{
                             checkboxSection: menuStyles.checkboxSection,
                             checkboxScroll: menuStyles.checkboxScroll,

@@ -1,6 +1,10 @@
 import { FormGroup, Input, Label } from "reactstrap";
 import type { TypeRepas } from "../../types/api";
-import { estPetitDejeunerOuGouter, libelleCompositionCheckboxPourAffichage } from "../../helpers/menuRepas";
+import {
+    estPetitDejeunerOuGouter,
+    libelleCompositionCheckboxPourAffichage,
+    type ResumeMenuCourtChampsVisibles,
+} from "../../helpers/menuRepas";
 import type { ReferenceCheckboxOption } from "../../helpers/optionsReferencesAlimentaires";
 
 export type MenuRepasFormulaireCorpsClasses = {
@@ -34,6 +38,8 @@ export type MenuRepasFormulaireCorpsProps = {
     refsChargeTerminee: boolean;
     submitting: boolean;
     css: MenuRepasFormulaireCorpsClasses;
+    /** Si absent : tous les champs composant le menu sont affichés. */
+    champsComposeVisibles?: ResumeMenuCourtChampsVisibles | null;
 };
 
 /** Champs corps du modal menu (réutilisable), sans pied ni titre. */
@@ -60,7 +66,22 @@ export function MenuRepasFormulaireCorps({
     refsChargeTerminee,
     submitting,
     css,
+    champsComposeVisibles,
 }: MenuRepasFormulaireCorpsProps) {
+    const cc = champsComposeVisibles ?? null;
+    const afficherEntree = cc == null || cc.entree;
+    const afficherPlat = cc == null || cc.plat;
+    const afficherFromage = cc == null || cc.fromageOuEntremet;
+    const afficherDessert = cc == null || cc.dessert;
+    const aucunChampComposeListe =
+        typeRepasCourant &&
+        !estPetitDejeunerOuGouter(typeRepasCourant) &&
+        cc != null &&
+        !afficherEntree &&
+        !afficherPlat &&
+        !afficherFromage &&
+        !afficherDessert;
+
     return (
         <>
             {typeRepasCourant && estPetitDejeunerOuGouter(typeRepasCourant) ? (
@@ -77,50 +98,64 @@ export function MenuRepasFormulaireCorps({
                 </FormGroup>
             ) : (
                 <>
-                    <FormGroup>
-                        <Label for="menu-entree">Entrée</Label>
-                        <Input
-                            id="menu-entree"
-                            type="textarea"
-                            rows={menuFormCompact ? 1 : 2}
-                            value={fEntree}
-                            onChange={(e) => onChangeEntree(e.target.value)}
-                            disabled={submitting}
-                        />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label for="menu-plat">Plat</Label>
-                        <Input
-                            id="menu-plat"
-                            type="textarea"
-                            rows={menuFormCompact ? 1 : 2}
-                            value={fPlat}
-                            onChange={(e) => onChangePlat(e.target.value)}
-                            disabled={submitting}
-                        />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label for="menu-fromage">Fromage ou entremet</Label>
-                        <Input
-                            id="menu-fromage"
-                            type="textarea"
-                            rows={menuFormCompact ? 1 : 2}
-                            value={fFromage}
-                            onChange={(e) => onChangeFromage(e.target.value)}
-                            disabled={submitting}
-                        />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label for="menu-dessert">Dessert</Label>
-                        <Input
-                            id="menu-dessert"
-                            type="textarea"
-                            rows={menuFormCompact ? 1 : 2}
-                            value={fDessert}
-                            onChange={(e) => onChangeDessert(e.target.value)}
-                            disabled={submitting}
-                        />
-                    </FormGroup>
+                    {aucunChampComposeListe ? (
+                        <p className={css.fieldHint}>
+                            Aucun champ de composition n’est affiché (paramétrage Repas). Vous pouvez toujours
+                            renseigner allergènes et régimes.
+                        </p>
+                    ) : null}
+                    {afficherEntree && (
+                        <FormGroup>
+                            <Label for="menu-entree">Entrée</Label>
+                            <Input
+                                id="menu-entree"
+                                type="textarea"
+                                rows={menuFormCompact ? 1 : 2}
+                                value={fEntree}
+                                onChange={(e) => onChangeEntree(e.target.value)}
+                                disabled={submitting}
+                            />
+                        </FormGroup>
+                    )}
+                    {afficherPlat && (
+                        <FormGroup>
+                            <Label for="menu-plat">Plat</Label>
+                            <Input
+                                id="menu-plat"
+                                type="textarea"
+                                rows={menuFormCompact ? 1 : 2}
+                                value={fPlat}
+                                onChange={(e) => onChangePlat(e.target.value)}
+                                disabled={submitting}
+                            />
+                        </FormGroup>
+                    )}
+                    {afficherFromage && (
+                        <FormGroup>
+                            <Label for="menu-fromage">Fromage ou entremet</Label>
+                            <Input
+                                id="menu-fromage"
+                                type="textarea"
+                                rows={menuFormCompact ? 1 : 2}
+                                value={fFromage}
+                                onChange={(e) => onChangeFromage(e.target.value)}
+                                disabled={submitting}
+                            />
+                        </FormGroup>
+                    )}
+                    {afficherDessert && (
+                        <FormGroup>
+                            <Label for="menu-dessert">Dessert</Label>
+                            <Input
+                                id="menu-dessert"
+                                type="textarea"
+                                rows={menuFormCompact ? 1 : 2}
+                                value={fDessert}
+                                onChange={(e) => onChangeDessert(e.target.value)}
+                                disabled={submitting}
+                            />
+                        </FormGroup>
+                    )}
                 </>
             )}
             {refsErreur ? (

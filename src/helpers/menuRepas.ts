@@ -192,16 +192,42 @@ export function ligneLibellesCompositionMenu(refs: ReferenceAlimentaireDto[] | u
 
 export const RESUME_MENU_MAX = 72;
 
+/** Champs de composition pour déjeuner / dîner (petit-déj. et goûter : détail toujours affiché). */
+export type ResumeMenuCourtChampsVisibles = {
+    entree: boolean;
+    plat: boolean;
+    fromageOuEntremet: boolean;
+    dessert: boolean;
+};
+
+const RESUME_MENU_TOUS_CHAMPS_VISIBLES: ResumeMenuCourtChampsVisibles = {
+    entree: true,
+    plat: true,
+    fromageOuEntremet: true,
+    dessert: true,
+};
+
+/** Valeurs par défaut : afficher tous les champs de composition (paramétrage Repas). */
+export const AFFICHAGE_CHAMPS_COMPOSE_MENU_DEFAUT: ResumeMenuCourtChampsVisibles = RESUME_MENU_TOUS_CHAMPS_VISIBLES;
+
 /** Une ligne courte pour l’aperçu dans la grille calendrier. */
-export function resumeMenuCourt(menu: MenuRepasDto): string {
+export function resumeMenuCourt(
+    menu: MenuRepasDto,
+    champsVisibles?: ResumeMenuCourtChampsVisibles | null,
+): string {
+    const v = champsVisibles ?? RESUME_MENU_TOUS_CHAMPS_VISIBLES;
     if (estPetitDejeunerOuGouter(menu.typeRepas)) {
         const d = menu.detailPetitDejeunerOuGouter?.trim();
         if (!d) return "—";
         return d.length > RESUME_MENU_MAX ? `${d.slice(0, RESUME_MENU_MAX - 1)}…` : d;
     }
-    const plat = menu.plat?.trim();
-    const entree = menu.entree?.trim();
-    const line = plat || entree || menu.dessert?.trim() || menu.fromageOuEntremet?.trim() || "—";
+    /** Même hiérarchie qu’historiquement : plat, puis entrée, puis dessert, puis fromage. */
+    const extraits: string[] = [];
+    if (v.plat && menu.plat?.trim()) extraits.push(menu.plat.trim());
+    if (v.entree && menu.entree?.trim()) extraits.push(menu.entree.trim());
+    if (v.dessert && menu.dessert?.trim()) extraits.push(menu.dessert.trim());
+    if (v.fromageOuEntremet && menu.fromageOuEntremet?.trim()) extraits.push(menu.fromageOuEntremet.trim());
+    const line = extraits[0] ?? "—";
     return line.length > RESUME_MENU_MAX ? `${line.slice(0, RESUME_MENU_MAX - 1)}…` : line;
 }
 
