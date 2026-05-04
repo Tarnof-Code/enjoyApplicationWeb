@@ -190,8 +190,6 @@ export function ligneLibellesCompositionMenu(refs: ReferenceAlimentaireDto[] | u
         .join(", ");
 }
 
-export const RESUME_MENU_MAX = 72;
-
 /** Champs de composition pour déjeuner / dîner (petit-déj. et goûter : détail toujours affiché). */
 export type ResumeMenuCourtChampsVisibles = {
     entree: boolean;
@@ -210,25 +208,48 @@ const RESUME_MENU_TOUS_CHAMPS_VISIBLES: ResumeMenuCourtChampsVisibles = {
 /** Valeurs par défaut : afficher tous les champs de composition (paramétrage Repas). */
 export const AFFICHAGE_CHAMPS_COMPOSE_MENU_DEFAUT: ResumeMenuCourtChampsVisibles = RESUME_MENU_TOUS_CHAMPS_VISIBLES;
 
-/** Une ligne courte pour l’aperçu dans la grille calendrier. */
-export function resumeMenuCourt(
+export type LigneCompositionMenuAffichage = {
+    key: string;
+    label: string;
+    valeur: string;
+};
+
+/** Lignes de composition du menu (liste, calendrier), selon le paramétrage d’affichage. */
+export function lignesCompositionMenuPourAffichage(
     menu: MenuRepasDto,
     champsVisibles?: ResumeMenuCourtChampsVisibles | null,
-): string {
-    const v = champsVisibles ?? RESUME_MENU_TOUS_CHAMPS_VISIBLES;
+): LigneCompositionMenuAffichage[] {
+    const montre = (cle: keyof ResumeMenuCourtChampsVisibles) =>
+        champsVisibles == null || champsVisibles[cle];
+
     if (estPetitDejeunerOuGouter(menu.typeRepas)) {
         const d = menu.detailPetitDejeunerOuGouter?.trim();
-        if (!d) return "—";
-        return d.length > RESUME_MENU_MAX ? `${d.slice(0, RESUME_MENU_MAX - 1)}…` : d;
+        return [
+            {
+                key: "detail",
+                label: "Détail du repas",
+                valeur: d || "—",
+            },
+        ];
     }
-    /** Même hiérarchie qu’historiquement : plat, puis entrée, puis dessert, puis fromage. */
-    const extraits: string[] = [];
-    if (v.plat && menu.plat?.trim()) extraits.push(menu.plat.trim());
-    if (v.entree && menu.entree?.trim()) extraits.push(menu.entree.trim());
-    if (v.dessert && menu.dessert?.trim()) extraits.push(menu.dessert.trim());
-    if (v.fromageOuEntremet && menu.fromageOuEntremet?.trim()) extraits.push(menu.fromageOuEntremet.trim());
-    const line = extraits[0] ?? "—";
-    return line.length > RESUME_MENU_MAX ? `${line.slice(0, RESUME_MENU_MAX - 1)}…` : line;
+
+    const lignesPossibles = [
+        { cle: "entree" as const, label: "Entrée :", val: menu.entree },
+        { cle: "plat" as const, label: "Plat :", val: menu.plat },
+        { cle: "fromageOuEntremet" as const, label: "Fromage ou entremet :", val: menu.fromageOuEntremet },
+        { cle: "dessert" as const, label: "Dessert :", val: menu.dessert },
+    ] as const;
+
+    const out: LigneCompositionMenuAffichage[] = [];
+    for (const { cle, label, val } of lignesPossibles) {
+        if (!montre(cle)) continue;
+        out.push({
+            key: cle,
+            label,
+            valeur: val?.trim() || "—",
+        });
+    }
+    return out;
 }
 
 /** Ligne secondaire sous le résumé du menu dans la grille calendrier (libellés uniquement, ex. « Oeufs - Porc »). */

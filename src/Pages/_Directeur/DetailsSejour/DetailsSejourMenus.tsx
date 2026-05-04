@@ -25,7 +25,7 @@ import {
     construireSaveMenuRepasRequest,
     estPetitDejeunerOuGouter,
     ligneMetaAllergenesRegimesCalendrier,
-    resumeMenuCourt,
+    lignesCompositionMenuPourAffichage,
     type ResumeMenuCourtChampsVisibles,
 } from "../../../helpers/menuRepas";
 import {
@@ -326,33 +326,13 @@ const DetailsSejourMenus: React.FC = () => {
 
     const renduBlocInfosCarte = (menu: MenuRepasDto, cv: ResumeMenuCourtChampsVisibles | null) => {
         const metaAllergRegimes = ligneMetaAllergenesRegimesCalendrier(menu);
-        const lignesMontreCle = (cle: keyof ResumeMenuCourtChampsVisibles) => cv == null || cv[cle];
-
-        const lignesMenu: ReactNode[] = [];
-        if (estPetitDejeunerOuGouter(menu.typeRepas)) {
-            lignesMenu.push(
-                <div key="detail">
-                    <span className={menuStyles.refLabel}>Détail du repas</span>
-                    <span>{menu.detailPetitDejeunerOuGouter?.trim() || "—"}</span>
-                </div>,
-            );
-        } else {
-            const lignesPossibles = [
-                { cle: "entree" as const, label: "Entrée :", val: menu.entree },
-                { cle: "plat" as const, label: "Plat :", val: menu.plat },
-                { cle: "fromageOuEntremet" as const, label: "Fromage ou entremet :", val: menu.fromageOuEntremet },
-                { cle: "dessert" as const, label: "Dessert :", val: menu.dessert },
-            ] as const;
-            lignesPossibles.forEach(({ cle, label, val }) => {
-                if (!lignesMontreCle(cle)) return;
-                lignesMenu.push(
-                    <div key={cle}>
-                        <span className={menuStyles.refLabel}>{label}</span>
-                        <span>{val?.trim() || "—"}</span>
-                    </div>,
-                );
-            });
-        }
+        const lignes = lignesCompositionMenuPourAffichage(menu, cv);
+        const lignesMenu: ReactNode[] = lignes.map(({ key, label, valeur }) => (
+            <div key={key}>
+                <span className={menuStyles.refLabel}>{label}</span>
+                <span>{valeur}</span>
+            </div>
+        ));
 
         if (!lignesMenu.length && !metaAllergRegimes) return null;
 
@@ -523,7 +503,13 @@ const DetailsSejourMenus: React.FC = () => {
                                                     </td>
                                                 );
                                             }
-                                            const resume = resumeMenuCourt(menu, champsComposeMenusVisibles);
+                                            const lignesMenuCal = lignesCompositionMenuPourAffichage(
+                                                menu,
+                                                champsComposeMenusVisibles,
+                                            );
+                                            const partiesCal = lignesMenuCal.filter(
+                                                (l) => l.valeur.trim().length > 0 && l.valeur !== "—",
+                                            );
                                             const meta = ligneMetaAllergenesRegimesCalendrier(menu);
                                             const editionDesactivee = deleting && pendingDelete?.id === menu.id;
                                             return (
@@ -544,10 +530,22 @@ const DetailsSejourMenus: React.FC = () => {
                                                         deleteAriaLabel={`Supprimer le menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`}
                                                         deleteDisabled={editionDesactivee}
                                                     >
-                                                        <span className={menuStyles.calMenusCarteResume}>{resume}</span>
-                                                        {meta ? (
-                                                            <span className={menuStyles.calMenusCarteMeta}>{meta}</span>
-                                                        ) : null}
+                                                        <div className={menuStyles.calMenusCarteCorps}>
+                                                            <div className={menuStyles.calMenusCarteResume}>
+                                                                {partiesCal.length === 0 ? (
+                                                                    <div className={menuStyles.calMenusCarteLigne}>—</div>
+                                                                ) : (
+                                                                    partiesCal.map((l) => (
+                                                                        <div key={l.key} className={menuStyles.calMenusCarteLigne}>
+                                                                            {l.valeur}
+                                                                        </div>
+                                                                    ))
+                                                                )}
+                                                            </div>
+                                                            {meta ? (
+                                                                <span className={menuStyles.calMenusCarteMeta}>{meta}</span>
+                                                            ) : null}
+                                                        </div>
                                                     </CalendrierCarteEditionAvecSuppression>
                                                 </td>
                                             );
@@ -688,8 +686,9 @@ const DetailsSejourMenus: React.FC = () => {
             <Modal isOpen={deleteOpen} toggle={() => !deleting && setDeleteOpen(false)}>
                 <ModalHeader toggle={() => !deleting && setDeleteOpen(false)}>Supprimer le menu</ModalHeader>
                 <ModalBody>
-                    Confirmer la suppression du menu « {pendingDelete ? LABELS_TYPE_REPAS[pendingDelete.typeRepas] : ""} » du{" "}
-                    {pendingDelete ? normaliserDateRepasISO(pendingDelete.dateRepas) : ""} ?
+                    {pendingDelete
+                        ? `Confirmer la suppression du ${LABELS_TYPE_REPAS[pendingDelete.typeRepas].toLocaleLowerCase("fr-FR")} ?`
+                        : null}
                     {modalError && <p className={menuStyles.modalError}>{modalError}</p>}
                 </ModalBody>
                 <ModalFooter>

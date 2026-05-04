@@ -159,11 +159,6 @@
     font-size: 0.82rem;
     line-height: 1.35;
     color: #444;
-
-    .calMenusCarteMeta {
-        display: block;
-        margin-top: 0.35rem;
-    }
 }
 
 .refLabel {
@@ -329,13 +324,27 @@ td.calMenusTdSizing {
     vertical-align: middle;
 }
 
+/** Contenu des cartes (calendrier) : centrage horizontal, sans impacter la vue liste. */
+.calMenusCarteCorps {
+    width: 100%;
+    text-align: center;
+}
+
 .calMenusCarteResume {
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
     word-break: break-word;
     font-size: 0.84rem;
 }
 
+.calMenusCarteLigne {
+    line-height: 1.28;
+}
+
 .calMenusCarteMeta {
+    display: block;
+    margin-top: 0.85rem;
     font-size: 0.74rem;
     color: #b91c1c;
     line-height: 1.25;
