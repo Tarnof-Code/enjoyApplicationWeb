@@ -39,7 +39,7 @@ const DetailsSejourOrganisation: React.FC = () => {
 
     const { sejour, groupes, lieux, moments, horaires, planningGrilles } = loaderData;
 
-    const baseOrganisation = `/directeur/sejours/${sejour.id}/organisation`;
+    const baseOrganisation = `/mes-sejours/${sejour.id}/organisation`;
 
     return (
         <ListePlanningsOrganisation

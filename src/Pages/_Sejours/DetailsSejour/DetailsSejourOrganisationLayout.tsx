@@ -29,7 +29,7 @@ const DetailsSejourOrganisationLayout: FC = () => {
     if (loaderData === undefined) {
         return (
             <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Chargement du séjour…</p>
@@ -40,7 +40,7 @@ const DetailsSejourOrganisationLayout: FC = () => {
     if (loaderData instanceof Error) {
         return (
             <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Erreur lors du chargement du séjour</p>
@@ -53,7 +53,7 @@ const DetailsSejourOrganisationLayout: FC = () => {
     if (!sejour) {
         return (
             <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Séjour introuvable</p>

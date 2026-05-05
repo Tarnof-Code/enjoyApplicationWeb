@@ -4,17 +4,17 @@ import { useLoaderData, useNavigate } from "react-router-dom";
 import formaterDate from "../../../helpers/formaterDate";
 import { SejourDTO } from "../../../types/api";
 
-export async function listeSejoursDirecteurLoader() {
+export async function mesSejoursLoader() {
     try {
-        const response = await sejourService.getAllSejoursByDirecteur();
+        const response = await sejourService.getAllSejoursByUtilisateur();
         return response;
     } catch (error) {
-        console.error("Erreur chargement liste sejours directeur", error);
+        console.error("Erreur chargement de mes séjours", error);
         return [];
     }
 }
 
-const ListeSejoursDirecteur: React.FC = () => {
+const MesSejours: React.FC = () => {
     const sejours = useLoaderData() as SejourDTO[];
     const navigate = useNavigate();
     const createColumn = (
@@ -50,7 +50,7 @@ const ListeSejoursDirecteur: React.FC = () => {
         }),
     ];
     const handleView = (sejour: SejourDTO) => {
-        navigate(`/directeur/sejours/${sejour.id}`, { state: { sejour } });
+        navigate(`/mes-sejours/${sejour.id}`, { state: { sejour } });
     };
     return (
         <Liste
@@ -67,5 +67,4 @@ const ListeSejoursDirecteur: React.FC = () => {
     )
 }
 
-export default ListeSejoursDirecteur;
-
+export default MesSejours;

@@ -9,16 +9,16 @@ import { accountService } from "./services/account.service";
 import ListeSejoursAdmin, { sejoursAdminLoader } from "./Pages/_Admin/ListeSejoursAdmin/ListeSejoursAdmin.tsx";
 import ListeUtilisateurs, { utilisateursLoader } from "./Pages/_Admin/ListeUtilisateurs/ListeUtilisateurs.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ListeSejoursDirecteur, { listeSejoursDirecteurLoader } from "./Pages/_Directeur/ListeSejoursDirecteur/ListeSejoursDirecteur.tsx";
-import { detailsSejourLoader } from "./Pages/_Directeur/DetailsSejour/detailsSejourLoader";
-import SejourDetailOutlet from "./Pages/_Directeur/DetailsSejour/SejourDetailOutlet";
-import DetailsSejourOverview from "./Pages/_Directeur/DetailsSejour/DetailsSejourOverview";
-import DetailsSejourActivites from "./Pages/_Directeur/DetailsSejour/DetailsSejourActivites";
-import DetailsSejourParametrage from "./Pages/_Directeur/DetailsSejour/DetailsSejourParametrage";
-import DetailsSejourOrganisationLayout from "./Pages/_Directeur/DetailsSejour/DetailsSejourOrganisationLayout";
-import DetailsSejourOrganisation from "./Pages/_Directeur/DetailsSejour/DetailsSejourOrganisation";
-import DetailsSejourMenus from "./Pages/_Directeur/DetailsSejour/DetailsSejourMenus";
-import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Directeur/DossierEnfant/DossierEnfant.tsx";
+import MesSejours, { mesSejoursLoader } from "./Pages/_Sejours/MesSejours/MesSejours.tsx";
+import { detailsSejourLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejourLoader";
+import SejourDetailOutlet from "./Pages/_Sejours/DetailsSejour/SejourDetailOutlet";
+import DetailsSejourOverview from "./Pages/_Sejours/DetailsSejour/DetailsSejourOverview";
+import DetailsSejourActivites from "./Pages/_Sejours/DetailsSejour/DetailsSejourActivites";
+import DetailsSejourParametrage from "./Pages/_Sejours/DetailsSejour/DetailsSejourParametrage";
+import DetailsSejourOrganisationLayout from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisationLayout";
+import DetailsSejourOrganisation from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisation";
+import DetailsSejourMenus from "./Pages/_Sejours/DetailsSejour/DetailsSejourMenus";
+import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Sejours/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 
 const App: React.FC = () => {
@@ -58,20 +58,20 @@ const App: React.FC = () => {
           ),
         },
         {
-          path: "/directeur/sejours",
-          loader: listeSejoursDirecteurLoader,
+          path: "/mes-sejours",
+          loader: mesSejoursLoader,
           element: (
-            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
-              <ListeSejoursDirecteur />
+            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION, RoleSysteme.BASIC_USER]}>
+              <MesSejours />
             </ProtectedRoute>
           ),
         },
         {
-          path: "/directeur/sejours/:id",
+          path: "/mes-sejours/:id",
           id: "sejour-detail",
           loader: detailsSejourLoader,
           element: (
-            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION]}>
+            <ProtectedRoute allowedRoles={[RoleSysteme.DIRECTION, RoleSysteme.BASIC_USER]}>
               <SejourDetailOutlet />
             </ProtectedRoute>
           ),

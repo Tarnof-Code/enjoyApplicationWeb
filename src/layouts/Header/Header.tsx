@@ -59,16 +59,17 @@ const Admin_header: React.FC = () => {
 
   const roleLabel = utilisateurService.getRoleSystemeByGenre(role, genre);
 
-  const sejourMatch = useMatch({ path: "/directeur/sejours/:id", end: false });
+  const sejourMatch = useMatch({ path: "/mes-sejours/:id", end: false });
   const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | Error | undefined;
   const sejourDetailData =
     sejourLoaderRaw && !(sejourLoaderRaw instanceof Error) ? sejourLoaderRaw : undefined;
-  const isSejourContext = role === RoleSysteme.DIRECTION && Boolean(sejourMatch && sejourDetailData);
+  const isParticipantSejour = role === RoleSysteme.DIRECTION || role === RoleSysteme.BASIC_USER;
+  const isSejourContext = isParticipantSejour && Boolean(sejourMatch && sejourDetailData);
   const sejourIdParam = sejourMatch?.params.id;
   const { pathname } = useLocation();
   const dossierEnfantCommeVueGenerale =
     Boolean(sejourIdParam) &&
-    pathname.startsWith(`/directeur/sejours/${sejourIdParam}/enfants/`) &&
+    pathname.startsWith(`/mes-sejours/${sejourIdParam}/enfants/`) &&
     pathname.endsWith("/dossier");
 
   return (
@@ -99,11 +100,11 @@ const Admin_header: React.FC = () => {
               </NavItem>
             </Nav>
           )}
-          {role === RoleSysteme.DIRECTION && (
+          {isParticipantSejour && (
             <Nav className={`me-auto ${styles.directorNav}`} navbar>
               <NavItem className={styles.directorNavItem}>
                 <NavLink
-                  to={"/directeur/sejours"}
+                  to={"/mes-sejours"}
                   end
                   className={({ isActive }) =>
                     `${styles.directorRootLink} ${isActive ? styles.directorRootLinkActive : ""}`
@@ -122,7 +123,7 @@ const Admin_header: React.FC = () => {
                     </span>
                     <div className={styles.directorSegmented} role="tablist" aria-label="Sections du séjour">
                       <NavLink
-                        to={`/directeur/sejours/${sejourIdParam}`}
+                        to={`/mes-sejours/${sejourIdParam}`}
                         end
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive || dossierEnfantCommeVueGenerale ? styles.directorSegmentActive : ""}`
@@ -132,7 +133,7 @@ const Admin_header: React.FC = () => {
                         Vue générale
                       </NavLink>
                       <NavLink
-                        to={`/directeur/sejours/${sejourIdParam}/organisation`}
+                        to={`/mes-sejours/${sejourIdParam}/organisation`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }
@@ -141,7 +142,7 @@ const Admin_header: React.FC = () => {
                         Organisation
                       </NavLink>
                       <NavLink
-                        to={`/directeur/sejours/${sejourIdParam}/activites`}
+                        to={`/mes-sejours/${sejourIdParam}/activites`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }
@@ -150,7 +151,7 @@ const Admin_header: React.FC = () => {
                         Activités
                       </NavLink>
                       <NavLink
-                        to={`/directeur/sejours/${sejourIdParam}/menus`}
+                        to={`/mes-sejours/${sejourIdParam}/menus`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }
@@ -159,7 +160,7 @@ const Admin_header: React.FC = () => {
                         Menus
                       </NavLink>
                       <NavLink
-                        to={`/directeur/sejours/${sejourIdParam}/parametrage`}
+                        to={`/mes-sejours/${sejourIdParam}/parametrage`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }

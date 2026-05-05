@@ -363,7 +363,7 @@ const DetailsSejourMenus: React.FC = () => {
     if (loaderData instanceof Error || !sejour) {
         return (
             <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/directeur/sejours")} className={styles.backButton}>
+                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Séjour introuvable ou erreur de chargement</p>

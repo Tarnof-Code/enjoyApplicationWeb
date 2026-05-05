@@ -12,8 +12,8 @@ Application Web de gestion de séjours (Enjoy).
 
 ## Structure des dossiers (rappel)
 
-- Séparation `Pages/_Admin` vs `Pages/_Directeur` pour les pages par rôle.
-- Détail séjour : `Pages/_Directeur/DetailsSejour/` — `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`, **`DetailsSejourParametrage.tsx`**, `SejourDetailOutlet.tsx`, `detailsSejourLoader.ts`, styles `DetailsSejour.module.scss` ; composant accordéon partagé **`components/DetailsSejour/DetailsSejourAccordionItem.tsx`** (styles importés depuis `DetailsSejour.module.scss`).
+- Séparation `Pages/_Admin` (rôle ADMIN) vs **`Pages/_Sejours`** (pages partagées **DIRECTION + BASIC_USER** participant à un séjour : **`MesSejours/`**, `DetailsSejour/`, `DossierEnfant/`).
+- Détail séjour : **`Pages/_Sejours/DetailsSejour/`** — `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`, **`DetailsSejourParametrage.tsx`**, `SejourDetailOutlet.tsx`, `detailsSejourLoader.ts`, styles `DetailsSejour.module.scss` ; composant accordéon partagé **`components/DetailsSejour/DetailsSejourAccordionItem.tsx`** (styles importés depuis `DetailsSejour.module.scss`).
 - Helpers dans `helpers/`, types dans `types/`, services dans `services/`.
 - Composants de liste génériques dans `components/Liste/`.
 
@@ -21,7 +21,8 @@ Les règles obligatoires (langue, lint, patterns) restent dans [`.cursorrules`](
 
 ## Glossaire métier (très court)
 
-- **Directeur** : `RoleSysteme.DIRECTION`, routes `/directeur/*`.
+- **Directeur** : `RoleSysteme.DIRECTION`, routes **`/mes-sejours/*`** (partagées avec les **BASIC_USER** membres d’équipe).
+- **Animateur (BASIC_USER)** : `RoleSysteme.BASIC_USER`, accès aux mêmes routes **`/mes-sejours/*`** mais filtré côté API sur les séjours dont il est membre d’équipe.
 - **Admin** : `RoleSysteme.ADMIN`, `/utilisateurs`, `/sejours`.
 - **Séjour** : entité centrale (équipe, enfants, lieux, activités, plannings).
 

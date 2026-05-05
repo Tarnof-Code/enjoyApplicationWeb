@@ -5,7 +5,8 @@
 - [x] Refactoriser Sejour_form avec le Form générique
 - [x] Ajouter les docs utiles dans les settings de Cursor
 - [x] Migrer vers React 19 et activer React Compiler
-- [x] Renommer et séparer les listes de séjours (`ListeSejoursAdmin`, `ListeSejoursDirecteur`)
+- [x] Renommer et séparer les listes de séjours (`ListeSejoursAdmin`, **`MesSejours`** — anciennement `ListeSejoursDirecteur`)
+- [x] Élargir l’accès aux séjours aux membres d’équipe (BASIC_USER) — endpoint **`/sejours/utilisateur/{utilisateurTokenId}`** (`sejourService.getAllSejoursByUtilisateur`), routes **`/mes-sejours[...]`**, dossier **`Pages/_Sejours/`**, **`Header.tsx`** (drapeau **`isParticipantSejour`**), permissions **`[DIRECTION, BASIC_USER]`**
 - [x] Supprimer les `useMemo`/`useCallback` inutiles dans les composants clés
 - [x] Détail séjour : vue générale + onglet activités (`DetailsSejourOverview`, `DetailsSejourActivites`, routes imbriquées, accordéons `1`–`6` / `9` / `8` / `10`, `reordonnerMoments`)
 - [x] Gestion des **horaires** du séjour (`ListeHoraires`, `sejourHoraireService`, `trierHorairesChronologiquement`, `validerLibelleHoraire`, panneau `9`, `HoraireDto` / `SaveHoraireRequest`, `detailsSejourLoader`)

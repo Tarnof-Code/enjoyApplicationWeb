@@ -27,14 +27,14 @@ let getSejourById = async (id: string): Promise<SejourDTO> => {
   }
 };
 
-let getAllSejoursByDirecteur = async (): Promise<SejourDTO[]> => {
+let getAllSejoursByUtilisateur = async (): Promise<SejourDTO[]> => {
   try {
     const tokenInfo = accountService.getTokenInfo();
-    const directeurTokenId = tokenInfo?.payload?.sub;
-    if (!directeurTokenId) {
-      throw new Error("Impossible de récupérer le token ID du directeur");
+    const utilisateurTokenId = tokenInfo?.payload?.sub;
+    if (!utilisateurTokenId) {
+      throw new Error("Impossible de récupérer le token ID de l'utilisateur");
     }
-    const response = await Axios.get("/sejours/directeur/" + directeurTokenId);
+    const response = await Axios.get("/sejours/utilisateur/" + utilisateurTokenId);
     return response.data;
   } catch (error) {
     console.error("Une erreur s'est produite :", error);
@@ -80,7 +80,7 @@ let deleteSejour = async (sejourId: number) => {
 export const sejourService = {
   getAllSejours,
   getSejourById,
-  getAllSejoursByDirecteur,
+  getAllSejoursByUtilisateur,
   addSejour,
   updateSejour,
   deleteSejour,

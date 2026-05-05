@@ -39,7 +39,7 @@
   - `logout()` : Suppression du token et nettoyage du store Redux
   - `isLogged()` : Vérification de la présence d'un token
 - **sejour.service.ts** : CRUD des séjours uniquement
-  - `getAllSejours()`, `getSejourById()`, `getAllSejoursByDirecteur()`, `addSejour()`, `updateSejour()`, `deleteSejour()`
+  - `getAllSejours()`, `getSejourById()`, **`getAllSejoursByUtilisateur()`** (endpoint **`/sejours/utilisateur/{utilisateurTokenId}`** — accessible ADMIN, DIRECTION, BASIC_USER ; le backend filtre selon le rôle), `addSejour()`, `updateSejour()`, `deleteSejour()`
   - Tri automatique de l'équipe par nom dans `getSejourById()`
   - Utilise `validateResponseStatus` et `adaptAxiosError` de `helpers/axiosError.ts`
 - **sejour-equipe.service.ts** : Gestion de l'équipe d'un séjour
@@ -97,14 +97,15 @@
 
 ## Glossaire
 
-- **Directeur :** Rôle utilisateur (`RoleSysteme.DIRECTION`) gérant des séjours spécifiques. Accès aux pages `/directeur/*`.
+- **Directeur :** Rôle utilisateur (`RoleSysteme.DIRECTION`) gérant des séjours spécifiques. Accès aux pages **`/mes-sejours/*`** (avec les BASIC_USER membres d'équipe). Voit les séjours dont il est directeur **ou** dont il est membre d'équipe.
+- **Animateur (BASIC_USER) :** Rôle utilisateur (`RoleSysteme.BASIC_USER`) — membre d'équipe d'un ou plusieurs séjours. Accès aux pages **`/mes-sejours/*`** ; ne voit que les séjours dont il est membre d'équipe (filtrage côté backend).
 - **Admin :** Super-utilisateur (`RoleSysteme.ADMIN`) gérant l'ensemble de la plateforme. Accès aux pages `/utilisateurs`, `/sejours`.
 - **Séjour :** Entité principale du système contenant nom, description, lieu, dates, équipe, enfants, plannings.
 - **Équipe :** Liste des utilisateurs assignés à un séjour (composant `Equipe.tsx`).
 - **Enfant :** Entité représentant un enfant avec ses informations personnelles (nom, prénom, genre, date de naissance, niveau scolaire). Un enfant peut être réutilisé dans plusieurs séjours. Composants : `ListeEnfants.tsx`, `AddEnfantForm.tsx`, `ImportExcelEnfants.tsx`.
 - **Groupe :** Regroupement d'enfants d'un séjour. Types : THEMATIQUE (manuel), AGE (tranche d'âge), NIVEAU_SCOLAIRE (tranche de niveau). Composants : `ListeGroupes.tsx`, `CreateGroupeForm.tsx`. Service : `sejour-groupe.service.ts` (export `sejourGroupeService`). Pour AGE/NIVEAU_SCOLAIRE, ajout automatique à la création (backend) ou fallback frontend ; bouton « Ajouter les enfants de la tranche » pour ajouter en masse les enfants correspondants.
 - **Référent (groupe) :** Membre de l'équipe du séjour associé à un groupe comme point de contact. Géré via `ReferentsSelector` + appels `ajouterReferent` / `retirerReferent` ; listé dans `GroupeDto.referents` (`ReferentInfos`).
-- **Dossier enfant :** Informations complémentaires d'un enfant (contacts parents, infos médicales, PAI, alimentaires, traitements). Page dédiée `DossierEnfant` accessible via l'icône dossier dans `ListeEnfants`. Route : `/directeur/sejours/:sejourId/enfants/:enfantId/dossier`. Accès réservé aux participants du séjour (directeur ou membre de l'équipe).
+- **Dossier enfant :** Informations complémentaires d'un enfant (contacts parents, infos médicales, PAI, alimentaires, traitements). Page dédiée `DossierEnfant` accessible via l'icône dossier dans `ListeEnfants`. Route : `/mes-sejours/:sejourId/enfants/:enfantId/dossier`. Accès réservé aux participants du séjour (directeur ou membre de l'équipe).
 - **Loader :** Fonction asynchrone React Router pour charger les données avant le rendu de la page. Exemple : `detailsSejourLoader` (route id **`sejour-detail`**) charge le séjour, les enfants, les groupes, les lieux, les **moments**, les **horaires**, les activités, les **types d’activité** (`Promise.all` : `sejourService`, `sejourEnfantService`, `sejourGroupeService`, `sejourLieuService`, **`sejourMomentService`**, **`sejourHoraireService`**, `sejourActiviteService`, **`sejourTypeActiviteService`**) et en parallèle **`sejourPlanningGrilleService.listerGrilles(sejourId)`** — donnée retournée **`planningGrilles`** ; en cas d’échec : liste vide + `console.warn`.
 - **Moment (séjour) :** Créneau nommé rattaché au séjour (ex. matin, après-midi). `MomentDto` (**`ordre`** pour l’ordre d’affichage) ; CRUD + **réordonnancement** (`reordonnerMoments`) via `ListeMoments` et `sejourMomentService`. Les **activités** référencent un moment (`ActiviteDto.moment`, `momentId`) ; sans au moins un moment, l’UI bloque la création d’activités jusqu’à en créer un.
 - **Horaire (séjour) :** Libellé d’heure rattaché au séjour (ex. `8h30`, format `6h00`–`23h59`). `HoraireDto` ; CRUD via `ListeHoraires` et `sejourHoraireService`. Affichage trié chronologiquement (`trierHorairesChronologiquement`). Non référencé par les **activités** dans l’API à ce stade.

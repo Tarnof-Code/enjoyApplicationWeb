@@ -380,8 +380,8 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                                             icon={faFolder}
                                                             onClick={() => {
                                                                 const state = { from: 'groupes' as const, openAccordion: '4', expandedGroupeId: groupe.id };
-                                                                navigate(`/directeur/sejours/${sejourId}`, { state, replace: true });
-                                                                navigate(`/directeur/sejours/${sejourId}/enfants/${enfant.id}/dossier`, { state });
+                                                                navigate(`/mes-sejours/${sejourId}`, { state, replace: true });
+                                                                navigate(`/mes-sejours/${sejourId}/enfants/${enfant.id}/dossier`, { state });
                                                             }}
                                                             style={{ cursor: 'pointer' }}
                                                             title="Voir le dossier"

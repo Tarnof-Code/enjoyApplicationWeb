@@ -63,7 +63,7 @@ const DossierEnfant: React.FC = () => {
 
     const handleRetour = () => {
         if (sejourId && returnState?.openAccordion) {
-            navigate(`/directeur/sejours/${sejourId}`, {
+            navigate(`/mes-sejours/${sejourId}`, {
                 state: {
                     openAccordion: returnState.openAccordion,
                     expandedGroupeId: returnState.expandedGroupeId
@@ -71,7 +71,7 @@ const DossierEnfant: React.FC = () => {
                 replace: true
             });
         } else if (sejourId) {
-            navigate(`/directeur/sejours/${sejourId}`, { replace: true });
+            navigate(`/mes-sejours/${sejourId}`, { replace: true });
         } else {
             navigate(-1);
         }

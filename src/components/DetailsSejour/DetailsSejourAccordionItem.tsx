@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from "react";
 import { FaGripVertical } from "react-icons/fa";
-import styles from "../../Pages/_Directeur/DetailsSejour/DetailsSejour.module.scss";
+import styles from "../../Pages/_Sejours/DetailsSejour/DetailsSejour.module.scss";
 
 export type DetailsSejourAccordionItemProps = {
     id: string;
