@@ -27,13 +27,8 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
     const [isDeletingAll, setIsDeletingAll] = useState(false);
 
     const handleDeleteEnfant = async (enfant: EnfantDto, _index: number) => {
-        try {
-            await sejourEnfantService.supprimerEnfantDuSejour(sejourId, enfant.id);
-            revalidator.revalidate();
-        } catch (error) {
-            console.error("Erreur lors du retrait de l'enfant", error);
-            setErrorMessage("Erreur lors du retrait de l'enfant");
-        }
+        await sejourEnfantService.supprimerEnfantDuSejour(sejourId, enfant.id);
+        revalidator.revalidate();
     };
 
     const createColumn = (key: string, label: string, type: ColumnConfig['type'] = 'text', options?: Partial<ColumnConfig>): ColumnConfig => ({

@@ -15,12 +15,8 @@ const Equipe: React.FC<EquipeProps> = ({ membres, sejourId }) => {
 
     const handleDeleteMembre = async (user: ProfilUtilisateurDTO) => {
         if (!user.tokenId) return;
-        try {
-            await sejourEquipeService.supprimerMembreEquipe(sejourId, user.tokenId);
-            revalidator.revalidate();
-        } catch (error) {
-            console.error("Erreur lors du retrait du membre", error);
-        }
+        await sejourEquipeService.supprimerMembreEquipe(sejourId, user.tokenId);
+        revalidator.revalidate();
     };
 
     return (

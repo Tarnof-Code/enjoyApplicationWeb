@@ -36,13 +36,9 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   const revalidator = useRevalidator();
 
   const handleDefaultDelete = async (user: ProfilUtilisateurDTO) => {
-      try {
-        if (!user.tokenId) return;
-        await utilisateurService.deleteUser(String(user.tokenId));
-        revalidator.revalidate();
-      } catch (error) {
-        console.error("Erreur suppression", error);
-      }
+      if (!user.tokenId) return;
+      await utilisateurService.deleteUser(String(user.tokenId));
+      revalidator.revalidate();
   };
 
   const createColumn = (key: string, label: string, type: ColumnConfig['type'] = 'text', options?: Partial<ColumnConfig>): ColumnConfig => ({

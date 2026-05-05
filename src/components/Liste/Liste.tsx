@@ -170,10 +170,14 @@ const Liste = <T extends Record<string, any>>({
     item: T | null;
     itemIndex: number;
     itemName?: string;
+    errorMessage: string | null;
+    isDeleting: boolean;
   }>({
     show: false,
     item: null,
     itemIndex: -1,
+    errorMessage: null,
+    isDeleting: false,
   });
 
   // État pour la modale de succès
@@ -229,23 +233,36 @@ const Liste = <T extends Record<string, any>>({
       item,
       itemIndex: index,
       itemName,
+      errorMessage: null,
+      isDeleting: false,
     });
   };
 
   // Confirmation de la suppression
   const confirmDelete = async () => {
-    if (deleteModalState.item && onDelete) {
-      try {
-        await onDelete(deleteModalState.item, deleteModalState.itemIndex);
-        const itemName = deleteModalState.itemName;
-        setDeleteModalState({ show: false, item: null, itemIndex: -1 });
-        // Afficher la modale de succès
-        setSuccessModalState({ show: true, itemName });
-        revalidator.revalidate();
-      } catch (error) {
-        console.error("Erreur lors de la suppression:", error);
-        // La modale reste ouverte en cas d'erreur
-      }
+    if (!deleteModalState.item || !onDelete) return;
+    setDeleteModalState(prev => ({ ...prev, errorMessage: null, isDeleting: true }));
+    try {
+      await onDelete(deleteModalState.item, deleteModalState.itemIndex);
+      const itemName = deleteModalState.itemName;
+      setDeleteModalState({
+        show: false,
+        item: null,
+        itemIndex: -1,
+        errorMessage: null,
+        isDeleting: false,
+      });
+      // Afficher la modale de succès
+      setSuccessModalState({ show: true, itemName });
+      revalidator.revalidate();
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      // Récupérer le message d'erreur (provenant de l'API si disponible, sinon message générique)
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Une erreur s'est produite lors de la suppression";
+      setDeleteModalState(prev => ({ ...prev, errorMessage: message, isDeleting: false }));
     }
   };
 
@@ -256,7 +273,13 @@ const Liste = <T extends Record<string, any>>({
 
   // Annulation de la suppression
   const cancelDelete = () => {
-    setDeleteModalState({ show: false, item: null, itemIndex: -1 });
+    setDeleteModalState({
+      show: false,
+      item: null,
+      itemIndex: -1,
+      errorMessage: null,
+      isDeleting: false,
+    });
   };
 
 
@@ -495,17 +518,27 @@ const Liste = <T extends Record<string, any>>({
             <p>Vous allez supprimer {deleteModalState.itemName || "cet élément"}. Cette action est irréversible.</p>
           )}
           <p>Êtes-vous sûr de vouloir continuer ?</p>
+          {deleteModalState.errorMessage && (
+            <div className={styles.deleteErrorMessage} role="alert">
+              {deleteModalState.errorMessage}
+            </div>
+          )}
         </ModalBody>
         <ModalFooter>
-          <Button 
-            color="secondary" 
+          <Button
+            color="secondary"
             onClick={cancelDelete}
             className={styles.btnAnnuler}
+            disabled={deleteModalState.isDeleting}
           >
-            Annuler
+            {deleteModalState.errorMessage ? "Fermer" : "Annuler"}
           </Button>
-          <Button color="danger" onClick={confirmDelete}>
-            Confirmer
+          <Button
+            color="danger"
+            onClick={confirmDelete}
+            disabled={deleteModalState.isDeleting}
+          >
+            {deleteModalState.isDeleting ? "Suppression..." : "Confirmer"}
           </Button>
         </ModalFooter>
       </Modal>
