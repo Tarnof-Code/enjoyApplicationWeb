@@ -238,7 +238,8 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
             revalidator.revalidate();
         } catch (error) {
             console.error("Erreur lors de la suppression du groupe", error);
-            setErrorMessage("Erreur lors de la suppression du groupe");
+            const errorMsg = error instanceof Error ? error.message : "Erreur lors de la suppression du groupe";
+            setErrorMessage(errorMsg);
         } finally {
             setIsDeleting(false);
         }
@@ -252,8 +253,6 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                     Créer un groupe
                 </Button>
             </div>
-
-            {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
 
             {groupes.length === 0 ? (
                 <p className={styles.placeholderText}>
@@ -612,20 +611,32 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </ModalFooter>
             </Modal>
 
-            <Modal isOpen={deleteModal.show} toggle={() => setDeleteModal({ show: false, groupe: null })}>
-                <ModalHeader toggle={() => setDeleteModal({ show: false, groupe: null })}>
+            <Modal isOpen={deleteModal.show} toggle={() => {
+                setDeleteModal({ show: false, groupe: null });
+                setErrorMessage(null);
+            }}>
+                <ModalHeader toggle={() => {
+                    setDeleteModal({ show: false, groupe: null });
+                    setErrorMessage(null);
+                }}>
                     Supprimer le groupe
                 </ModalHeader>
                 <ModalBody>
                     {deleteModal.groupe && (
-                        <p>
-                            Voulez-vous supprimer le groupe <strong>{deleteModal.groupe.nom}</strong> ?
-                            Les enfants ne seront pas retirés du séjour.
-                        </p>
+                        <>
+                            <p>
+                                Voulez-vous supprimer le groupe <strong>{deleteModal.groupe.nom}</strong> ?
+                                Les enfants ne seront pas retirés du séjour.
+                            </p>
+                            {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
+                        </>
                     )}
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="secondary" onClick={() => setDeleteModal({ show: false, groupe: null })}>
+                    <Button color="secondary" onClick={() => {
+                        setDeleteModal({ show: false, groupe: null });
+                        setErrorMessage(null);
+                    }}>
                         Annuler
                     </Button>
                     <Button color="danger" onClick={handleSupprimerGroupe} disabled={isDeleting}>

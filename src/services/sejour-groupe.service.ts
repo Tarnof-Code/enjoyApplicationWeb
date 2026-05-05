@@ -47,7 +47,7 @@ let modifierGroupe = async (sejourId: number, groupeId: number, request: CreateG
   }
 };
 
-let supprimerGroupe = async (sejourId: number, groupeId: number) => {
+let supprimerGroupe = async (sejourId: number, groupeId: number): Promise<void> => {
   try {
     const response = await Axios.delete(`/sejours/${sejourId}/groupes/${groupeId}`);
     validateResponseStatus(response, 204);
