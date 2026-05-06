@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
-import { LoaderFunctionArgs, useLoaderData, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { LoaderFunctionArgs, useLoaderData, useLocation, useNavigate, useParams, useRouteLoaderData } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import styles from "./DossierEnfant.module.scss";
 import { getApiErrorMessage, type AdaptedError } from "../../../helpers/axiosError";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
-import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto } from "../../../types/api";
+import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto, SejourDTO } from "../../../types/api";
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
+import { accountService } from "../../../services/account.service";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     const sejourId = params.id;
@@ -50,13 +52,28 @@ interface DossierLocationState {
     expandedGroupeId?: number;
 }
 
+type SejourDetailLoaderSuccess = {
+    sejour: SejourDTO;
+};
+
 const DossierEnfant: React.FC = () => {
     const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined } | Error;
+    const sejourDetailLoader = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
     const navigate = useNavigate();
     const location = useLocation();
     const { id: sejourId, enfantId } = useParams();
     const [showEditModal, setShowEditModal] = useState(false);
     const returnState = location.state as DossierLocationState | null;
+
+    const peutModifierDossier = useMemo(() => {
+        if (!sejourDetailLoader || sejourDetailLoader instanceof Error) return false;
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return peutGererMembresEquipeSejour(
+            typeof sub === "string" ? sub : undefined,
+            sejourDetailLoader.sejour.directeur,
+            sejourDetailLoader.sejour.equipe
+        );
+    }, [sejourDetailLoader]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -109,7 +126,7 @@ const DossierEnfant: React.FC = () => {
                 <h1 className={styles.pageTitle}>
                     Dossier de <span className={styles.enfantNameBadge}>{enfantNom}</span>
                 </h1>
-                {sejourId && enfantId && (
+                {peutModifierDossier && sejourId && enfantId && (
                     <Button
                         color="primary"
                         onClick={() => setShowEditModal(true)}
@@ -207,12 +224,12 @@ const DossierEnfant: React.FC = () => {
                 </section>
             </div>
 
-            <Modal isOpen={showEditModal} toggle={() => setShowEditModal(false)} size="lg">
+            <Modal isOpen={peutModifierDossier && showEditModal} toggle={() => setShowEditModal(false)} size="lg">
                 <ModalHeader toggle={() => setShowEditModal(false)}>
                     Modifier le dossier
                 </ModalHeader>
                 <ModalBody>
-                    {showEditModal && sejourId && enfantId && (
+                    {peutModifierDossier && showEditModal && sejourId && enfantId && (
                         <DossierEnfantForm
                             handleCloseModal={() => setShowEditModal(false)}
                             sejourId={parseInt(sejourId)}

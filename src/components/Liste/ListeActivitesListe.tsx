@@ -225,6 +225,8 @@ export type ListeActivitesListeResultatProps = {
     deletingActiviteId: number | null;
     onEdit: (a: ActiviteDto) => void;
     onDelete: (id: number) => void;
+    peutGererToutesActivites?: boolean;
+    tokenUtilisateurConnecte?: string | null;
 };
 
 export function ListeActivitesListeResultat({
@@ -234,6 +236,8 @@ export function ListeActivitesListeResultat({
     deletingActiviteId,
     onEdit,
     onDelete,
+    peutGererToutesActivites = true,
+    tokenUtilisateurConnecte = null,
 }: ListeActivitesListeResultatProps) {
     if (activites.length === 0) {
         return <p className={styles.empty}>Aucune activité planifiée pour ce séjour.</p>;
@@ -241,6 +245,14 @@ export function ListeActivitesListeResultat({
     if (activitesFiltrees.length === 0) {
         return <p className={styles.empty}>Aucune activité ne correspond aux filtres sélectionnés.</p>;
     }
+
+    const tokenSelf = (tokenUtilisateurConnecte ?? "").trim();
+    const utilisateurSurActivite = (a: ActiviteDto) =>
+        tokenSelf !== "" && a.membres?.some((m) => (m.tokenId ?? "").trim() === tokenSelf);
+
+    const peutModifierActiviteListe = (a: ActiviteDto) =>
+        peutGererToutesActivites || utilisateurSurActivite(a);
+
     return (
         <div className={styles.list}>
             {activitesFiltrees.map((a) => (
@@ -293,22 +305,26 @@ export function ListeActivitesListeResultat({
                         {a.description ? <p className={styles.description}>{a.description}</p> : null}
                     </div>
                     <div className={styles.cardActions}>
-                        <Button
-                            color="primary"
-                            size="sm"
-                            onClick={() => onEdit(a)}
-                            disabled={deletingActiviteId === a.id}
-                        >
-                            Modifier
-                        </Button>
-                        <Button
-                            color="danger"
-                            size="sm"
-                            onClick={() => onDelete(a.id)}
-                            disabled={deletingActiviteId === a.id}
-                        >
-                            {deletingActiviteId === a.id ? "Suppression…" : "Supprimer"}
-                        </Button>
+                        {peutModifierActiviteListe(a) ? (
+                            <>
+                                <Button
+                                    color="primary"
+                                    size="sm"
+                                    onClick={() => onEdit(a)}
+                                    disabled={deletingActiviteId === a.id}
+                                >
+                                    Modifier
+                                </Button>
+                                <Button
+                                    color="danger"
+                                    size="sm"
+                                    onClick={() => onDelete(a.id)}
+                                    disabled={deletingActiviteId === a.id}
+                                >
+                                    {deletingActiviteId === a.id ? "Suppression…" : "Supprimer"}
+                                </Button>
+                            </>
+                        ) : null}
                     </div>
                 </article>
             ))}

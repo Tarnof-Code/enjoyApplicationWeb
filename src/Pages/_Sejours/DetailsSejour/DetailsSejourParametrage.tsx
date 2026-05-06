@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
-import { useRouteLoaderData, useNavigate, useRevalidator } from "react-router-dom";
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useRouteLoaderData, useNavigate, useRevalidator, Navigate } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import ListeLieux from "../../../components/Liste/ListeLieux";
 import ListeMoments from "../../../components/Liste/ListeMoments";
@@ -19,8 +19,10 @@ import {
 } from "../../../types/api";
 import { trierMomentsChronologiquement } from "../../../helpers/trierMomentsChronologiquement";
 import { trierHorairesChronologiquement } from "../../../helpers/trierHorairesChronologiquement";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 import DetailsSejourAccordionItem from "../../../components/DetailsSejour/DetailsSejourAccordionItem";
 import ParametrageAffichageMenus from "./ParametrageAffichageMenus";
+import { accountService } from "../../../services/account.service";
 
 /** Ordre des blocs sur la page Paramétrage (1 Lieux … 6 Repas / menus). */
 const PARAM_ACCORDION_IDS = ["1", "2", "3", "4", "5", "6"] as const;
@@ -133,6 +135,16 @@ const DetailsSejourParametrage: React.FC = () => {
         setTypesActivite(t);
     }, [loaderData]);
 
+    const peutGererParametrageSejour = useMemo(() => {
+        if (!loaderData || loaderData instanceof Error) return false;
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return peutGererMembresEquipeSejour(
+            typeof sub === "string" ? sub : undefined,
+            loaderData.sejour.directeur,
+            loaderData.sejour.equipe,
+        );
+    }, [loaderData]);
+
     useEffect(() => {
         const id = lastOpenedAccordion.current;
         if (!id) return;
@@ -165,6 +177,10 @@ const DetailsSejourParametrage: React.FC = () => {
                 <p className={styles.error}>Erreur lors du chargement du séjour</p>
             </div>
         );
+    }
+
+    if (!peutGererParametrageSejour) {
+        return <Navigate to={`/mes-sejours/${loaderData.sejour.id}`} replace />;
     }
 
     const {
@@ -306,7 +322,12 @@ const DetailsSejourParametrage: React.FC = () => {
             case "5":
                 return <ListeReferencesAlimentaires />;
             case "6":
-                return <ParametrageAffichageMenus sejourId={sejour.id} />;
+                return (
+                    <ParametrageAffichageMenus
+                        sejourId={sejour.id}
+                        modifiable={peutGererParametrageSejour}
+                    />
+                );
             default:
                 return null;
         }

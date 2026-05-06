@@ -16,6 +16,8 @@ import styles from "./DetailsSejour.module.scss";
 
 type Props = {
     sejourId: number;
+    /** Faux hors directeur / adjoint : préférences en lecture seule. */
+    modifiable?: boolean;
 };
 
 const CHAMPS_COMPOSE_OPTIONS: { cle: keyof ChampsComposeMenuVisibilite; legende: string }[] = [
@@ -26,7 +28,7 @@ const CHAMPS_COMPOSE_OPTIONS: { cle: keyof ChampsComposeMenuVisibilite; legende:
 ];
 
 /** Préférences locales d’affichage de la page Menus (repas visibles + lignes de composition). */
-const ParametrageAffichageMenus: React.FC<Props> = ({ sejourId }) => {
+const ParametrageAffichageMenus: React.FC<Props> = ({ sejourId, modifiable = true }) => {
     const [prefs, setPrefs] = useState<PreferencesAffichageMenusSejour>(() =>
         lirePreferencesAffichageMenusSejour(sejourId),
     );
@@ -37,13 +39,14 @@ const ParametrageAffichageMenus: React.FC<Props> = ({ sejourId }) => {
 
     const persist = useCallback(
         (next: PreferencesAffichageMenusSejour) => {
+            if (!modifiable) return;
             setPrefs(next);
             enregistrerPreferencesAffichageMenusSejour(sejourId, next);
             window.dispatchEvent(
                 new CustomEvent("enjoy-menu-affichage-changed", { detail: { sejourId } }),
             );
         },
-        [sejourId],
+        [sejourId, modifiable],
     );
 
     const toggleTypeRepas = (t: TypeRepas, checked: boolean) => {
@@ -81,7 +84,7 @@ const ParametrageAffichageMenus: React.FC<Props> = ({ sejourId }) => {
 
     return (
         <div className={styles.paramRepasBloc}>
-            <fieldset className={styles.paramRepasFieldset}>
+            <fieldset className={styles.paramRepasFieldset} disabled={!modifiable}>
                 <legend className={styles.paramRepasLegend}>Repas affichés dans les menus</legend>
                 <FormGroup>
                     {TYPES_REPAS.map((t) => (
@@ -102,7 +105,7 @@ const ParametrageAffichageMenus: React.FC<Props> = ({ sejourId }) => {
                 ) : null}
             </fieldset>
 
-            <fieldset className={styles.paramRepasFieldset}>
+            <fieldset className={styles.paramRepasFieldset} disabled={!modifiable}>
                 <legend className={styles.paramRepasLegend}>Contenu affiché pour chaque menu</legend>
                 {CHAMPS_COMPOSE_OPTIONS.map(({ cle, legende }) => (
                     <FormGroup key={cle}>

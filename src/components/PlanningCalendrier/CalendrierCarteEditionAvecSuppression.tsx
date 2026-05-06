@@ -15,6 +15,8 @@ export type CalendrierCarteEditionAvecSuppressionProps = {
     deleteAriaLabel: string;
     deleteTitle?: string;
     deleteDisabled?: boolean;
+    /** Affichage seul : pas d’édition ni suppression */
+    lectureSeule?: boolean;
 };
 
 /** Carte cliquable + bouton suppression (pattern planning activités / menus). */
@@ -28,7 +30,22 @@ export function CalendrierCarteEditionAvecSuppression({
     deleteAriaLabel,
     deleteTitle = "Supprimer",
     deleteDisabled,
+    lectureSeule,
 }: CalendrierCarteEditionAvecSuppressionProps) {
+    if (lectureSeule) {
+        return (
+            <div className={styles.carteBloc}>
+                <div
+                    className={`${styles.carteBtn} ${styles.carteBtnLectureSeule}`}
+                    style={mainButtonStyle}
+                    role="group"
+                    aria-label={editAriaLabel}
+                >
+                    {children}
+                </div>
+            </div>
+        );
+    }
     return (
         <div className={styles.carteBloc}>
             <button

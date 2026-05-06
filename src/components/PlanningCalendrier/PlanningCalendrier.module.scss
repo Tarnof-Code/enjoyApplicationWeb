@@ -185,3 +185,14 @@ $plan-cal-border: #cfd3db;
         cursor: not-allowed;
     }
 }
+
+/** Carte affichée sans action (ex. activité d’un autre animateur) : pas de curseur « main » ni d’effet au survol. */
+.carteBtn.carteBtnLectureSeule {
+    cursor: default;
+    padding-right: 0.48rem;
+
+    &:hover {
+        border-color: rgba($bleu_principal, 0.35);
+        filter: none;
+    }
+}

@@ -12,6 +12,8 @@ import {
     EnfantDto,
     GroupeDto,
 } from "../../../types/api";
+import { accountService } from "../../../services/account.service";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 
 /**
  * Accordéons vue générale — ordre par défaut affiché :
@@ -251,6 +253,13 @@ const DetailsSejourOverview: React.FC = () => {
 
     const duree = calculerDureeEnJours(sejour.dateDebut, sejour.dateFin);
 
+    const tokenIdConnecte = accountService.getTokenInfo()?.payload?.sub;
+    const peutGererMembresEquipe = peutGererMembresEquipeSejour(
+        typeof tokenIdConnecte === "string" ? tokenIdConnecte : undefined,
+        sejour.directeur,
+        sejour.equipe
+    );
+
     const membresEquipePourActivites = (() => {
         const seen = new Set<string>();
         const result: { tokenId: string; nom: string; prenom: string }[] = [];
@@ -319,9 +328,22 @@ const DetailsSejourOverview: React.FC = () => {
                     </div>
                 );
             case "2":
-                return <Equipe membres={sejour.equipe || []} sejourId={sejour.id} />;
+                return (
+                    <Equipe
+                        membres={sejour.equipe || []}
+                        sejourId={sejour.id}
+                        peutGererMembres={peutGererMembresEquipe}
+                    />
+                );
             case "3":
-                return <ListeEnfants enfants={enfants || []} groupes={groupes || []} sejourId={sejour.id} />;
+                return (
+                    <ListeEnfants
+                        enfants={enfants || []}
+                        groupes={groupes || []}
+                        sejourId={sejour.id}
+                        peutGererEnfants={peutGererMembresEquipe}
+                    />
+                );
             case "4":
                 return (
                     <ListeGroupes
@@ -329,6 +351,7 @@ const DetailsSejourOverview: React.FC = () => {
                         enfants={enfants || []}
                         sejourId={sejour.id}
                         dateDebutSejour={sejour.dateDebut}
+                        peutGererGroupes={peutGererMembresEquipe}
                         equipe={membresEquipePourActivites}
                         initialExpandedGroupeId={expandedGroupeIdFromState}
                         onGroupRendered={(groupeId) => {

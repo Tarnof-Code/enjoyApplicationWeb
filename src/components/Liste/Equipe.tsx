@@ -8,9 +8,11 @@ import { RoleSysteme } from "../../enums/RoleSysteme";
 interface EquipeProps {
     membres: ProfilUtilisateurDTO[];
     sejourId: number;
+    /** Directeur du séjour ou adjoint : boutons ajout / édition / suppression */
+    peutGererMembres: boolean;
 }
 
-const Equipe: React.FC<EquipeProps> = ({ membres, sejourId }) => {
+const Equipe: React.FC<EquipeProps> = ({ membres, sejourId, peutGererMembres }) => {
     const revalidator = useRevalidator();
 
     const handleDeleteMembre = async (user: ProfilUtilisateurDTO) => {
@@ -24,9 +26,9 @@ const Equipe: React.FC<EquipeProps> = ({ membres, sejourId }) => {
             title="Membres de l'équipe"
             users={membres}
             excludedRoles={[RoleSysteme.DIRECTION, RoleSysteme.ADMIN]} 
-            canAdd={true}
-            canEdit={true}
-            canDelete={true}
+            canAdd={peutGererMembres}
+            canEdit={peutGererMembres}
+            canDelete={peutGererMembres}
             sejourId={sejourId}
             onDelete={handleDeleteMembre}
             deleteConfirmationMessage={(user) => `Voulez-vous retirer ${user.prenom} ${user.nom} de l'équipe de ce séjour ?`}

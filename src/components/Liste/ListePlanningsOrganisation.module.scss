@@ -725,6 +725,15 @@
     background: #e8f4fc;
 }
 
+.cellButtonReadOnly {
+    cursor: default;
+    pointer-events: none;
+}
+
+.cellButtonReadOnly:hover {
+    background: transparent;
+}
+
 .cellMuted {
     color: #999;
     font-style: italic;

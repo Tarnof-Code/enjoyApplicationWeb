@@ -160,11 +160,13 @@ function ListeReferencesAlimentaires() {
 
     const renderListe = (sousListe: ReferenceAlimentaireDto[], type: ReferenceAlimentaireType, titre: string) => (
         <div className={styles.subSection}>
-            <h3 className={styles.subTitle}>{titre}</h3>
-            <div className={styles.actionsContainer}>
-                <Button color="success" size="sm" onClick={() => openCreate(type)} disabled={chargement}>
-                    Ajouter
-                </Button>
+            <div className={styles.subSectionHeader}>
+                <h3 className={styles.subTitle}>{titre}</h3>
+                <div className={styles.actionsContainer}>
+                    <Button color="success" size="sm" onClick={() => openCreate(type)} disabled={chargement}>
+                        Ajouter
+                    </Button>
+                </div>
             </div>
             {sousListe.length === 0 ? (
                 <p className={styles.empty}>Aucune entrée.</p>
@@ -202,14 +204,7 @@ function ListeReferencesAlimentaires() {
     }
 
     return (
-        <div>
-            <p className={styles.hint}>
-                Liste complète renvoyée par l&apos;API (y compris les entrées inactives ou héritées d&apos;anciennes bases).
-                L&apos;ordre d&apos;affichage suit le champ <strong>ordre</strong> (plus petit en premier), puis l&apos;identifiant.
-                Sur une nouvelle base vide, l&apos;API crée automatiquement les allergènes courants et deux entrées régimes /
-                préférences par défaut (« Sans porc », « Sans viande ») ; vous pouvez ajouter d&apos;autres lignes à la main.
-                Les bases déjà peuplées peuvent encore contenir d&apos;anciens libellés.
-            </p>
+        <div>           
             {errorMessage && !modalOpen && !deleteModalOpen && <div className={styles.errorMessage}>{errorMessage}</div>}
 
             {renderListe(allergenes, "ALLERGENE", "Allergènes")}

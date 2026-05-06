@@ -22,13 +22,24 @@ interface ListeGroupesProps {
     enfants: EnfantDto[];
     sejourId: number;
     dateDebutSejour: string | number;
+    /** Directeur du séjour ou adjoint : création, édition, membres ; sinon consultation + dossiers */
+    peutGererGroupes: boolean;
     /** Équipe complète (directeur + membres) pour sélection des référents */
     equipe?: EquipePerson[];
     initialExpandedGroupeId?: number;
     onGroupRendered?: (groupeId: number) => void;
 }
 
-const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId, dateDebutSejour, equipe = [], initialExpandedGroupeId, onGroupRendered }) => {
+const ListeGroupes: React.FC<ListeGroupesProps> = ({
+    groupes,
+    enfants,
+    sejourId,
+    dateDebutSejour,
+    peutGererGroupes,
+    equipe = [],
+    initialExpandedGroupeId,
+    onGroupRendered,
+}) => {
     const revalidator = useRevalidator();
     const navigate = useNavigate();
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -247,16 +258,20 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
 
     return (
         <div className={styles.container}>
-            <div className={styles.actionsContainer}>
-                <Button color="success" onClick={() => setShowCreateModal(true)}>
-                    <FontAwesomeIcon icon={faPlus} className={styles.icon} />
-                    Créer un groupe
-                </Button>
-            </div>
+            {peutGererGroupes && (
+                <div className={styles.actionsContainer}>
+                    <Button color="success" onClick={() => setShowCreateModal(true)}>
+                        <FontAwesomeIcon icon={faPlus} className={styles.icon} />
+                        Créer un groupe
+                    </Button>
+                </div>
+            )}
 
             {groupes.length === 0 ? (
                 <p className={styles.placeholderText}>
-                    Aucun groupe créé. Cliquez sur "Créer un groupe" pour commencer.
+                    {peutGererGroupes
+                        ? 'Aucun groupe créé. Cliquez sur « Créer un groupe » pour commencer.'
+                        : "Aucun groupe pour ce séjour."}
                 </p>
             ) : (
                 <div className={styles.groupesList}>
@@ -286,30 +301,32 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                         <span className={styles.groupeNom}>{groupe.nom}</span>
                                         <span className={styles.groupeCount}>({groupe.enfants.length})</span>
                                     </button>
-                                    <div className={styles.groupeHeaderActions}>
-                                        <Button
-                                            color="primary"
-                                            size="sm"
-                                            outline
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditGroupe(groupe);
-                                            }}
-                                            className={styles.editButton}
-                                        >
-                                            Modifier
-                                        </Button>
-                                        <Button
-                                            color="danger"
-                                            size="sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setDeleteModal({ show: true, groupe });
-                                            }}
-                                        >
-                                            <FontAwesomeIcon icon={faTrash} /> Supprimer
-                                        </Button>
-                                    </div>
+                                    {peutGererGroupes && (
+                                        <div className={styles.groupeHeaderActions}>
+                                            <Button
+                                                color="primary"
+                                                size="sm"
+                                                outline
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditGroupe(groupe);
+                                                }}
+                                                className={styles.editButton}
+                                            >
+                                                Modifier
+                                            </Button>
+                                            <Button
+                                                color="danger"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteModal({ show: true, groupe });
+                                                }}
+                                            >
+                                                <FontAwesomeIcon icon={faTrash} /> Supprimer
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {isExpanded && (
@@ -337,7 +354,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                                     dateDebutSejour,
                                                     enfantsIdsDansGroupe
                                                 );
-                                                return matching.length > 0 ? (
+                                                return peutGererGroupes && matching.length > 0 ? (
                                                     <Button
                                                         color="success"
                                                         size="sm"
@@ -351,7 +368,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                             })()}
                                     </div>
 
-                                    {enfantsHorsGroupe.length > 0 && (
+                                    {peutGererGroupes && enfantsHorsGroupe.length > 0 && (
                                         <div className={styles.addEnfant}>
                                             <Button
                                                 color="success"
@@ -394,14 +411,16 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                                                             </span>
                                                         </span>
                                                     </span>
-                                                    <Button
-                                                        color="danger"
-                                                        size="sm"
-                                                        onClick={() => setRetirerEnfantModal({ groupe, enfant })}
-                                                        title="Retirer du groupe"
-                                                    >
-                                                        <FontAwesomeIcon icon={faUserMinus} /> Retirer
-                                                    </Button>
+                                                    {peutGererGroupes && (
+                                                        <Button
+                                                            color="danger"
+                                                            size="sm"
+                                                            onClick={() => setRetirerEnfantModal({ groupe, enfant })}
+                                                            title="Retirer du groupe"
+                                                        >
+                                                            <FontAwesomeIcon icon={faUserMinus} /> Retirer
+                                                        </Button>
+                                                    )}
                                                 </li>
                                             ))}
                                         </ul>
@@ -414,7 +433,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </div>
             )}
 
-            <Modal isOpen={showCreateModal} toggle={() => setShowCreateModal(false)} size="lg">
+            <Modal isOpen={peutGererGroupes && showCreateModal} toggle={() => setShowCreateModal(false)} size="lg">
                 <ModalHeader toggle={() => setShowCreateModal(false)}>Créer un groupe</ModalHeader>
                 <ModalBody>
                     <CreateGroupeForm
@@ -427,7 +446,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </ModalBody>
             </Modal>
 
-            <Modal isOpen={!!editGroupe} toggle={() => setEditGroupe(null)} size="lg">
+            <Modal isOpen={peutGererGroupes && !!editGroupe} toggle={() => setEditGroupe(null)} size="lg">
                 <ModalHeader toggle={() => setEditGroupe(null)}>Modifier le groupe</ModalHeader>
                 <ModalBody>
                     {editGroupe && (
@@ -442,7 +461,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
             </Modal>
 
             <Modal
-                isOpen={addEnfantsModal !== null}
+                isOpen={peutGererGroupes && addEnfantsModal !== null}
                 toggle={() => {
                     if (!addEnfantsModal || isAddingEnfants) return;
                     dismissAddEnfantsModal(addEnfantsModal.step === "recap");
@@ -557,7 +576,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </ModalFooter>
             </Modal>
 
-            <Modal isOpen={!!retirerEnfantModal} toggle={() => setRetirerEnfantModal(null)}>
+            <Modal isOpen={peutGererGroupes && !!retirerEnfantModal} toggle={() => setRetirerEnfantModal(null)}>
                 <ModalHeader toggle={() => setRetirerEnfantModal(null)}>
                     Retirer un enfant du groupe
                 </ModalHeader>
@@ -578,7 +597,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </ModalFooter>
             </Modal>
 
-            <Modal isOpen={!!addTrancheModal} toggle={() => setAddTrancheModal(null)} size="lg">
+            <Modal isOpen={peutGererGroupes && !!addTrancheModal} toggle={() => setAddTrancheModal(null)} size="lg">
                 <ModalHeader toggle={() => setAddTrancheModal(null)}>
                     Ajouter les enfants de la tranche
                 </ModalHeader>
@@ -611,7 +630,7 @@ const ListeGroupes: React.FC<ListeGroupesProps> = ({ groupes, enfants, sejourId,
                 </ModalFooter>
             </Modal>
 
-            <Modal isOpen={deleteModal.show} toggle={() => {
+            <Modal isOpen={peutGererGroupes && deleteModal.show} toggle={() => {
                 setDeleteModal({ show: false, groupe: null });
                 setErrorMessage(null);
             }}>

@@ -28,7 +28,6 @@ import type {
 } from "../../types/api";
 import { sejourPlanningGrilleService } from "../../services/sejour-planning-grille.service";
 import {
-    PlanningLigneLibelleSourceLabels,
     planningLibelleLignesSourceOptions,
     planningLigneLibelleSourceOptions,
 } from "../../enums/PlanningLigneLibelleSourceLabels";
@@ -61,8 +60,10 @@ export interface ListePlanningsOrganisationProps {
     /** Mode pleine page : affiche uniquement l’éditeur (pas la liste ni la modale tableau). */
     embeddedEditorGrilleId?: number | null;
     onCloseEmbeddedEditor?: () => void;
-    /** Si défini, création et « Consulter / tableau » naviguent au lieu d’ouvrir la modale. */
+    /** Si défini, création et « Consulter le planning » naviguent au lieu d’ouvrir la modale. */
     onNavigateToPlanning?: (grilleId: number) => void;
+    /** Directeur / adjoint : créer/supprimer/modifier grille, lignes, sections ; les autres suivent les règles « animateur ». */
+    peutGererPlanningStructure: boolean;
 }
 
 /** L’API n’expose plus de hiérarchie parent / enfant sur les lignes : profondeur d’indentation toujours nulle. */
@@ -515,6 +516,14 @@ function sourceContenuCellulesEffectif(d: PlanningGrilleDetailDto): PlanningLign
     return d.sourceContenuCellules ?? "SAISIE_LIBRE";
 }
 
+/** Sans droit « structure », la cellule n’est éditable que pour ce schéma (membre au libellé de ligne ou au contenu cellule). */
+function planningAnimateurPeutModifierCellules(detail: PlanningGrilleDetailDto): boolean {
+    return (
+        detail.sourceLibelleLignes === "MEMBRE_EQUIPE" ||
+        sourceContenuCellulesEffectif(detail) === "MEMBRE_EQUIPE"
+    );
+}
+
 function libelleEntiteAttendu(
     l: PlanningLigneDto,
     sourceLignes: PlanningLigneLibelleSource,
@@ -834,6 +843,7 @@ function ListePlanningsOrganisation({
     embeddedEditorGrilleId,
     onCloseEmbeddedEditor,
     onNavigateToPlanning,
+    peutGererPlanningStructure,
 }: ListePlanningsOrganisationProps) {
     const isEmbeddedEditor =
         embeddedEditorGrilleId != null &&
@@ -999,6 +1009,7 @@ function ListePlanningsOrganisation({
     };
 
     const appliquerDeplacementSectionEntreBlocs = async (fromBlocIdx: number, toBlocIdx: number) => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail || fromBlocIdx === toBlocIdx) return;
         const blocs = decomposerEnBlocsOrdre(detail.lignes);
         const fromB = blocs[fromBlocIdx];
@@ -1035,6 +1046,7 @@ function ListePlanningsOrganisation({
     };
 
     const openCreateMeta = () => {
+        if (!peutGererPlanningStructure) return;
         setMetaError(null);
         setMetaEditingId(null);
         setMetaPlanningLigneCount(0);
@@ -1043,6 +1055,7 @@ function ListePlanningsOrganisation({
     };
 
     const handleMetaSubmit = async () => {
+        if (!peutGererPlanningStructure) return;
         const titre = metaForm.titre.trim();
         if (!titre) {
             setMetaError("Le titre est obligatoire.");
@@ -1088,6 +1101,7 @@ function ListePlanningsOrganisation({
     };
 
     const loadMetaForEdit = async (grilleId: number) => {
+        if (!peutGererPlanningStructure) return;
         setMetaError(null);
         setMetaSubmitting(true);
         try {
@@ -1109,11 +1123,13 @@ function ListePlanningsOrganisation({
     };
 
     const requestDeleteGrille = (id: number) => {
+        if (!peutGererPlanningStructure) return;
         setPendingDeleteGrilleId(id);
         setDeleteGrilleModalOpen(true);
     };
 
     const confirmDeleteGrille = async () => {
+        if (!peutGererPlanningStructure) return;
         if (pendingDeleteGrilleId == null) return;
         const idSupprime = pendingDeleteGrilleId;
         setDeletingGrille(true);
@@ -1151,7 +1167,7 @@ function ListePlanningsOrganisation({
     };
 
     const openSectionModal = () => {
-        if (!detail) return;
+        if (!peutGererPlanningStructure || !detail) return;
         setSectionModalError(null);
         setNewSectionLibelle("");
         setNewSectionLineIds(new Set());
@@ -1197,6 +1213,7 @@ function ListePlanningsOrganisation({
     };
 
     const handleCreerSection = async () => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail) return;
         const lib = newSectionLibelle.trim();
         if (!lib) {
@@ -1234,6 +1251,7 @@ function ListePlanningsOrganisation({
     };
 
     const handleEnregistrerModificationSection = async () => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail || sectionEditTarget == null) return;
         const newLibelle = editSectionLibelleInput.trim();
         if (!newLibelle) {
@@ -1278,6 +1296,7 @@ function ListePlanningsOrganisation({
     };
 
     const handleSupprimerSectionConfirm = async () => {
+        if (!peutGererPlanningStructure) return;
         if (deletingSection == null || editorGrilleId == null || !detail) return;
         const ids = detail.lignes
             .filter((l) => l.libelleRegroupement === deletingSection)
@@ -1302,6 +1321,7 @@ function ListePlanningsOrganisation({
     };
 
     const creerLigneSansModal = async () => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail) return;
         if (!grilleLibelleLignesDesactive(detail)) return;
         setEditorError(null);
@@ -1336,6 +1356,7 @@ function ListePlanningsOrganisation({
     };
 
     const openCreateLine = () => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail) return;
         if (grilleLibelleLignesDesactive(detail)) {
             void creerLigneSansModal();
@@ -1349,6 +1370,7 @@ function ListePlanningsOrganisation({
     };
 
     const openEditLine = (l: PlanningLigneDto) => {
+        if (!peutGererPlanningStructure) return;
         if (!detail) return;
         setEditorError(null);
         setLineError(null);
@@ -1370,6 +1392,7 @@ function ListePlanningsOrganisation({
     };
 
     const appliquerGlisserDeposerOrdreLignes = async (draggedId: number, targetId: number) => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail || draggedId === targetId) return;
         const lignesOrd = lignesTriPourAffichageGrille(detail.lignes);
         const dragged = lignesOrd.find((l) => l.id === draggedId);
@@ -1423,6 +1446,7 @@ function ListePlanningsOrganisation({
     };
 
     const handleLineSubmit = async () => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null || !detail) return;
         const src = sourceLibelleEffectifGrille(detail);
         const validation = validateLineForm(lineForm, src);
@@ -1462,6 +1486,7 @@ function ListePlanningsOrganisation({
     };
 
     const handleDeleteLine = async (ligneId: number) => {
+        if (!peutGererPlanningStructure) return;
         if (editorGrilleId == null) return;
         setEditorError(null);
         setDeletingLine(true);
@@ -1478,6 +1503,9 @@ function ListePlanningsOrganisation({
 
     const openCellModal = (ligneId: number, jour: string) => {
         if (!detail) return;
+        const peutModifierCetteCellule =
+            peutGererPlanningStructure || planningAnimateurPeutModifierCellules(detail);
+        if (!peutModifierCetteCellule) return;
         const ligne = detail.lignes.find((l) => l.id === ligneId);
         if (!ligne) return;
         const cell = cellulePourJour(ligne, jour);
@@ -1532,6 +1560,9 @@ function ListePlanningsOrganisation({
 
     const handleCellSubmit = async () => {
         if (cellLigneId == null || cellJour == null || editorGrilleId == null || !detail) return;
+        const peutModifierCetteCellule =
+            peutGererPlanningStructure || planningAnimateurPeutModifierCellules(detail);
+        if (!peutModifierCetteCellule) return;
         const contenuSrc = sourceContenuCellulesEffectif(detail);
 
         let horaireIds: number[] | null = null;
@@ -1629,31 +1660,36 @@ function ListePlanningsOrganisation({
         detail != null ? grilleAfficheColonneRegroupement(detail.lignes) : false;
     const afficherColonneLibelleLigne = detail != null ? grilleAfficheColonneLibelleLigne(detail) : false;
 
-    const renderLineDragHandle = (ligne: PlanningLigneDto, className: string) => (
-        <div
-            className={className}
-            aria-label="Glisser pour réorganiser les lignes"
-            title="Réorganiser"
-            draggable={!lineReorderBusy && !reordonnancementSectionBusy}
-            onDragStart={(e) => {
-                e.dataTransfer.setData("text/plain", `line:${ligne.id}`);
-                e.dataTransfer.effectAllowed = "move";
-                setDraggingPlanningLigneId(ligne.id);
-            }}
-            onDragEnd={() => {
-                setDraggingPlanningLigneId(null);
-                setDropTargetPlanningLigneId(null);
-            }}
-        >
-            <FaGripVertical aria-hidden size={12} />
-        </div>
-    );
+    const renderLineDragHandle = (ligne: PlanningLigneDto, className: string) =>
+        peutGererPlanningStructure ? (
+            <div
+                className={className}
+                aria-label="Glisser pour réorganiser les lignes"
+                title="Réorganiser"
+                draggable={!lineReorderBusy && !reordonnancementSectionBusy}
+                onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", `line:${ligne.id}`);
+                    e.dataTransfer.effectAllowed = "move";
+                    setDraggingPlanningLigneId(ligne.id);
+                }}
+                onDragEnd={() => {
+                    setDraggingPlanningLigneId(null);
+                    setDropTargetPlanningLigneId(null);
+                }}
+            >
+                <FaGripVertical aria-hidden size={12} />
+            </div>
+        ) : null;
 
     const renderEditorSurface = () => (
         <>
         {editorLoading && <p>Chargement…</p>}
         {editorError && <div className={styles.errorMessage}>{editorError}</div>}
-        {!editorLoading && detail && (
+        {!editorLoading && detail && (() => {
+            const peutModifierCellulesPlanning =
+                peutGererPlanningStructure ||
+                planningAnimateurPeutModifierCellules(detail);
+            return (
             <>
                 {detail.consigneGlobale ? (
                     <div className={styles.editorConsigne}>
@@ -1664,17 +1700,21 @@ function ListePlanningsOrganisation({
                     <div className={styles.tableToolbar}>
                         <div className={styles.tableToolbarRow}>
                             <div className={styles.tableToolbarActions}>
-                                <Button
-                                    color="success"
-                                    size="sm"
-                                    onClick={openCreateLine}
-                                    disabled={ligneRapideBusy}
-                                >
-                                    {ligneRapideBusy ? "Ajout…" : "Ajouter une ligne"}
-                                </Button>
-                                <Button color="secondary" size="sm" onClick={openSectionModal}>
-                                    Libellés de section
-                                </Button>
+                                {peutGererPlanningStructure ? (
+                                    <>
+                                        <Button
+                                            color="success"
+                                            size="sm"
+                                            onClick={openCreateLine}
+                                            disabled={ligneRapideBusy}
+                                        >
+                                            {ligneRapideBusy ? "Ajout…" : "Ajouter une ligne"}
+                                        </Button>
+                                        <Button color="secondary" size="sm" onClick={openSectionModal}>
+                                            Libellés de section
+                                        </Button>
+                                    </>
+                                ) : null}
                             </div>
                             {joursFenetre.length > 0 ?
                                 <CalendrierNavigationPeriode
@@ -1717,9 +1757,11 @@ function ListePlanningsOrganisation({
                                         {label}
                                     </th>
                                 ))}
-                                <th className={styles.lineActionsHead} scope="col">
-                                    Actions
-                                </th>
+                                {peutGererPlanningStructure ? (
+                                    <th className={styles.lineActionsHead} scope="col">
+                                        Actions
+                                    </th>
+                                ) : null}
                             </tr>
                         </thead>
                         <tbody>
@@ -1743,6 +1785,7 @@ function ListePlanningsOrganisation({
                                     blocsPlein.filter((b) => b.kind === "section")
                                         .length >= 2;
                                 const afficherPoigneeDeplacerSection =
+                                    peutGererPlanningStructure &&
                                     afficherColonneRegroupement &&
                                     auMoinsDeuxSections &&
                                     idxBlocTeteSection >= 0 &&
@@ -1779,6 +1822,7 @@ function ListePlanningsOrganisation({
                                             className={rowDnDClass || undefined}
                                             onDragOver={(e) => {
                                                 if (
+                                                    !peutGererPlanningStructure ||
                                                     lineReorderBusy ||
                                                     reordonnancementSectionBusy ||
                                                     draggingPlanningLigneId == null
@@ -1798,6 +1842,7 @@ function ListePlanningsOrganisation({
                                             }}
                                             onDrop={(e) => {
                                                 e.preventDefault();
+                                                if (!peutGererPlanningStructure) return;
                                                 const raw = e.dataTransfer.getData("text/plain");
                                                 if (raw.startsWith("section-bloc:")) {
                                                     return;
@@ -1826,7 +1871,10 @@ function ListePlanningsOrganisation({
                                                         .filter(Boolean)
                                                         .join(" ")}
                                                     onDragOver={(e) => {
-                                                        if (reordonnancementSectionBusy) {
+                                                        if (
+                                                            !peutGererPlanningStructure ||
+                                                            reordonnancementSectionBusy
+                                                        ) {
                                                             return;
                                                         }
                                                         if (draggingSectionBlocIndex == null) {
@@ -1851,7 +1899,7 @@ function ListePlanningsOrganisation({
                                                     onDrop={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
-                                                        if (reordonnancementSectionBusy) return;
+                                                        if (!peutGererPlanningStructure || reordonnancementSectionBusy) return;
                                                         const raw = e.dataTransfer.getData("text/plain");
                                                         const m = /^section-bloc:(\d+)$/.exec(raw);
                                                         const from = m
@@ -1963,24 +2011,41 @@ function ListePlanningsOrganisation({
                                                 );
                                                 return (
                                                     <td key={j} className={styles.planningGridCell}>
-                                                        <button
-                                                            type="button"
-                                                            className={styles.cellButton}
-                                                            onClick={() => openCellModal(ligne.id, j)}
-                                                        >
-                                                            <span
-                                                                className={
-                                                                    texteCellule === "—"
-                                                                        ? styles.cellMuted
-                                                                        : undefined
-                                                                }
+                                                        {peutModifierCellulesPlanning ? (
+                                                            <button
+                                                                type="button"
+                                                                className={styles.cellButton}
+                                                                onClick={() => openCellModal(ligne.id, j)}
                                                             >
-                                                                {texteCellule}
+                                                                <span
+                                                                    className={
+                                                                        texteCellule === "—"
+                                                                            ? styles.cellMuted
+                                                                            : undefined
+                                                                    }
+                                                                >
+                                                                    {texteCellule}
+                                                                </span>
+                                                            </button>
+                                                        ) : (
+                                                            <span
+                                                                className={`${styles.cellButton} ${styles.cellButtonReadOnly}`}
+                                                            >
+                                                                <span
+                                                                    className={
+                                                                        texteCellule === "—"
+                                                                            ? styles.cellMuted
+                                                                            : undefined
+                                                                    }
+                                                                >
+                                                                    {texteCellule}
+                                                                </span>
                                                             </span>
-                                                        </button>
+                                                        )}
                                                     </td>
                                                 );
                                             })}
+                                            {peutGererPlanningStructure ? (
                                             <td className={styles.lineActionsCell}>
                                                 <div className={styles.lineActionsButtons}>
                                                     {!afficherColonneLibelleLigne
@@ -2022,6 +2087,7 @@ function ListePlanningsOrganisation({
                                                     </button>
                                                 </div>
                                             </td>
+                                            ) : null}
                                         </tr>
                                     </Fragment>
                                 );
@@ -2030,7 +2096,8 @@ function ListePlanningsOrganisation({
                     </table>
                 </div>
             </>
-        )}
+            );
+        })()}
         </>
     );
 
@@ -2051,9 +2118,11 @@ function ListePlanningsOrganisation({
                 <>
                     <div className={styles.actionsContainer}>
                         <h1 className="page-title">Organisation</h1>
-                        <Button color="success" onClick={openCreateMeta}>
-                            Créer un planning
-                        </Button>
+                        {peutGererPlanningStructure ? (
+                            <Button color="success" onClick={openCreateMeta}>
+                                Créer un planning
+                            </Button>
+                        ) : null}
                     </div>
             {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
 
@@ -2069,14 +2138,18 @@ function ListePlanningsOrganisation({
                             </div>
                             <div className={styles.cardActions}>
                                 <Button color="primary" size="sm" onClick={() => openConsultEditTable(g.id)}>
-                                    Consulter / tableau
+                                    Consulter le planning
                                 </Button>
-                                <Button color="secondary" size="sm" onClick={() => loadMetaForEdit(g.id)}>
-                                    Modifier infos
-                                </Button>
-                                <Button color="danger" size="sm" outline onClick={() => requestDeleteGrille(g.id)}>
-                                    Supprimer
-                                </Button>
+                                {peutGererPlanningStructure ? (
+                                    <>
+                                        <Button color="secondary" size="sm" onClick={() => loadMetaForEdit(g.id)}>
+                                            Modifier infos
+                                        </Button>
+                                        <Button color="danger" size="sm" outline onClick={() => requestDeleteGrille(g.id)}>
+                                            Supprimer
+                                        </Button>
+                                    </>
+                                ) : null}
                             </div>
                         </article>
                     ))}
@@ -2085,7 +2158,7 @@ function ListePlanningsOrganisation({
                 </>
             )}
 
-            <Modal isOpen={metaModalOpen} toggle={() => !metaSubmitting && setMetaModalOpen(false)} size="lg">
+            <Modal isOpen={metaModalOpen && peutGererPlanningStructure} toggle={() => !metaSubmitting && setMetaModalOpen(false)} size="lg">
                 <ModalHeader toggle={() => !metaSubmitting && setMetaModalOpen(false)}>
                     {metaEditingId == null ? "Nouveau planning" : "Modifier le planning"}
                 </ModalHeader>
@@ -2224,7 +2297,7 @@ function ListePlanningsOrganisation({
             </Modal>
 
             <Modal
-                isOpen={deleteGrilleModalOpen}
+                isOpen={deleteGrilleModalOpen && peutGererPlanningStructure}
                 toggle={() => !deletingGrille && setDeleteGrilleModalOpen(false)}
             >
                 <ModalHeader toggle={() => !deletingGrille && setDeleteGrilleModalOpen(false)}>
@@ -2258,7 +2331,7 @@ function ListePlanningsOrganisation({
             )}
 
             <Modal
-                isOpen={sectionModalOpen}
+                isOpen={sectionModalOpen && peutGererPlanningStructure}
                 toggle={() => {
                     if (sectionBusy) return;
                     cancelEditSection();
@@ -2611,7 +2684,7 @@ function ListePlanningsOrganisation({
                 </ModalFooter>
             </Modal>
 
-            <Modal isOpen={lineModalOpen} toggle={() => !lineSubmitting && setLineModalOpen(false)} size="lg">
+            <Modal isOpen={lineModalOpen && peutGererPlanningStructure} toggle={() => !lineSubmitting && setLineModalOpen(false)} size="lg">
                 <ModalHeader toggle={() => !lineSubmitting && setLineModalOpen(false)}>
                     {lineEditingId == null ? "Nouvelle ligne" : "Modifier la ligne"}
                 </ModalHeader>
@@ -2674,30 +2747,7 @@ function ListePlanningsOrganisation({
                 <ModalHeader toggle={() => !cellSubmitting && setCellModalOpen(false)}>
                     Cellule — {cellJour ? libelleJourCommeCalendrierActivites(cellJour) : ""}
                 </ModalHeader>
-                <ModalBody>
-                    {contenuCellulesPourModal != null ? (
-                        <p className={styles.fieldHint}>
-                            Type de contenu des cellules :{" "}
-                            <strong>{PlanningLigneLibelleSourceLabels[contenuCellulesPourModal]}</strong>
-                            {contenuCellulesPourModal === "SAISIE_LIBRE" ? (
-                                <span>
-                                    {" "}
-                                    — texte libre et/ou membres (optionnel) ; laisser tout vide pour effacer la
-                                    cellule.
-                                </span>
-                            ) : contenuCellulesPourModal === "MEMBRE_EQUIPE" ? (
-                                <span>
-                                    {" "}
-                                    — cochez un ou plusieurs membres. Aucune case cochée pour effacer la cellule.
-                                </span>
-                            ) : (
-                                <span>
-                                    {" "}
-                                    — cochez une ou plusieurs entrées (aucune case pour effacer la cellule).
-                                </span>
-                            )}
-                        </p>
-                    ) : null}
+                <ModalBody>                
                     {contenuCellulesPourModal === "SAISIE_LIBRE" ? (
                         <>
                             <FormGroup className={styles.modalField}>

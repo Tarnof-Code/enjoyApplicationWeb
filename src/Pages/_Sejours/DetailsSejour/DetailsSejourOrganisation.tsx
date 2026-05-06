@@ -1,5 +1,8 @@
+import { useMemo } from "react";
 import { useNavigate, useParams, useRouteLoaderData } from "react-router-dom";
 import ListePlanningsOrganisation from "../../../components/Liste/ListePlanningsOrganisation";
+import { accountService } from "../../../services/account.service";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 import {
     SejourDTO,
     EnfantDto,
@@ -41,6 +44,15 @@ const DetailsSejourOrganisation: React.FC = () => {
 
     const baseOrganisation = `/mes-sejours/${sejour.id}/organisation`;
 
+    const peutGererPlanningStructure = useMemo(() => {
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return peutGererMembresEquipeSejour(
+            typeof sub === "string" ? sub : undefined,
+            sejour.directeur,
+            sejour.equipe
+        );
+    }, [sejour.directeur, sejour.equipe]);
+
     return (
         <ListePlanningsOrganisation
             sejourId={sejour.id}
@@ -56,6 +68,7 @@ const DetailsSejourOrganisation: React.FC = () => {
             embeddedEditorGrilleId={embeddedEditorGrilleId}
             onCloseEmbeddedEditor={() => navigate(baseOrganisation)}
             onNavigateToPlanning={(id) => navigate(`${baseOrganisation}/${id}`)}
+            peutGererPlanningStructure={peutGererPlanningStructure}
         />
     );
 };

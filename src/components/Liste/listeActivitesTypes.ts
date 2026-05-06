@@ -27,4 +27,11 @@ export interface ListeActivitesProps {
     lieux: LieuDto[];
     moments: MomentDto[];
     typesActivite: TypeActiviteDto[];
+    /**
+     * Directeur / adjoint : toutes les lignes du calendrier, tous les animateurs dans le formulaire.
+     * Sinon l’utilisateur ne peut agir que sur sa ligne et reste obligatoirement coché comme animateur.
+     */
+    peutGererActivitesComplet?: boolean;
+    /** Identifiant utilisateur (JWT `sub`), aligné sur `membre.tokenId`. */
+    tokenUtilisateurConnecte?: string | null;
 }

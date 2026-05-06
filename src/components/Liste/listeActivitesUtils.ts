@@ -189,6 +189,17 @@ export function trierTypesParLibelle(a: TypeActiviteDto, b: TypeActiviteDto): nu
     return a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" });
 }
 
+/** Met un membre d’équipe en tête si son `tokenId` correspond (liste / calendrier / formulaire). */
+export function equipeAvecTokenEnTete<T extends { tokenId: string }>(membres: T[], tokenPrioritaire: string): T[] {
+    const t = tokenPrioritaire.trim();
+    if (!t) return membres;
+    const idx = membres.findIndex((m) => (m.tokenId ?? "").trim() === t);
+    if (idx <= 0) return membres;
+    const copy = [...membres];
+    const [premier] = copy.splice(idx, 1);
+    return [premier, ...copy];
+}
+
 /** Groupes dont le membre d’équipe (token) est référent. */
 export function groupeIdsReferentsPourToken(groupes: GroupeDto[], tokenId: string): Set<number> {
     const ids = new Set<number>();

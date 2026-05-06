@@ -33,7 +33,9 @@ import {
     lirePreferencesAffichageMenusSejour,
 } from "../../../helpers/menuRepasAffichageSejour";
 import { optionsCheckboxReferencesAlimentaires } from "../../../helpers/optionsReferencesAlimentaires";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 import { sejourMenuService } from "../../../services/sejour-menu.service";
+import { accountService } from "../../../services/account.service";
 
 type LoaderOk = { sejour: SejourDTO };
 
@@ -80,6 +82,16 @@ const DetailsSejourMenus: React.FC = () => {
     const [preferencesMenusNonce, setPreferencesMenusNonce] = useState(0);
 
     const sejour = loaderData && !(loaderData instanceof Error) ? loaderData.sejour : undefined;
+
+    const peutGererMenus = useMemo(() => {
+        if (!sejour) return false;
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return peutGererMembresEquipeSejour(
+            typeof sub === "string" ? sub : undefined,
+            sejour.directeur,
+            sejour.equipe,
+        );
+    }, [sejour]);
 
     const prefsAffichageMenus = useMemo(
         () => (sejour ? lirePreferencesAffichageMenusSejour(sejour.id) : null),
@@ -223,6 +235,7 @@ const DetailsSejourMenus: React.FC = () => {
     );
 
     const ouvrirCreation = (type: TypeRepas, dateISO: string) => {
+        if (!peutGererMenus) return;
         setModalError(null);
         setModalDateRepasStr(dateISO);
         setEditingMenu(null);
@@ -240,6 +253,7 @@ const DetailsSejourMenus: React.FC = () => {
     };
 
     const ouvrirEdition = (menu: MenuRepasDto) => {
+        if (!peutGererMenus) return;
         setModalError(null);
         setModalDateRepasStr(jourISOdepuisDateRepasApi(menu.dateRepas as unknown) || normaliserDateRepasISO(String(menu.dateRepas ?? "")));
         setEditingMenu(menu);
@@ -347,6 +361,7 @@ const DetailsSejourMenus: React.FC = () => {
     };
 
     const demanderSuppressionMenu = (m: MenuRepasDto) => {
+        if (!peutGererMenus) return;
         setModalError(null);
         setPendingDelete(m);
         setDeleteOpen(true);
@@ -488,6 +503,16 @@ const DetailsSejourMenus: React.FC = () => {
                                             const datePourAria = formaterDate(`${col.ymd}T12:00:00`);
                                             const menu = menusParJourEtType.get(col.ymd)?.get(type);
                                             if (!menu) {
+                                                if (!peutGererMenus) {
+                                                    return (
+                                                        <td
+                                                            key={`${col.ymd}-${type}`}
+                                                            className={`${planningCal.cellShell} ${planningCal.cellToneEmpty} ${menuStyles.calMenusTdSizing}`}
+                                                        >
+                                                            <span className={menuStyles.calTdMuted}>—</span>
+                                                        </td>
+                                                    );
+                                                }
                                                 const ouvrirCellule = () => ouvrirCreation(type, col.ymd);
                                                 return (
                                                     <td
@@ -518,9 +543,14 @@ const DetailsSejourMenus: React.FC = () => {
                                                     className={`${planningCal.cellShell} ${planningCal.cellToneFilled} ${menuStyles.calMenusTdSizing}`}
                                                 >
                                                     <CalendrierCarteEditionAvecSuppression
+                                                        lectureSeule={!peutGererMenus}
                                                         onEdit={() => ouvrirEdition(menu)}
                                                         editDisabled={editionDesactivee}
-                                                        editAriaLabel={`Modifier le menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`}
+                                                        editAriaLabel={
+                                                            peutGererMenus
+                                                                ? `Modifier le menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`
+                                                                : `Menu « ${LABELS_TYPE_REPAS[type]} » du ${datePourAria}`
+                                                        }
                                                         mainButtonStyle={
                                                             {
                                                                 "--plan-cal-carte-bg": couleurFondCarteMenuPourTypeRepas(type),
@@ -557,8 +587,9 @@ const DetailsSejourMenus: React.FC = () => {
                     </div>
                     {menus.length === 0 && !loading && !pageError ? (
                         <p className={planningCal.footnote}>
-                            Aucun menu renseigné sur cette plage — cliquez dans une case (jour et type de repas) pour en
-                            ajouter un.
+                            {peutGererMenus
+                                ? "Aucun menu renseigné sur cette plage — cliquez dans une case (jour et type de repas) pour en ajouter un."
+                                : "Aucun menu renseigné sur cette plage."}
                         </p>
                     ) : null}
                 </div>
@@ -582,26 +613,38 @@ const DetailsSejourMenus: React.FC = () => {
                                               {menu ? (
                                                   <>
                                                       {renduBlocInfosCarte(menu, champsComposeMenusVisibles)}
-                                                      <div className={menuStyles.cardActions}>
-                                                          <Button color="primary" size="sm" onClick={() => ouvrirEdition(menu)}>
-                                                              Modifier
-                                                          </Button>
-                                                          <Button
-                                                              color="danger"
-                                                              size="sm"
-                                                              outline
-                                                              onClick={() => demanderSuppressionMenu(menu)}
-                                                          >
-                                                              Supprimer
-                                                          </Button>
-                                                      </div>
+                                                      {peutGererMenus ? (
+                                                          <div className={menuStyles.cardActions}>
+                                                              <Button
+                                                                  color="primary"
+                                                                  size="sm"
+                                                                  onClick={() => ouvrirEdition(menu)}
+                                                              >
+                                                                  Modifier
+                                                              </Button>
+                                                              <Button
+                                                                  color="danger"
+                                                                  size="sm"
+                                                                  outline
+                                                                  onClick={() => demanderSuppressionMenu(menu)}
+                                                              >
+                                                                  Supprimer
+                                                              </Button>
+                                                          </div>
+                                                      ) : null}
                                                   </>
                                               ) : (
                                                   <>
                                                       <p className={menuStyles.empty}>Aucun menu renseigné.</p>
-                                                      <Button color="success" size="sm" onClick={() => ouvrirCreation(type, dayISO)}>
-                                                          Ajouter
-                                                      </Button>
+                                                      {peutGererMenus ? (
+                                                          <Button
+                                                              color="success"
+                                                              size="sm"
+                                                              onClick={() => ouvrirCreation(type, dayISO)}
+                                                          >
+                                                              Ajouter
+                                                          </Button>
+                                                      ) : null}
                                                   </>
                                               )}
                                           </article>

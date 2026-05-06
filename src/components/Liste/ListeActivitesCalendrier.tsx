@@ -147,6 +147,8 @@ export function CalendrierNavigationPeriode({
 }
 
 export type CalendrierFiltresPlanningProps = {
+    /** Si vrai : pas de choix d’animateurs (ligne unique imposée côté parent). */
+    masquerFiltreAnimateurs?: boolean;
     equipeTriéeFiltre: MembreEquipeSejour[];
     groupesTriésFiltre: GroupeDto[];
     groupes: GroupeDto[];
@@ -165,6 +167,7 @@ export type CalendrierFiltresPlanningProps = {
 };
 
 export function CalendrierFiltresPlanning({
+    masquerFiltreAnimateurs = false,
     equipeTriéeFiltre,
     groupesTriésFiltre,
     groupes,
@@ -225,77 +228,79 @@ export function CalendrierFiltresPlanning({
                 <div className={styles.calendrierFiltreBarre}>
                     <span className={styles.calendrierFiltreTitre}>Filtrer le planning</span>
                     <div className={styles.calendrierFiltreBarreFiltres}>
-                        <div ref={calFiltAnimDropdownRef} className={styles.calendrierFiltreDropdown}>
-                            <button
-                                type="button"
-                                className={styles.calendrierFiltreDropdownBtn}
-                                aria-haspopup="listbox"
-                                aria-expanded={calFiltAnimPanelOuvert}
-                                aria-label={`Animateurs affichés : ${libelleResumeFiltreCalendrierAnim}`}
-                                id="calfilt-anim-btn"
-                                onClick={() => {
-                                    setCalFiltAnimPanelOuvert((v) => !v);
-                                    setCalFiltGrpPanelOuvert(false);
-                                }}
-                            >
-                                <span className={styles.calendrierFiltreDropdownBtnText}>
-                                    {libelleResumeFiltreCalendrierAnim}
-                                </span>
-                                <span className={styles.calendrierFiltreDropdownChevron} aria-hidden>
-                                    &#9660;
-                                </span>
-                            </button>
-                            {calFiltAnimPanelOuvert ? (
-                                <div
-                                    className={styles.calendrierFiltreDropdownPanel}
-                                    role="listbox"
-                                    aria-multiselectable="true"
-                                    aria-label="Choisir les animateurs à afficher"
+                        {!masquerFiltreAnimateurs ? (
+                            <div ref={calFiltAnimDropdownRef} className={styles.calendrierFiltreDropdown}>
+                                <button
+                                    type="button"
+                                    className={styles.calendrierFiltreDropdownBtn}
+                                    aria-haspopup="listbox"
+                                    aria-expanded={calFiltAnimPanelOuvert}
+                                    aria-label={`Animateurs affichés : ${libelleResumeFiltreCalendrierAnim}`}
+                                    id="calfilt-anim-btn"
+                                    onClick={() => {
+                                        setCalFiltAnimPanelOuvert((v) => !v);
+                                        setCalFiltGrpPanelOuvert(false);
+                                    }}
                                 >
-                                    {equipeTriéeFiltre.length > 0 ? (
-                                        <div className={styles.calendrierFiltreDropdownBulk}>
-                                            <Button
-                                                type="button"
-                                                color="link"
-                                                size="sm"
-                                                className={styles.calendrierFiltreDropdownBulkBtn}
-                                                onClick={onToutSelectionnerFiltreCalendrierAnim}
-                                                aria-label="Tout sélectionner dans les animateurs du calendrier"
-                                            >
-                                                Tout sélectionner
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                color="link"
-                                                size="sm"
-                                                className={styles.calendrierFiltreDropdownBulkBtn}
-                                                onClick={onRienSelectionnerFiltreCalendrierAnim}
-                                                aria-label="Ne sélectionner aucun animateur dans le calendrier"
-                                            >
-                                                Rien sélectionner
-                                            </Button>
-                                        </div>
-                                    ) : null}
-                                    {equipeTriéeFiltre.map((m) => (
-                                        <label key={m.tokenId} className={styles.calendrierFiltreDropdownItem}>
-                                            <Input
-                                                type="checkbox"
-                                                className={styles.calendrierFiltreDropdownCheckbox}
-                                                id={`calfilt-anim-${m.tokenId}`}
-                                                checked={
-                                                    filtreCalendrierTokens.size === 0 ||
-                                                    filtreCalendrierTokens.has(m.tokenId)
-                                                }
-                                                onChange={() => onToggleFiltreCalendrierToken(m.tokenId)}
-                                            />
-                                            <span className={styles.calendrierFiltreDropdownItemLabel}>
-                                                {m.prenom} {m.nom}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-                            ) : null}
-                        </div>
+                                    <span className={styles.calendrierFiltreDropdownBtnText}>
+                                        {libelleResumeFiltreCalendrierAnim}
+                                    </span>
+                                    <span className={styles.calendrierFiltreDropdownChevron} aria-hidden>
+                                        &#9660;
+                                    </span>
+                                </button>
+                                {calFiltAnimPanelOuvert ? (
+                                    <div
+                                        className={styles.calendrierFiltreDropdownPanel}
+                                        role="listbox"
+                                        aria-multiselectable="true"
+                                        aria-label="Choisir les animateurs à afficher"
+                                    >
+                                        {equipeTriéeFiltre.length > 0 ? (
+                                            <div className={styles.calendrierFiltreDropdownBulk}>
+                                                <Button
+                                                    type="button"
+                                                    color="link"
+                                                    size="sm"
+                                                    className={styles.calendrierFiltreDropdownBulkBtn}
+                                                    onClick={onToutSelectionnerFiltreCalendrierAnim}
+                                                    aria-label="Tout sélectionner dans les animateurs du calendrier"
+                                                >
+                                                    Tout sélectionner
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    color="link"
+                                                    size="sm"
+                                                    className={styles.calendrierFiltreDropdownBulkBtn}
+                                                    onClick={onRienSelectionnerFiltreCalendrierAnim}
+                                                    aria-label="Ne sélectionner aucun animateur dans le calendrier"
+                                                >
+                                                    Rien sélectionner
+                                                </Button>
+                                            </div>
+                                        ) : null}
+                                        {equipeTriéeFiltre.map((m) => (
+                                            <label key={m.tokenId} className={styles.calendrierFiltreDropdownItem}>
+                                                <Input
+                                                    type="checkbox"
+                                                    className={styles.calendrierFiltreDropdownCheckbox}
+                                                    id={`calfilt-anim-${m.tokenId}`}
+                                                    checked={
+                                                        filtreCalendrierTokens.size === 0 ||
+                                                        filtreCalendrierTokens.has(m.tokenId)
+                                                    }
+                                                    onChange={() => onToggleFiltreCalendrierToken(m.tokenId)}
+                                                />
+                                                <span className={styles.calendrierFiltreDropdownItemLabel}>
+                                                    {m.prenom} {m.nom}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : null}
                         {groupes.length > 0 ? (
                             <div ref={calFiltGrpDropdownRef} className={styles.calendrierFiltreDropdown}>
                                 <button
@@ -405,6 +410,11 @@ export type CalendrierPlanningProps = {
     onOpenEdit: (a: ActiviteDto) => void;
     onDelete: (activiteId: number) => void;
     deletingActiviteId: number | null;
+    /**
+     * Si renseigné : seules les lignes dont le `tokenId` correspond peuvent créer ou modifier/supprimer une activité
+     * (cases des autres lignes en lecture seule).
+     */
+    tokenEditionCalendrierReserve?: string | null;
 };
 
 export function CalendrierPlanning({
@@ -423,6 +433,7 @@ export function CalendrierPlanning({
     onOpenEdit,
     onDelete,
     deletingActiviteId,
+    tokenEditionCalendrierReserve = null,
 }: CalendrierPlanningProps) {
     return (
         <div className={styles.calendrierWrap}>
@@ -479,6 +490,10 @@ export function CalendrierPlanning({
                                 {equipePourCalendrier.map((membre) => {
                                     const libelleGroupesReferent =
                                         libellesGroupesReferentParToken.get(membre.tokenId);
+                                    const ligneEditableCalendrier =
+                                        tokenEditionCalendrierReserve == null ||
+                                        tokenEditionCalendrierReserve.trim() === "" ||
+                                        membre.tokenId.trim() === tokenEditionCalendrierReserve.trim();
                                     return (
                                         <tr key={membre.tokenId}>
                                             <th scope="row" className={styles.calendrierRowHead}>
@@ -511,7 +526,10 @@ export function CalendrierPlanning({
                                                         ? planningCal.cellToneFilled
                                                         : planningCal.cellToneEmpty;
                                                 const celluleAjoutClic =
-                                                    dansSejour && peutAjouterActivite && dansCellule.length === 0;
+                                                    ligneEditableCalendrier &&
+                                                    dansSejour &&
+                                                    peutAjouterActivite &&
+                                                    dansCellule.length === 0;
                                                 const ouvrirNouvelleActiviteCellule = () =>
                                                     onOpenNouvelleActivite({
                                                         dateYmd: ymd,
@@ -533,8 +551,12 @@ export function CalendrierPlanning({
                                                         {dansCellule.map((a) => (
                                                             <CalendrierCarteEditionAvecSuppression
                                                                 key={a.id}
+                                                                lectureSeule={!ligneEditableCalendrier}
                                                                 onEdit={() => onOpenEdit(a)}
-                                                                editDisabled={deletingActiviteId === a.id}
+                                                                editDisabled={
+                                                                    deletingActiviteId === a.id ||
+                                                                    !ligneEditableCalendrier
+                                                                }
                                                                 editAriaLabel={`Éditer l’activité « ${a.nom} »`}
                                                                 mainButtonStyle={
                                                                     {
@@ -546,7 +568,10 @@ export function CalendrierPlanning({
                                                                 }
                                                                 onDeleteClick={() => onDelete(a.id)}
                                                                 deleteAriaLabel={`Supprimer l’activité « ${a.nom} »`}
-                                                                deleteDisabled={deletingActiviteId === a.id}
+                                                                deleteDisabled={
+                                                                    deletingActiviteId === a.id ||
+                                                                    !ligneEditableCalendrier
+                                                                }
                                                             >
                                                                 {a.moment ? (
                                                                     <span className={styles.calendrierActiviteMoment}>
@@ -596,7 +621,10 @@ export function CalendrierPlanning({
                                                                 ) : null}
                                                             </CalendrierCarteEditionAvecSuppression>
                                                         ))}
-                                                        {dansSejour && peutAjouterActivite && dansCellule.length > 0 ? (
+                                                        {dansSejour &&
+                                                        peutAjouterActivite &&
+                                                        ligneEditableCalendrier &&
+                                                        dansCellule.length > 0 ? (
                                                             <button
                                                                 type="button"
                                                                 className={styles.calendrierAjoutMemeCaseBtn}

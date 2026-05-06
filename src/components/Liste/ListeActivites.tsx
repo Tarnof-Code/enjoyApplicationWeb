@@ -23,6 +23,7 @@ import {
     FILTRE_LISTE_LIEU_SANS,
     activiteDateToFilterKey,
     activiteDateToInputDate,
+    equipeAvecTokenEnTete,
     groupeIdsReferentsPourToken,
     enumererJoursDuSejour,
     resumePartageLieu,
@@ -45,6 +46,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     lieux,
     moments,
     typesActivite,
+    peutGererActivitesComplet = true,
+    tokenUtilisateurConnecte = null,
 }) => {
     const revalidator = useRevalidator();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -92,6 +95,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         [typesActivite]
     );
 
+    const tokenSelf = (tokenUtilisateurConnecte ?? "").trim();
+    const estAnimateurRestreintActivites = !peutGererActivitesComplet && tokenSelf !== "";
+    const tokenConnecteDansEquipe =
+        estAnimateurRestreintActivites &&
+        equipe.some((m) => (m.tokenId ?? "").trim() === tokenSelf);
+
     /** Nouvelle activité ; depuis le calendrier on peut préremplir le jour et l’animateur de la case. */
     const openModalNouvelleActivite = (opts?: { dateYmd?: string; animateurTokenId?: string }) => {
         setErrorMessage(null);
@@ -107,6 +116,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             groupeIdsReferentsPourToken(groupes, opts.animateurTokenId).forEach((id) =>
                 initialGroupes.add(id)
             );
+        } else if (
+            tokenSelf !== "" &&
+            equipe.some((m) => (m.tokenId ?? "").trim() === tokenSelf)
+        ) {
+            groupeIdsReferentsPourToken(groupes, tokenSelf).forEach((id) => initialGroupes.add(id));
         }
         if (initialGroupes.size === 0 && groupes.length === 1) {
             initialGroupes.add(groupes[0].id);
@@ -118,8 +132,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             equipe.some((m) => m.tokenId === opts.animateurTokenId)
         ) {
             initial.add(opts.animateurTokenId);
-        } else if (equipe.length === 1) {
+        } else         if (equipe.length === 1) {
             initial.add(equipe[0].tokenId);
+        }
+        if (estAnimateurRestreintActivites && tokenSelf && tokenConnecteDansEquipe) {
+            initial.add(tokenSelf);
         }
         setSelectedTokens(initial);
         setFormLieuId("");
@@ -146,13 +163,25 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     };
 
     const openEditModal = (activite: ActiviteDto) => {
+        if (estAnimateurRestreintActivites && tokenSelf) {
+            const dansActivite = activite.membres?.some(
+                (m) => (m.tokenId ?? "").trim() === tokenSelf
+            );
+            if (!dansActivite) return;
+        }
         setErrorMessage(null);
         setEditingActiviteId(activite.id);
         setFormDate(activiteDateToInputDate(activite.date));
         setFormNom(activite.nom);
         setFormDescription(activite.description ?? "");
         setSelectedGroupeIds(new Set(activite.groupeIds ?? []));
-        setSelectedTokens(new Set((activite.membres ?? []).map((m) => m.tokenId)));
+        const tokensEdit = new Set(
+            (activite.membres ?? []).map((m) => m.tokenId).filter((id): id is string => Boolean(id?.trim()))
+        );
+        if (estAnimateurRestreintActivites && tokenSelf && tokenConnecteDansEquipe) {
+            tokensEdit.add(tokenSelf);
+        }
+        setSelectedTokens(tokensEdit);
         setFormLieuId(activite.lieu?.id ?? "");
         setFormMomentId(activite.moment?.id ?? "");
         setFormTypeActiviteId(activite.typeActivite?.id ?? "");
@@ -161,6 +190,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     };
 
     const toggleToken = (tokenId: string) => {
+        if (estAnimateurRestreintActivites && tokenSelf && (tokenId ?? "").trim() === tokenSelf) return;
         setSelectedTokens((prev) => {
             const next = new Set(prev);
             if (next.has(tokenId)) next.delete(tokenId);
@@ -197,15 +227,14 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         () => [...groupes].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" })),
         [groupes]
     );
-    const equipeTriéeFiltre = useMemo(
-        () =>
-            [...equipe].sort((a, b) => {
-                const pa = `${a.prenom} ${a.nom}`.trim();
-                const pb = `${b.prenom} ${b.nom}`.trim();
-                return pa.localeCompare(pb, undefined, { sensitivity: "base" });
-            }),
-        [equipe]
-    );
+    const equipeTriéeFiltre = useMemo(() => {
+        const sorted = [...equipe].sort((a, b) => {
+            const pa = `${a.prenom} ${a.nom}`.trim();
+            const pb = `${b.prenom} ${b.nom}`.trim();
+            return pa.localeCompare(pb, undefined, { sensitivity: "base" });
+        });
+        return equipeAvecTokenEnTete(sorted, tokenSelf);
+    }, [equipe, tokenSelf]);
 
     const toggleFiltreCalendrierToken = useCallback((tokenId: string) => {
         setFiltreCalendrierTokens((prev) => {
@@ -325,13 +354,17 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             idsGroupesEfficaces,
             activites
         );
-        return lignes.filter((m) => tokensDuFiltreGroupe.has(m.tokenId));
+        return equipeAvecTokenEnTete(
+            lignes.filter((m) => tokensDuFiltreGroupe.has(m.tokenId)),
+            tokenSelf,
+        );
     }, [
         activites,
         equipeTriéeFiltre,
         filtreCalendrierGroupeIds,
         filtreCalendrierTokens,
         groupes,
+        tokenSelf,
     ]);
 
     /** Filtre « aucun groupe » : aucune activité ne peut correspondre — pas de grille (évite cases vides « cliquer pour ajouter »). */
@@ -424,7 +457,13 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             }
             return true;
         });
+        const particip = (a: ActiviteDto) =>
+            tokenSelf !== "" &&
+            (a.membres ?? []).some((m) => (m.tokenId ?? "").trim() === tokenSelf);
         out.sort((a, b) => {
+            const pa = particip(a) ? 0 : 1;
+            const pb = particip(b) ? 0 : 1;
+            if (pa !== pb) return pa - pb;
             const ka = activiteDateToFilterKey(a.date);
             const kb = activiteDateToFilterKey(b.date);
             if (ka !== kb) return ka.localeCompare(kb);
@@ -438,6 +477,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         filtreListeGroupe,
         filtreListeAnimateur,
         filtreListeType,
+        tokenSelf,
     ]);
 
     const activitesParAnimateurEtDate = useMemo(() => {
@@ -500,10 +540,15 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             return;
         }
 
+        const idsMembres = new Set(selectedTokens);
+        if (estAnimateurRestreintActivites && tokenSelf && tokenConnecteDansEquipe) {
+            idsMembres.add(tokenSelf);
+        }
+
         const payload: CreateActiviteRequest | UpdateActiviteRequest = {
             date: formDate,
             nom: formNom.trim(),
-            membreTokenIds: [...selectedTokens],
+            membreTokenIds: [...idsMembres],
             groupeIds: [...selectedGroupeIds].sort((x, y) => x - y),
             typeActiviteId: formTypeActiviteId,
         };
@@ -559,6 +604,15 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     };
 
     const requestDeleteActivite = (activiteId: number) => {
+        if (estAnimateurRestreintActivites && tokenSelf) {
+            const cible = activites.find((a) => a.id === activiteId);
+            if (
+                cible &&
+                !cible.membres?.some((m) => (m.tokenId ?? "").trim() === tokenSelf)
+            ) {
+                return;
+            }
+        }
         setPendingDeleteActiviteId(activiteId);
         setDeleteModalOpen(true);
     };
@@ -794,6 +848,9 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     onOpenEdit={openEditModal}
                     onDelete={requestDeleteActivite}
                     deletingActiviteId={deletingActiviteId}
+                    tokenEditionCalendrierReserve={
+                        estAnimateurRestreintActivites && tokenSelf ? tokenSelf : null
+                    }
                 />
             ) : (
                 <ListeActivitesListeResultat
@@ -803,6 +860,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     deletingActiviteId={deletingActiviteId}
                     onEdit={openEditModal}
                     onDelete={requestDeleteActivite}
+                    peutGererToutesActivites={peutGererActivitesComplet}
+                    tokenUtilisateurConnecte={tokenSelf || null}
                 />
             )}
 
@@ -1049,7 +1108,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                                         id={`anim-${m.tokenId}`}
                                         checked={selectedTokens.has(m.tokenId)}
                                         onChange={() => toggleToken(m.tokenId)}
-                                        disabled={submitting}
+                                        disabled={
+                                            submitting ||
+                                            (estAnimateurRestreintActivites &&
+                                                tokenSelf !== "" &&
+                                                (m.tokenId ?? "").trim() === tokenSelf)
+                                        }
                                     />
                                     <Label for={`anim-${m.tokenId}`} className="mb-0">
                                         {m.prenom} {m.nom}

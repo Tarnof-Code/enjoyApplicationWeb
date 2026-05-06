@@ -1,8 +1,9 @@
 import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from "react-router-dom";
 import { accountService } from "../../services/account.service";
+import { peutGererMembresEquipeSejour } from "../../helpers/peutGererMembresEquipeSejour";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
@@ -63,6 +64,15 @@ const Admin_header: React.FC = () => {
   const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | Error | undefined;
   const sejourDetailData =
     sejourLoaderRaw && !(sejourLoaderRaw instanceof Error) ? sejourLoaderRaw : undefined;
+  const peutAfficherNavParametrage = useMemo(() => {
+    if (!sejourDetailData) return false;
+    const sub = accountService.getTokenInfo()?.payload?.sub;
+    return peutGererMembresEquipeSejour(
+      typeof sub === "string" ? sub : undefined,
+      sejourDetailData.sejour.directeur,
+      sejourDetailData.sejour.equipe,
+    );
+  }, [sejourDetailData]);
   const isParticipantSejour = role === RoleSysteme.DIRECTION || role === RoleSysteme.BASIC_USER;
   const isSejourContext = isParticipantSejour && Boolean(sejourMatch && sejourDetailData);
   const sejourIdParam = sejourMatch?.params.id;
@@ -159,15 +169,17 @@ const Admin_header: React.FC = () => {
                         <FaUtensils size={14} aria-hidden />
                         Menus
                       </NavLink>
-                      <NavLink
-                        to={`/mes-sejours/${sejourIdParam}/parametrage`}
-                        className={({ isActive }) =>
-                          `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
-                        }
-                      >
-                        <FaSlidersH size={14} aria-hidden />
-                        Paramétrage
-                      </NavLink>
+                      {peutAfficherNavParametrage ? (
+                        <NavLink
+                          to={`/mes-sejours/${sejourIdParam}/parametrage`}
+                          className={({ isActive }) =>
+                            `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
+                          }
+                        >
+                          <FaSlidersH size={14} aria-hidden />
+                          Paramétrage
+                        </NavLink>
+                      ) : null}
                     </div>
                   </div>
                 </NavItem>

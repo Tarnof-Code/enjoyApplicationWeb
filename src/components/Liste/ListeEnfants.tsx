@@ -17,9 +17,11 @@ export interface ListeEnfantsProps {
     enfants: EnfantDto[];
     groupes?: GroupeDto[];
     sejourId: number;
+    /** Directeur du séjour ou adjoint : import, ajout, édition, suppressions ; sinon lecture + dossier uniquement */
+    peutGererEnfants: boolean;
 }
 
-const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejourId }) => {
+const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejourId, peutGererEnfants }) => {
     const revalidator = useRevalidator();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -111,19 +113,21 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
 
     return (
         <div>
-            <div className={styles.actionsContainer}>
-                <ImportExcelEnfants sejourId={sejourId} />
-                {enfants.length > 0 && (
-                    <Button
-                        color="danger"
-                        onClick={() => setShowDeleteAllModal(true)}
-                        className={styles.deleteAllButton}
-                    >
-                        <FontAwesomeIcon icon={faTrash} className={styles.icon} />
-                        Supprimer tous les enfants
-                    </Button>
-                )}
-            </div>
+            {peutGererEnfants && (
+                <div className={styles.actionsContainer}>
+                    <ImportExcelEnfants sejourId={sejourId} />
+                    {enfants.length > 0 && (
+                        <Button
+                            color="danger"
+                            onClick={() => setShowDeleteAllModal(true)}
+                            className={styles.deleteAllButton}
+                        >
+                            <FontAwesomeIcon icon={faTrash} className={styles.icon} />
+                            Supprimer tous les enfants
+                        </Button>
+                    )}
+                </div>
+            )}
             
             {errorMessage && (
                 <div className={styles.errorMessage}>
@@ -137,9 +141,9 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
                 data={dataWithGroupes}
                 loading={false}
                 onDelete={handleDeleteEnfant}
-                canAdd={true}
-                canEdit={true}
-                canDelete={true}
+                canAdd={peutGererEnfants}
+                canEdit={peutGererEnfants}
+                canDelete={peutGererEnfants}
                 canDossier={true}
                 onDossier={handleDossier}
                 formComponent={FormWithProps}
@@ -148,7 +152,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
                 errorMessage={errorMessage}
             />
 
-            {/* Modal de confirmation pour supprimer tous les enfants */}
+            {peutGererEnfants && (
             <Modal isOpen={showDeleteAllModal} toggle={() => setShowDeleteAllModal(false)}>
                 <ModalHeader toggle={() => setShowDeleteAllModal(false)}>
                     Confirmation de suppression
@@ -180,6 +184,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
                     </Button>
                 </ModalFooter>
             </Modal>
+            )}
         </div>
     );
 };

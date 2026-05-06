@@ -2,14 +2,16 @@ import { useMemo } from "react";
 import { useRouteLoaderData, useNavigate } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import ListeActivites from "../../../components/Liste/ListeActivites";
+import { accountService } from "../../../services/account.service";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 import {
     SejourDTO,
     EnfantDto,
     GroupeDto,
     ActiviteDto,
+    HoraireDto,
     LieuDto,
     MomentDto,
-    HoraireDto,
     TypeActiviteDto,
 } from "../../../types/api";
 
@@ -52,6 +54,21 @@ const DetailsSejourActivites: React.FC = () => {
             return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
         });
     }, [loaderData]);
+
+    const peutGererActivitesComplet = useMemo(() => {
+        if (!loaderData || loaderData instanceof Error) return true;
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return peutGererMembresEquipeSejour(
+            typeof sub === "string" ? sub : undefined,
+            loaderData.sejour.directeur,
+            loaderData.sejour.equipe
+        );
+    }, [loaderData]);
+
+    const tokenUtilisateurConnecte = useMemo(() => {
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return typeof sub === "string" ? sub : null;
+    }, []);
 
     if (loaderData === undefined) {
         return (
@@ -98,6 +115,8 @@ const DetailsSejourActivites: React.FC = () => {
                 lieux={lieux ?? []}
                 moments={moments}
                 typesActivite={typesActivite}
+                peutGererActivitesComplet={peutGererActivitesComplet}
+                tokenUtilisateurConnecte={tokenUtilisateurConnecte}
             />
         </div>
     );
