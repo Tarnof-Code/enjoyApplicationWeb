@@ -4,6 +4,7 @@ import { Button, Modal, ModalHeader, ModalBody } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import styles from "./DossierEnfant.module.scss";
+import { getApiErrorMessage, type AdaptedError } from "../../../helpers/axiosError";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto } from "../../../types/api";
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
@@ -78,11 +79,14 @@ const DossierEnfant: React.FC = () => {
     };
 
     if (loaderData instanceof Error) {
-        const message = (loaderData as any).response?.status === 403
-            ? "Vous ne participez pas à ce séjour"
-            : (loaderData as any).response?.status === 404
-                ? "Dossier non trouvé ou enfant non inscrit à ce séjour"
-                : "Erreur lors du chargement du dossier";
+        const err = loaderData as AdaptedError & Error;
+        const message =
+            err.response?.data !== undefined
+                ? getApiErrorMessage(
+                      err.response.data,
+                      err.message || "Erreur lors du chargement du dossier"
+                  )
+                : err.message || "Erreur lors du chargement du dossier";
         return (
             <div className={styles.pageContainer}>
                 <button onClick={handleRetour} className={styles.backButton}>

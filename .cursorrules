@@ -51,8 +51,9 @@ L'assistant doit répondre exclusivement en français.
 - Gestion d'erreurs avec try/catch dans les loaders et services
 - **Gestion d'erreurs API** : Utiliser le helper centralisé `helpers/axiosError.ts` :
   - `validateResponseStatus(response, expectedStatus)` : Vérifie le code HTTP attendu avant de traiter la réponse
+  - `getApiErrorMessage(errorData, whenUnknown)` : Message utilisateur à partir du corps JSON (`message` métier prioritaire si non vide, sinon `error`, puis agrégation validation 400)
   - `adaptAxiosError(error, options)` : Adapte les erreurs Axios dans les blocs catch. Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`
-  - Gère automatiquement les formats standard (`error`/`message`) et validation 400 (`{ champ: "msg" }` ou `{ champ: ["msg"] }`)
+  - Gère automatiquement les formats REST (`message` / `error`) et validation 400 (`{ champ: "msg" }` ou `{ champ: ["msg"] }`)
   - Exemple :
     ```typescript
     try {
@@ -94,6 +95,7 @@ L'assistant doit répondre exclusivement en français.
   - Le composant Form gère automatiquement la validation, les erreurs, et les modals de succès
   - Support des champs personnalisés via `customComponent` dans FormField
   - Messages de succès configurables via props (`successMessage` peut être une fonction)
+  - Prop **`errorMessagePlacement`** sur **`Form`** : `"top"` (défaut) ou `"bottom"` pour placer le paragraphe d’erreur sous les boutons (`role="alert"` si bas)
 - **Services** : 
   - Centraliser les appels API dans `services/` avec gestion d'erreurs via `helpers/axiosError.ts` (`validateResponseStatus`, `adaptAxiosError`)
   - Services séjour modulaires : `sejour.service.ts` (CRUD), `sejour-equipe.service.ts`, `sejour-enfant.service.ts`, `sejour-groupe.service.ts` (export `sejourGroupeService`), `sejour-lieu.service.ts` (`sejourLieuService`), `sejour-moment.service.ts` (`sejourMomentService`, incl. `reordonnerMoments`), `sejour-type-activite.service.ts` (`sejourTypeActiviteService`), `sejour-activite.service.ts` (`sejourActiviteService`)
@@ -163,3 +165,12 @@ L'assistant doit répondre exclusivement en français.
    - **Synchronisation backend :** si l’API change, mettre à jour `types/api.d.ts` et la fiche **`docs/ai/etat-projet.md`** (ou une fiche dédiée sync), en référence au `AI_MEMORY.md` enjoyApi.
 
 3. **RÉFLEXIVITÉ :** Si le code contredit la Memory Bank, signaler : soit le code est faux, soit la mémoire doit être mise à jour.
+
+4. **Commande utilisateur `#MAJ` :**
+   - **Déclencheur :** uniquement si le message utilisateur est **exactement** `#MAJ`, avec tolérance **uniquement** pour des **espaces** en début ou fin de message (aucun autre texte ; pas de `#MAJ …`).
+   - **Lecture des règles :** en premier, **relire le fichier** `.cursorrules` **sur disque** (conventions à jour du dépôt).
+   - **Codebase avant les markdowns :** **analyser le dépôt frontend** pour refléter l’état réel du code — au minimum `git status`, `git diff`, historique de commits récents ; ouvrir les fichiers pertinents (`src/`, `services/`, `types/api.d.ts`, `App.tsx`, loaders, etc.) **jusqu’à** une description fidèle du travail effectué. **Interdit :** se contenter de paraphraser les fiches existantes sans recouper le code.
+   - **Lecture du pivot (référence) :** lire `AI_MEMORY.md` et les fiches `docs/ai/*.md` nécessaires **pour savoir quoi mettre à jour** par rapport aux constats codebase (pas comme seule source de vérité).
+   - **Écriture obligatoire :** **modifier** `AI_MEMORY.md` **et** les fiches `docs/ai/` concernées selon le protocole déjà défini aux points **1 et 2** ci-dessus (même logique qu’une **demande explicite** de mise à jour de la Memory Bank : pivot + détail dans les bonnes fiches ; **nouvelle** fiche `docs/ai/*.md` seulement si aucune fiche existante ne couvre le sujet, puis **référencer** dans `AI_MEMORY.md` et `docs/ai/README.md`).
+   - **Alignement API :** si les constats impliquent un changement de contrat ou de DTOs, **prendre en compte** `../enjoyApi/AI_MEMORY.md` et la doc API côté backend (`../enjoyApi/docs/ai/`, notamment `documentation-api-rest.md`) pour cohérence ; mettre à jour côté front `types/api.d.ts` et **`docs/ai/etat-projet.md`** (ou fiche dédiée) comme prévu au point **2** du présent protocole.
+   - **Interdictions explicites** dans ce flux : répondre uniquement par un résumé dans le chat **sans éditer les fichiers** ; affirmer « tout est à jour » **sans** avoir inspecté git/code ; ignorer `.cursorrules`.

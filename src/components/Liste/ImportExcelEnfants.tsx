@@ -3,6 +3,7 @@ import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExcel, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { sejourEnfantService } from "../../services/sejour-enfant.service";
+import { getApiErrorMessage } from "../../helpers/axiosError";
 import { ExcelImportResponse, ExcelImportSpecResponse } from "../../types/api";
 import { useRevalidator } from "react-router-dom";
 import styles from "./ImportExcelEnfants.module.scss";
@@ -123,7 +124,10 @@ const ImportExcelEnfants: React.FC<ImportExcelEnfantsProps> = ({ sejourId }) => 
             } else {
                 const backendError = error.response?.data;
                 if (backendError && typeof backendError === 'object') {
-                    errorMsg = backendError.error || backendError.message || error.message || "Une erreur s'est produite lors de l'import du fichier Excel";
+                    errorMsg = getApiErrorMessage(
+                        backendError,
+                        error.message || "Une erreur s'est produite lors de l'import du fichier Excel"
+                    );
                     if (errorMsg.toLowerCase().includes('incomplet') || errorMsg.toLowerCase().includes('manquant')) {
                         errorMsg += " Veuillez vérifier que votre fichier Excel contient toutes les colonnes requises : Nom, Prénom, Genre, Date de naissance, Niveau scolaire.";
                     }

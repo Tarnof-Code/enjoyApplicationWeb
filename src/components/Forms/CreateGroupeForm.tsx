@@ -5,6 +5,7 @@ import { sejourGroupeService } from "../../services/sejour-groupe.service";
 import { CreateGroupeRequest, GroupeDto, EnfantDto, TypeGroupe } from "../../types/api";
 import { getNiveauScolaireOptions } from "../../enums/NiveauScolaire";
 import { getEnfantsMatchingTranche } from "../../helpers/groupeTranche";
+import { getApiErrorMessage } from "../../helpers/axiosError";
 
 const NIVEAU_ORDER = ['PS', 'MS', 'GS', 'CP', 'CE1', 'CE2', 'CM1', 'CM2', 'SIXIEME', 'CINQUIEME', 'QUATRIEME', 'TROISIEME', 'DEUXIEME', 'PREMIERE', 'TERMINALE'];
 
@@ -198,7 +199,11 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
                 }
             }
         } catch (error: any) {
-            const msg = error.response?.data?.error || error.response?.data?.message || error.message || (isEditMode ? "Erreur lors de la modification du groupe" : "Erreur lors de la création du groupe");
+            const fallback = isEditMode ? "Erreur lors de la modification du groupe" : "Erreur lors de la création du groupe";
+            const msg =
+                error.response?.data !== undefined
+                    ? getApiErrorMessage(error.response.data, error.message || fallback)
+                    : error.message || fallback;
             setErrorMessage(msg);
             throw error;
         }
@@ -248,6 +253,7 @@ function CreateGroupeForm({ handleCloseModal, sejourId, groupe, enfants = [], da
             submitText={isEditMode ? "Modifier le groupe" : "Créer le groupe"}
             initialData={initialData}
             errorMessage={errorMessage}
+            errorMessagePlacement="bottom"
             successMessage={isEditMode ? "Le groupe a bien été modifié." : "Le groupe a bien été créé."}
             infoContent={infoContent}
         />

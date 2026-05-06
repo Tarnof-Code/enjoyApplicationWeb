@@ -54,6 +54,8 @@ export interface FormProps {
   loading?: boolean;
   /** Contenu informatif affiché au-dessus des champs (peut dépendre de formData) */
   infoContent?: (formData: Record<string, any>) => React.ReactNode;
+  /** Où afficher `errorMessage` (défaut : au-dessus du formulaire). */
+  errorMessagePlacement?: "top" | "bottom";
 }
 
 function Form({
@@ -68,6 +70,7 @@ function Form({
   errorMessage,
   loading = false,
   infoContent,
+  errorMessagePlacement = "top",
 }: FormProps) {
   const revalidator = useRevalidator();
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -319,7 +322,9 @@ function Form({
     <div className={styles.main}>
       <Container className={styles.formContainer}>
         {title && <h2 className={styles.title}>{title}</h2>}
-        {errorMessage && <p className={styles.errorMessage}>{errorMessage}</p>}
+        {errorMessagePlacement === "top" && errorMessage && (
+          <p className={styles.errorMessage}>{errorMessage}</p>
+        )}
         {infoContent?.(formData)}
         <ReactstrapForm 
           className={styles.form} 
@@ -347,6 +352,11 @@ function Form({
               {isSubmitting ? "En cours..." : submitText}
             </Button>
           </div>
+          {errorMessagePlacement === "bottom" && errorMessage && (
+            <p className={`${styles.errorMessage} ${styles.errorMessageBelowButtons}`} role="alert">
+              {errorMessage}
+            </p>
+          )}
         </ReactstrapForm>
 
         {modalIsOpen && (

@@ -21,6 +21,7 @@
   - Validation croisée : si `dateDebut` change, revalide automatiquement `dateFin` (pattern dans `handleFieldChange`).
   - Utilisation de `useRevalidator` de React Router pour rafraîchir les données après soumission.
   - Messages de succès/erreur configurables via props (`successMessage` peut être une fonction, `errorMessage`).
+  - **`errorMessagePlacement`** (`"top"` par défaut \| `"bottom"`) : position du paragraphe d’erreur (au-dessus du formulaire ou sous la rangée de boutons, classe **`errorMessageBelowButtons`** + **`role="alert"`** si bas).
   - Support des champs personnalisés via `customComponent` dans `FormField`.
   - Modal de confirmation automatique après succès si `successMessage` est fourni (fermeture du formulaire après confirmation).
   - Gestion de l'état de chargement (`loading`, `isSubmitting`) pour désactiver les champs et boutons pendant la soumission.
@@ -32,9 +33,9 @@
   - Composants enfants :
     - `AddEnfantForm.tsx` : Formulaire générique pour créer/modifier un enfant (utilise `Form.tsx` avec configuration `fields`)
     - `ListeEnfants.tsx` : Liste des enfants avec filtres, tri, actions CRUD (création, modification, suppression individuelle et groupée), icône dossier pour accéder au dossier de chaque enfant. Formatage automatique du niveau scolaire avec `NiveauScolaireLabels` (affichage "5ème" au lieu de "CINQUIEME")
-    - `DossierEnfant.tsx` : Page d'affichage et modification du dossier d'un enfant (contacts parents, médical, traitements). Bouton Modifier → modal avec formulaire.
+    - `DossierEnfant.tsx` : Page d'affichage et modification du dossier d'un enfant (contacts parents, médical, traitements). Bouton Modifier → modal avec formulaire. Si le **loader** rejette avec une erreur Axios adaptée, affichage du message via **`getApiErrorMessage`** sur **`response.data`** (**`AdaptedError`**).
     - `DossierEnfantForm.tsx` : Formulaire de modification du dossier (13 champs, validation email/téléphone optionnelle, textarea pour les champs longs).
-    - `ImportExcelEnfants.tsx` : Import Excel avec gestion des résultats (`ExcelImportResponse`), affichage des erreurs détaillées, et icône info ouvrant une notice des colonnes (logique groupes ET/OU, colonnes obligatoires/optionnelles, mots-clés formatés, formats acceptés ; majuscules et espaces autorisés)
+    - `ImportExcelEnfants.tsx` : Import Excel avec gestion des résultats (`ExcelImportResponse`), affichage des erreurs détaillées (**`getApiErrorMessage`** sur le corps d’erreur), et icône info ouvrant une notice des colonnes (logique groupes ET/OU, colonnes obligatoires/optionnelles, mots-clés formatés, formats acceptés ; majuscules et espaces autorisés)
     - `ListeGroupes.tsx` : Liste des groupes d'un séjour (accordéon, création/édition/suppression, ajout/retrait d'enfants, affichage des **référents**, bouton « Ajouter les enfants de la tranche » pour AGE/NIVEAU_SCOLAIRE)
     - `ListeMoments.tsx` : **Moments** (créneaux) — ordre **`trierMomentsChronologiquement`** (champ **`ordre`** / `id`), CRUD modals, **Monter / Descendre** + **`reordonnerMoments`**, callbacks optionnels pour état parent (`onMomentsReordered`, etc.) ; champs **`SaveMomentRequest.nom`** (obligatoire)
     - `ListeHoraires.tsx` : **Horaires** (libellés d’heure) — CRUD modals, validation **`validerLibelleHoraire`**, affichage trié **`trierHorairesChronologiquement`** ; callbacks `onHoraireCreated` / `onHoraireUpdated` / `onHoraireDeleted` pour l’état parent **`DetailsSejourParametrage`**
@@ -47,7 +48,7 @@
       - **`listeActivitesTypes.ts`** / **`listeActivitesUtils.ts`** / **`useCalendrierFenetreJours.ts`** : props partagées, constantes filtres calendrier ; utilitaires dates (`yyyy-MM-dd`), tris, **`bornesDebutFenetreCalendrier`** ; hook partagé **ListeActivites** / **ListePlanningsOrganisation** pour la fenêtre **1 / 3 / 7 jours** dans un intervalle de jours du séjour.
       - Règles métier / API : **créneau** **`moments`** + **`momentId`**, **type** **`typesActivite`** + **`typeActiviteId`**, **`groupeIds`**, **`membreTokenIds`**, **`lieuId`** + filtre emplacement, **`metaGrid`**, **`avertissementLieu`** — aligné **enjoyApi**.
     - `ListeLieux.tsx` : Liste des **lieux** du séjour (`LieuDto`) — filtres emplacement / capacité min, CRUD via `sejourLieuService`, formulaire avec **partage entre animateurs** et **nombre max d’activités le même jour**, résumé partage sur les cartes, `useRevalidator` après mutations ; libellés `EmplacementLieuLabels`
-    - `CreateGroupeForm.tsx` : Formulaire création/édition de groupe (types THEMATIQUE, AGE, NIVEAU_SCOLAIRE ; `ReferentsSelector` pour les référents ; sync API après sauvegarde ; fallback ajout enfants si backend renvoie groupe vide)
+    - `CreateGroupeForm.tsx` : Formulaire création/édition de groupe (types THEMATIQUE, AGE, NIVEAU_SCOLAIRE ; `ReferentsSelector` pour les référents ; sync API après sauvegarde ; fallback ajout enfants si backend renvoie groupe vide ; messages d’échec via **`getApiErrorMessage`** ; **`errorMessagePlacement="bottom"`** sur **`Form`** si besoin d’afficher l’erreur sous les boutons)
     - `ReferentsSelector.tsx` : Sélection multi-référents parmi l'équipe (valeur = JSON array de `tokenId`, voir section Types)
     - `Acces_non_autorise.tsx` : Page d'erreur 403 (utilisée dans `ListeUtilisateurs` quand l'utilisateur n'a pas le rôle ADMIN)
   - **Formatage des enums** : Utiliser les objets `Labels` (ex: `NiveauScolaireLabels`, `RoleSejourLabels`, `RoleSystemeLabels`, `EmplacementLieuLabels`) pour formater l'affichage des valeurs enum dans l'UI plutôt que d'afficher directement les valeurs brutes.
@@ -58,7 +59,8 @@
   - Header `X-Skip-Token-Refresh` pour désactiver le refresh automatique sur certaines requêtes (ex: login, inscription, updateUser).
   - Pattern de gestion d'erreurs centralisé dans `helpers/axiosError.ts` :
     - `validateResponseStatus(response, expectedStatus)` : Vérifie le code HTTP attendu
-    - `adaptAxiosError(error, options)` : Adapte les erreurs Axios avec message, format validation (400), et préservation de `response.data`
+    - **`getApiErrorMessage(errorData, whenUnknown)`** : message utilisateur à partir du corps d’erreur JSON (**`message`** prioritaire si chaîne non vide — texte métier Spring / REST ; sinon **`error`** — synthèse HTTP ; sinon agrégation champs validation).
+    - `adaptAxiosError(error, options)` : Adapte les erreurs Axios avec message (via la même logique d’extraction), format validation (400), et préservation de `response.data`
     - Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`
     - Utilisé dans : `sejour.service.ts`, `sejour-equipe.service.ts`, `sejour-enfant.service.ts`, `sejour-groupe.service.ts`, `sejour-activite.service.ts`, **`sejour-moment.service.ts`**, **`sejour-horaire.service.ts`** (mutations ; GET avec try/catch simple), **`sejour-type-activite.service.ts`** (mutations ; GET avec try/catch simple), `sejour-lieu.service.ts` (mutations ; GET avec try/catch simple), **`sejour-planning-grille.service.ts`** (mutations), `utilisateur.service.ts`
   - Types API centralisés dans `types/api.d.ts` (DTOs synchronisés avec le backend Java Spring).

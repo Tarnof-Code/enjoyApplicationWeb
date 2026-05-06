@@ -40,12 +40,13 @@ function extractErrorMessage(
     return defaultMessage;
   }
   const data = errorData as Record<string, unknown>;
-  // Format standard : { error: "..." } ou { message: "..." }
+  // ErrorResponse REST : message = texte métier pour l'utilisateur ; error = synthèse HTTP (ex. "Forbidden").
+  const msg = data.message;
+  if (typeof msg === "string" && msg.trim() !== "") {
+    return msg;
+  }
   if (data.error && typeof data.error === "string") {
     return data.error;
-  }
-  if (data.message && typeof data.message === "string") {
-    return data.message;
   }
   // Format validation : { nom: "message", prenom: ["msg1", "msg2"], ... }
   const entries = Object.entries(data).filter(([_, v]) => v !== null && v !== undefined);
