@@ -3,6 +3,7 @@ import { Form as RouterForm, redirect, useActionData, useNavigation, Navigate, A
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
 import { getApiErrorMessage } from "../../helpers/axiosError";
+import { chargerProfilEtCheminAccueil, cheminAccueilDepuisEtatActuel } from "../../helpers/redirectApresAuthentification";
 import { AxiosError } from "axios";
 
 export async function loginAction({ request }: ActionFunctionArgs) {
@@ -20,7 +21,7 @@ export async function loginAction({ request }: ActionFunctionArgs) {
       motDePasse: motDePasse
     } as any);
     accountService.saveAccessToken(response.data.access_token);
-    return redirect("/profil");
+    return redirect(await chargerProfilEtCheminAccueil());
   } catch (error) {
     console.error("Erreur lors de la connexion", error);
     if (error instanceof AxiosError && error.response) {
@@ -41,7 +42,7 @@ function Connexion() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  if (accountService.isLogged()) return <Navigate to="/profil" />;
+  if (accountService.isLogged()) return <Navigate to={cheminAccueilDepuisEtatActuel()} replace />;
 
   return (
     <div className={styles.main}>

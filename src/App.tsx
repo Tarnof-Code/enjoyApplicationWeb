@@ -20,6 +20,7 @@ import DetailsSejourOrganisation from "./Pages/_Sejours/DetailsSejour/DetailsSej
 import DetailsSejourMenus from "./Pages/_Sejours/DetailsSejour/DetailsSejourMenus";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Sejours/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
+import { chargerProfilEtCheminAccueil } from "./helpers/redirectApresAuthentification";
 
 const App: React.FC = () => {
   const router = createBrowserRouter([
@@ -32,7 +33,7 @@ const App: React.FC = () => {
           index: true,
           loader: async () => {
             if (accountService.isLogged()) {
-              return redirect("/profil");
+              return redirect(await chargerProfilEtCheminAccueil());
             }
             return null;
           },

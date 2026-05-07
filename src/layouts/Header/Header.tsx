@@ -5,6 +5,7 @@ import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from 
 import { accountService } from "../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../helpers/peutGererMembresEquipeSejour";
 import {
+  enregistrerDernierSejourVisite,
   enregistrerHeaderSejourContext,
   lireHeaderSejourContext,
   toHeaderSejourSnapshot,
@@ -80,6 +81,10 @@ const Admin_header: React.FC = () => {
   useEffect(() => {
     if (sejourDetailData?.sejour) {
       enregistrerHeaderSejourContext(sejourDetailData.sejour);
+      const sub = accountService.getTokenInfo()?.payload?.sub;
+      if (typeof sub === "string") {
+        enregistrerDernierSejourVisite(sub, sejourDetailData.sejour.id);
+      }
       setHeaderSejourCache(toHeaderSejourSnapshot(sejourDetailData.sejour));
     }
   }, [sejourDetailData]);
