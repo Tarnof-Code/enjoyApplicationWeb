@@ -2,6 +2,7 @@ import Axios from "./caller.service";
 import { jwtDecode } from "jwt-js-decode";
 import store from "../redux/store";
 import { clearUser } from "../redux/auth/authSlice";
+import { effacerHeaderSejourContext } from "../helpers/headerSejourContext";
 import CryptoJS from "crypto-js";
 import { RegisterRequest } from "../types/api";
 
@@ -42,6 +43,7 @@ let saveAccessToken = (access_token: string) => {
 
 let logout = () => {
   localStorage.removeItem("access_token");
+  effacerHeaderSejourContext();
   store.dispatch(clearUser());
 };
 

@@ -1,9 +1,15 @@
 import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from "react-router-dom";
 import { accountService } from "../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../helpers/peutGererMembresEquipeSejour";
+import {
+  enregistrerHeaderSejourContext,
+  lireHeaderSejourContext,
+  toHeaderSejourSnapshot,
+  type HeaderSejourContextSnapshot,
+} from "../../helpers/headerSejourContext";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { Collapse, Navbar, NavbarToggler, Nav, NavItem } from "reactstrap";
@@ -64,22 +70,54 @@ const Admin_header: React.FC = () => {
   const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | Error | undefined;
   const sejourDetailData =
     sejourLoaderRaw && !(sejourLoaderRaw instanceof Error) ? sejourLoaderRaw : undefined;
+  const routeIdStr = sejourMatch?.params.id;
+  const loaderSejour = sejourDetailData?.sejour;
+
+  const [headerSejourCache, setHeaderSejourCache] = useState<HeaderSejourContextSnapshot | null>(() =>
+    lireHeaderSejourContext(),
+  );
+
+  useEffect(() => {
+    if (sejourDetailData?.sejour) {
+      enregistrerHeaderSejourContext(sejourDetailData.sejour);
+      setHeaderSejourCache(toHeaderSejourSnapshot(sejourDetailData.sejour));
+    }
+  }, [sejourDetailData]);
+
+  const resolvedForHeader = useMemo((): HeaderSejourContextSnapshot | null => {
+    if (loaderSejour) return toHeaderSejourSnapshot(loaderSejour);
+    if (routeIdStr) {
+      const n = Number(routeIdStr);
+      return Number.isFinite(n) && headerSejourCache?.id === n ? headerSejourCache : null;
+    }
+    return headerSejourCache;
+  }, [loaderSejour, routeIdStr, headerSejourCache]);
+
+  const effectiveNavId =
+    resolvedForHeader && (routeIdStr ?? String(resolvedForHeader.id));
+
   const peutAfficherNavParametrage = useMemo(() => {
-    if (!sejourDetailData) return false;
+    if (!resolvedForHeader) return false;
     const sub = accountService.getTokenInfo()?.payload?.sub;
     return peutGererMembresEquipeSejour(
       typeof sub === "string" ? sub : undefined,
-      sejourDetailData.sejour.directeur,
-      sejourDetailData.sejour.equipe,
+      resolvedForHeader.directeur,
+      resolvedForHeader.equipe,
     );
-  }, [sejourDetailData]);
+  }, [resolvedForHeader]);
+
   const isParticipantSejour = role === RoleSysteme.DIRECTION || role === RoleSysteme.BASIC_USER;
-  const isSejourContext = isParticipantSejour && Boolean(sejourMatch && sejourDetailData);
-  const sejourIdParam = sejourMatch?.params.id;
+  const showSejourSegments =
+    isParticipantSejour &&
+    Boolean(
+      resolvedForHeader &&
+        effectiveNavId &&
+        Number(effectiveNavId) === resolvedForHeader.id,
+    );
   const { pathname } = useLocation();
   const dossierEnfantCommeVueGenerale =
-    Boolean(sejourIdParam) &&
-    pathname.startsWith(`/mes-sejours/${sejourIdParam}/enfants/`) &&
+    Boolean(effectiveNavId) &&
+    pathname.startsWith(`/mes-sejours/${effectiveNavId}/enfants/`) &&
     pathname.endsWith("/dossier");
 
   return (
@@ -124,16 +162,16 @@ const Admin_header: React.FC = () => {
                   <span>Mes séjours</span>
                 </NavLink>
               </NavItem>
-              {isSejourContext && sejourIdParam && sejourDetailData && (
+              {showSejourSegments && effectiveNavId && resolvedForHeader && (
                 <NavItem className={`${styles.directorNavItem} ${styles.directorContextItem}`}>
                   <div className={styles.directorContextRow}>
                     <FaChevronRight className={styles.directorBreadcrumbChevron} aria-hidden />
-                    <span className={styles.directorSejourPill} title={sejourDetailData.sejour.nom}>
-                      {sejourDetailData.sejour.nom}
+                    <span className={styles.directorSejourPill} title={resolvedForHeader.nom}>
+                      {resolvedForHeader.nom}
                     </span>
                     <div className={styles.directorSegmented} role="tablist" aria-label="Sections du séjour">
                       <NavLink
-                        to={`/mes-sejours/${sejourIdParam}`}
+                        to={`/mes-sejours/${effectiveNavId}`}
                         end
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive || dossierEnfantCommeVueGenerale ? styles.directorSegmentActive : ""}`
@@ -143,7 +181,7 @@ const Admin_header: React.FC = () => {
                         Vue générale
                       </NavLink>
                       <NavLink
-                        to={`/mes-sejours/${sejourIdParam}/organisation`}
+                        to={`/mes-sejours/${effectiveNavId}/organisation`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }
@@ -152,7 +190,7 @@ const Admin_header: React.FC = () => {
                         Organisation
                       </NavLink>
                       <NavLink
-                        to={`/mes-sejours/${sejourIdParam}/activites`}
+                        to={`/mes-sejours/${effectiveNavId}/activites`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }
@@ -161,7 +199,7 @@ const Admin_header: React.FC = () => {
                         Activités
                       </NavLink>
                       <NavLink
-                        to={`/mes-sejours/${sejourIdParam}/menus`}
+                        to={`/mes-sejours/${effectiveNavId}/menus`}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }
@@ -171,7 +209,7 @@ const Admin_header: React.FC = () => {
                       </NavLink>
                       {peutAfficherNavParametrage ? (
                         <NavLink
-                          to={`/mes-sejours/${sejourIdParam}/parametrage`}
+                          to={`/mes-sejours/${effectiveNavId}/parametrage`}
                           className={({ isActive }) =>
                             `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                           }
