@@ -68,6 +68,7 @@
 - **État Global :** 
   - Redux Toolkit avec Redux Persist pour la persistance de l'état d'authentification (localStorage).
   - AuthSlice (`redux/auth/authSlice.ts`) gère `role`, `prenom`, `genre`.
+  - **Post-connexion & dernier séjour** : **`helpers/headerSejourContext.ts`** expose aussi **`enregistrerDernierSejourVisite` / `lireDernierSejourVisite`** (**`localStorage`**, préfixe **`enjoy.dernierSejourId.{sub}`**, **`sub`** = JWT) — rempli depuis **`Header`** quand le loader **`sejour-detail`** fournit le séjour ; le snapshot **header** courant reste en **`sessionStorage`** et est **effacé au `logout`** (`effacerHeaderSejourContext`), pas la clé « dernier séjour ». **`helpers/redirectApresAuthentification.ts`** : **`chargerProfilEtCheminAccueil`** (appelle **`getUser`**, puis **`/mes-sejours/:id`** si **DIRECTION** / **BASIC_USER** et id mémorisé, sinon **`/profil`**) ; **`cheminAccueilDepuisEtatActuel`** pour **`Navigate`** quand le store est déjà à jour.
   - PersistGate dans `main.tsx` pour attendre la réhydratation avant le rendu.
   - Store configuré avec middleware Redux Persist (FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER ignorés dans serializableCheck).
   - Types exportés : `RootState`, `AppDispatch` pour le typage TypeScript.

@@ -5,7 +5,7 @@
 - Routes protégées via `ProtectedRoute.tsx` et Redux pour l'état d'authentification.
 - Routes définies dans `App.tsx` avec `createBrowserRouter`.
 - Routes principales :
-  - `/` : Page de connexion (redirige vers `/profil` si déjà connecté)
+  - `/` : Page de connexion ; **loader** si déjà authentifié : **`chargerProfilEtCheminAccueil()`** (**`profil`** chargé puis **`Navigate`** HTTP vers **`/mes-sejours/{dernierId}`** si utilisateur **DIRECTION** ou **BASIC_USER** **et** un dernier séjour est mémorisé (**`localStorage`** **`enjoy.dernierSejourId.{sub}`**, posé depuis **`Header`** à l’affichage du détail séjour) ; sinon **`/profil`**. **`loginAction`** (`Connexion`) : même logique après **`saveAccessToken`** ; **`Navigate`** côté client si déjà connecté : **`cheminAccueilDepuisEtatActuel`** (profil Redux déjà disponible → pas d’appel réseau). **ADMIN** sans route **`mes-sejours`** → **`/profil`**.
   - `/profil` : Page de profil utilisateur (accessible à tous les utilisateurs connectés)
   - `/utilisateurs` : Liste des utilisateurs (ADMIN uniquement)
   - `/sejours` : Liste de **tous** les séjours (ADMIN uniquement)
