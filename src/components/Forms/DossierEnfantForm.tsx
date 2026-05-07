@@ -6,11 +6,14 @@ import { optionsCheckboxReferencesAlimentaires } from "../../helpers/optionsRefe
 import { DossierEnfantDto, ReferenceAlimentaireDto, UpdateDossierEnfantRequest } from "../../types/api";
 import { regexValidation } from "../../helpers/regexValidation";
 
+type SectionType = 'contacts' | 'medical' | 'traitements' | 'autres';
+
 interface DossierEnfantFormProps {
     handleCloseModal: () => void;
     sejourId: number;
     enfantId: number;
     data: DossierEnfantDto;
+    section?: SectionType;
 }
 
 const toFormValue = (v: string | null): string => v ?? "";
@@ -29,7 +32,14 @@ const optionalPhoneValidation = (value: string) => {
     return !regexValidation.validatePhone(digitsOnly) ? "Téléphone invalide (10 chiffres commençant par 0)" : null;
 };
 
-function DossierEnfantForm({ handleCloseModal, sejourId, enfantId, data }: DossierEnfantFormProps) {
+const sectionFieldsMap: Record<SectionType, string[]> = {
+    contacts: ['emailParent1', 'telephoneParent1', 'emailParent2', 'telephoneParent2'],
+    medical: ['informationsMedicales', 'pai', 'allergeneIds', 'regimePreferenceIds', 'informationsAlimentaires'],
+    traitements: ['traitementMatin', 'traitementMidi', 'traitementSoir', 'traitementSiBesoin'],
+    autres: ['autresInformations', 'aPrendreEnSortie'],
+};
+
+function DossierEnfantForm({ handleCloseModal, sejourId, enfantId, data, section }: DossierEnfantFormProps) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [refsAllergenes, setRefsAllergenes] = useState<ReferenceAlimentaireDto[]>([]);
     const [refsRegimes, setRefsRegimes] = useState<ReferenceAlimentaireDto[]>([]);
@@ -90,7 +100,7 @@ function DossierEnfantForm({ handleCloseModal, sejourId, enfantId, data }: Dossi
         const allergOpts = optionsCheckboxReferencesAlimentaires(refsAllergenes, allergeneIdsInit);
         const regimeOpts = optionsCheckboxReferencesAlimentaires(refsRegimes, regimePreferenceIdsInit);
 
-        return [
+        const allFields: FormField[] = [
             { name: "emailParent1", label: "Email parent 1", type: "email", validation: optionalEmailValidation },
             { name: "telephoneParent1", label: "Téléphone parent 1", type: "tel", validation: optionalPhoneValidation },
             { name: "emailParent2", label: "Email parent 2", type: "email", validation: optionalEmailValidation },
@@ -122,7 +132,14 @@ function DossierEnfantForm({ handleCloseModal, sejourId, enfantId, data }: Dossi
             { name: "autresInformations", label: "Autres informations", type: "textarea" },
             { name: "aPrendreEnSortie", label: "À prendre en sortie", type: "textarea" },
         ];
-    }, [refsAllergenes, refsRegimes, data]);
+
+        if (section) {
+            const allowedFields = sectionFieldsMap[section];
+            return allFields.filter(field => allowedFields.includes(field.name));
+        }
+
+        return allFields;
+    }, [refsAllergenes, refsRegimes, data, section]);
 
     const handleSubmit = async (formData: Record<string, unknown>) => {
         setErrorMessage(null);

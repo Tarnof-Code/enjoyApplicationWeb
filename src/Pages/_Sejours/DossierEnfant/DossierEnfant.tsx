@@ -9,7 +9,7 @@ import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto, SejourDTO } from "../../../types/api";
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
 import { accountService } from "../../../services/account.service";
-import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
+import { peutModifierDossierEnfant } from "../../../helpers/peutModifierDossierEnfant";
 
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     const sejourId = params.id;
@@ -56,6 +56,23 @@ type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
 };
 
+type SectionType = 'contacts' | 'medical' | 'traitements' | 'autres';
+
+const getSectionTitle = (section: SectionType | null): string => {
+    switch (section) {
+        case 'contacts':
+            return 'Contacts parents';
+        case 'medical':
+            return 'Informations médicales';
+        case 'traitements':
+            return 'Traitements';
+        case 'autres':
+            return 'Autres informations';
+        default:
+            return 'Modifier le dossier';
+    }
+};
+
 const DossierEnfant: React.FC = () => {
     const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined } | Error;
     const sejourDetailLoader = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
@@ -63,12 +80,13 @@ const DossierEnfant: React.FC = () => {
     const location = useLocation();
     const { id: sejourId, enfantId } = useParams();
     const [showEditModal, setShowEditModal] = useState(false);
+    const [editingSection, setEditingSection] = useState<SectionType | null>(null);
     const returnState = location.state as DossierLocationState | null;
 
     const peutModifierDossier = useMemo(() => {
         if (!sejourDetailLoader || sejourDetailLoader instanceof Error) return false;
         const sub = accountService.getTokenInfo()?.payload?.sub;
-        return peutGererMembresEquipeSejour(
+        return peutModifierDossierEnfant(
             typeof sub === "string" ? sub : undefined,
             sejourDetailLoader.sejour.directeur,
             sejourDetailLoader.sejour.equipe
@@ -117,6 +135,16 @@ const DossierEnfant: React.FC = () => {
     const { dossier, enfant } = loaderData;
     const enfantNom = enfant ? `${enfant.prenom} ${enfant.nom}` : `Enfant #${dossier.enfantId}`;
 
+    const handleOpenEditModal = (section: SectionType) => {
+        setEditingSection(section);
+        setShowEditModal(true);
+    };
+
+    const handleCloseEditModal = () => {
+        setShowEditModal(false);
+        setEditingSection(null);
+    };
+
     return (
         <div className={styles.pageContainer}>
             <div className={styles.pageHeader}>
@@ -126,21 +154,23 @@ const DossierEnfant: React.FC = () => {
                 <h1 className={styles.pageTitle}>
                     Dossier de <span className={styles.enfantNameBadge}>{enfantNom}</span>
                 </h1>
-                {peutModifierDossier && sejourId && enfantId && (
-                    <Button
-                        color="primary"
-                        onClick={() => setShowEditModal(true)}
-                        className={styles.editButton}
-                    >
-                        <FontAwesomeIcon icon={faPencilAlt} className={styles.editIcon} />
-                        Modifier
-                    </Button>
-                )}
             </div>
 
             <div className={styles.dossierContent}>
                 <section className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Contacts parents</h2>
+                    <div className={styles.sectionHeader}>
+                        <h2 className={styles.sectionTitle}>Contacts parents</h2>
+                        {peutModifierDossier && sejourId && enfantId && (
+                            <Button
+                                color="primary"
+                                size="sm"
+                                onClick={() => handleOpenEditModal('contacts')}
+                                className={styles.sectionEditButton}
+                            >
+                                <FontAwesomeIcon icon={faPencilAlt} />
+                            </Button>
+                        )}
+                    </div>
                     <div className={styles.grid}>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Email parent 1</span>
@@ -162,7 +192,19 @@ const DossierEnfant: React.FC = () => {
                 </section>
 
                 <section className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Informations médicales</h2>
+                    <div className={styles.sectionHeader}>
+                        <h2 className={styles.sectionTitle}>Informations médicales</h2>
+                        {peutModifierDossier && sejourId && enfantId && (
+                            <Button
+                                color="primary"
+                                size="sm"
+                                onClick={() => handleOpenEditModal('medical')}
+                                className={styles.sectionEditButton}
+                            >
+                                <FontAwesomeIcon icon={faPencilAlt} />
+                            </Button>
+                        )}
+                    </div>
                     <div className={styles.infoStack}>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Informations médicales générales</span>
@@ -188,7 +230,19 @@ const DossierEnfant: React.FC = () => {
                 </section>
 
                 <section className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Traitements</h2>
+                    <div className={styles.sectionHeader}>
+                        <h2 className={styles.sectionTitle}>Traitements</h2>
+                        {peutModifierDossier && sejourId && enfantId && (
+                            <Button
+                                color="primary"
+                                size="sm"
+                                onClick={() => handleOpenEditModal('traitements')}
+                                className={styles.sectionEditButton}
+                            >
+                                <FontAwesomeIcon icon={faPencilAlt} />
+                            </Button>
+                        )}
+                    </div>
                     <div className={styles.grid}>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Matin</span>
@@ -210,7 +264,19 @@ const DossierEnfant: React.FC = () => {
                 </section>
 
                 <section className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Autres informations</h2>
+                    <div className={styles.sectionHeader}>
+                        <h2 className={styles.sectionTitle}>Autres informations</h2>
+                        {peutModifierDossier && sejourId && enfantId && (
+                            <Button
+                                color="primary"
+                                size="sm"
+                                onClick={() => handleOpenEditModal('autres')}
+                                className={styles.sectionEditButton}
+                            >
+                                <FontAwesomeIcon icon={faPencilAlt} />
+                            </Button>
+                        )}
+                    </div>
                     <div className={styles.infoStack}>
                         <div className={styles.infoGroup}>
                             <span className={styles.label}>Autres informations</span>
@@ -224,17 +290,18 @@ const DossierEnfant: React.FC = () => {
                 </section>
             </div>
 
-            <Modal isOpen={peutModifierDossier && showEditModal} toggle={() => setShowEditModal(false)} size="lg">
-                <ModalHeader toggle={() => setShowEditModal(false)}>
-                    Modifier le dossier
+            <Modal isOpen={peutModifierDossier && showEditModal} toggle={handleCloseEditModal} size="lg">
+                <ModalHeader toggle={handleCloseEditModal}>
+                    {getSectionTitle(editingSection)}
                 </ModalHeader>
                 <ModalBody>
-                    {peutModifierDossier && showEditModal && sejourId && enfantId && (
+                    {peutModifierDossier && showEditModal && sejourId && enfantId && editingSection && (
                         <DossierEnfantForm
-                            handleCloseModal={() => setShowEditModal(false)}
+                            handleCloseModal={handleCloseEditModal}
                             sejourId={parseInt(sejourId)}
                             enfantId={parseInt(enfantId)}
                             data={dossier}
+                            section={editingSection}
                         />
                     )}
                 </ModalBody>
