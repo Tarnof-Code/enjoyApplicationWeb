@@ -876,15 +876,21 @@ function ListePlanningsOrganisation({
         [directeur, membresEquipe]
     );
 
+    // Filtrer les lieux pour les plannings : uniquement ceux avec usage SURVEILLANCE ou RASSEMBLEMENT
+    const lieuxPourPlannings = useMemo(
+        () => lieux.filter((l) => l.usages && (l.usages.includes('SURVEILLANCE') || l.usages.includes('RASSEMBLEMENT'))),
+        [lieux]
+    );
+
     const donneesPourTypesPlanningMeta = useMemo<DonneesSejourPourTypesPlanning>(
         () => ({
             horaires,
             moments,
             groupes,
-            lieux,
+            lieux: lieuxPourPlannings,
             membresAvecNom: membresPourCellulesModal,
         }),
-        [horaires, moments, groupes, lieux, membresPourCellulesModal]
+        [horaires, moments, groupes, lieuxPourPlannings, membresPourCellulesModal]
     );
 
     const grillesTriAlphabetique = useMemo(
@@ -1028,7 +1034,7 @@ function ListePlanningsOrganisation({
                     ligne,
                     sourceLibellePourApi(detail),
                     groupes,
-                    lieux,
+                    lieuxPourPlannings,
                     horaires,
                     moments,
                     grilleLibelleLignesDesactive(detail)
@@ -1202,7 +1208,7 @@ function ListePlanningsOrganisation({
                 ligne,
                 sourceLibellePourApi(detail),
                 groupes,
-                lieux,
+                lieuxPourPlannings,
                 horaires,
                 moments,
                 grilleLibelleLignesDesactive(detail)
@@ -1428,7 +1434,7 @@ function ListePlanningsOrganisation({
                     l,
                     sourceLibellePourApi(detail),
                     groupes,
-                    lieux,
+                    lieuxPourPlannings,
                     horaires,
                     moments,
                     grilleLibelleLignesDesactive(detail)
@@ -1646,7 +1652,7 @@ function ListePlanningsOrganisation({
     const entiteChoicesLigne = optionsPourSource(
         ligneSourceEffectif,
         groupes,
-        lieux,
+        lieuxPourPlannings,
         horaires,
         moments,
         membresPourCellulesModal
@@ -1771,7 +1777,7 @@ function ListePlanningsOrganisation({
                                     ligne,
                                     sourceLibelleApiDetail,
                                     groupes,
-                                    lieux,
+                                    lieuxPourPlannings,
                                     horaires,
                                     moments,
                                     membresPourCellulesModal
@@ -2004,7 +2010,7 @@ function ListePlanningsOrganisation({
                                                 const texteCellule = resumeCellule(
                                                     c,
                                                     groupes,
-                                                    lieux,
+                                                    lieuxPourPlannings,
                                                     horaires,
                                                     moments,
                                                     membresPourCellulesModal
@@ -2410,7 +2416,7 @@ function ListePlanningsOrganisation({
                                                 ligne,
                                                 sourceLibelleApiDetail,
                                                 groupes,
-                                                lieux,
+                                                lieuxPourPlannings,
                                                 horaires,
                                                 moments,
                                                 membresPourCellulesModal
@@ -2522,7 +2528,7 @@ function ListePlanningsOrganisation({
                                             ligne,
                                             sourceLibelleApiDetail,
                                             groupes,
-                                            lieux,
+                                            lieuxPourPlannings,
                                             horaires,
                                             moments,
                                             membresPourCellulesModal
@@ -2901,13 +2907,13 @@ function ListePlanningsOrganisation({
                     {contenuCellulesPourModal === "LIEU" ? (
                         <FormGroup className={styles.modalField}>
                             <Label>Lieux</Label>
-                            {lieux.length === 0 ? (
+                            {lieuxPourPlannings.length === 0 ? (
                                 <p className={styles.fieldHintWarn}>
-                                    Aucun lieu pour ce séjour. Ajoutez-en dans la vue générale.
+                                    Aucun lieu avec usage « Surveillance » ou « Rassemblement » pour ce séjour.
                                 </p>
                             ) : (
                                 <div className={styles.membresCheckboxes}>
-                                    {lieux.map((l) => (
+                                    {lieuxPourPlannings.map((l) => (
                                         <FormGroup check key={l.id} className={styles.membreCheckboxRow}>
                                             <Label check>
                                                 <Input

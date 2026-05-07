@@ -417,6 +417,9 @@ export interface GroupeDto {
 /** Correspond à EmplacementLieu.java */
 export type EmplacementLieu = 'INTERIEUR' | 'EXTERIEUR' | 'HORS_CENTRE';
 
+/** Correspond à UsageLieu.java */
+export type UsageLieu = 'ACTIVITE' | 'SURVEILLANCE' | 'RASSEMBLEMENT';
+
 /**
  * Correspond à LieuDto.java
  */
@@ -431,6 +434,8 @@ export interface LieuDto {
   partageableEntreAnimateurs: boolean;
   /** Max d'activités le même jour sur ce lieu (≥ 2 si partageable) ; null si non partageable */
   nombreMaxActivitesSimultanees: number | null;
+  /** Ensemble des usages du lieu (ACTIVITE, SURVEILLANCE, RASSEMBLEMENT) - obligatoire et non vide */
+  usages: UsageLieu[];
 }
 
 /**
@@ -439,6 +444,7 @@ export interface LieuDto {
  * - emplacement : obligatoire
  * - nombreMax : optionnel ; si renseigné, doit être strictement positif côté API
  * - partage : si partageableEntreAnimateurs, nombreMaxActivitesSimultanees obligatoire et ≥ 2 ; sinon null
+ * - usages : ensemble non vide d'usages (ACTIVITE, SURVEILLANCE, RASSEMBLEMENT) - obligatoire
  */
 export interface SaveLieuRequest {
   nom: string;
@@ -446,6 +452,7 @@ export interface SaveLieuRequest {
   nombreMax?: number | null;
   partageableEntreAnimateurs: boolean;
   nombreMaxActivitesSimultanees?: number | null;
+  usages: UsageLieu[];
 }
 
 // ============================================================================

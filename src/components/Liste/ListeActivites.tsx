@@ -209,8 +209,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     };
 
     const lieuxFiltrésParEmplacement = useMemo(() => {
-        if (filtreEmplacementLieu === EMPLACEMENT_FILTRE_TOUS_ACTIVITE) return lieux;
-        return lieux.filter((l) => l.emplacement === filtreEmplacementLieu);
+        // Filtrer d'abord les lieux avec usage ACTIVITE
+        const lieuxPourActivites = lieux.filter((l) => l.usages && l.usages.includes('ACTIVITE'));
+        if (filtreEmplacementLieu === EMPLACEMENT_FILTRE_TOUS_ACTIVITE) return lieuxPourActivites;
+        return lieuxPourActivites.filter((l) => l.emplacement === filtreEmplacementLieu);
     }, [lieux, filtreEmplacementLieu]);
 
     const lieuxTriés = trierLieuxParNom(lieuxFiltrésParEmplacement);
@@ -1005,30 +1007,36 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         />
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
-                        <Label for="act-lieu-emplacement">Filtrer les lieux par emplacement</Label>
-                        <Input
-                            id="act-lieu-emplacement"
-                            type="select"
-                            value={filtreEmplacementLieu}
-                            onChange={(e) =>
-                                setFiltreEmplacementLieu(
-                                    e.target.value === EMPLACEMENT_FILTRE_TOUS_ACTIVITE
-                                        ? EMPLACEMENT_FILTRE_TOUS_ACTIVITE
-                                        : (e.target.value as EmplacementLieu)
-                                )
-                            }
-                            disabled={submitting || lieux.length === 0}
-                        >
-                            <option value={EMPLACEMENT_FILTRE_TOUS_ACTIVITE}>Tous les emplacements</option>
-                            {EmplacementLieuValues.map((v) => (
-                                <option key={v} value={v}>
-                                    {EmplacementLieuLabels[v]}
-                                </option>
-                            ))}
-                        </Input>
-                    </FormGroup>
-                    <FormGroup className={styles.modalField}>
-                        <Label for="act-lieu">Lieu (optionnel)</Label>
+                        <div className={styles.lieuHeaderRow}>
+                            <Label for="act-lieu">Lieu (optionnel)</Label>
+                            <div className={styles.lieuFilterInline}>
+                                <Label for="act-lieu-emplacement" className={styles.lieuFilterLabel}>
+                                    Filtrer les lieux
+                                </Label>
+                                <Input
+                                    id="act-lieu-emplacement"
+                                    type="select"
+                                    bsSize="sm"
+                                    value={filtreEmplacementLieu}
+                                    onChange={(e) =>
+                                        setFiltreEmplacementLieu(
+                                            e.target.value === EMPLACEMENT_FILTRE_TOUS_ACTIVITE
+                                                ? EMPLACEMENT_FILTRE_TOUS_ACTIVITE
+                                                : (e.target.value as EmplacementLieu)
+                                        )
+                                    }
+                                    disabled={submitting || lieux.length === 0}
+                                    className={styles.lieuFilterSelect}
+                                >
+                                    <option value={EMPLACEMENT_FILTRE_TOUS_ACTIVITE}>Tous</option>
+                                    {EmplacementLieuValues.map((v) => (
+                                        <option key={v} value={v}>
+                                            {EmplacementLieuLabels[v]}
+                                        </option>
+                                    ))}
+                                </Input>
+                            </div>
+                        </div>
                         <Input
                             id="act-lieu"
                             type="select"

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import { LieuDto, SaveLieuRequest, EmplacementLieu } from "../../types/api";
+import { LieuDto, SaveLieuRequest, EmplacementLieu, UsageLieu } from "../../types/api";
 import { sejourLieuService } from "../../services/sejour-lieu.service";
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
+import { UsageLieuLabels, UsageLieuValues } from "../../enums/UsageLieu";
 import styles from "./ListeLieux.module.scss";
 
 export interface ListeLieuxProps {
@@ -67,6 +68,7 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
     const [formNombreMax, setFormNombreMax] = useState("");
     const [formPartageable, setFormPartageable] = useState(false);
     const [formMaxActivitesJour, setFormMaxActivitesJour] = useState("");
+    const [formUsages, setFormUsages] = useState<UsageLieu[]>([]);
     const [filterEmplacement, setFilterEmplacement] = useState<typeof EMPLACEMENT_FILTRE_TOUS | EmplacementLieu>(
         EMPLACEMENT_FILTRE_TOUS
     );
@@ -80,6 +82,7 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
         setFormNombreMax("");
         setFormPartageable(false);
         setFormMaxActivitesJour("");
+        setFormUsages([]);
         setModalOpen(true);
     };
 
@@ -98,6 +101,7 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
         setFormMaxActivitesJour(
             lieu.nombreMaxActivitesSimultanees != null ? String(lieu.nombreMaxActivitesSimultanees) : ""
         );
+        setFormUsages(lieu.usages || []);
         setModalOpen(true);
     };
 
@@ -105,6 +109,10 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
         const nom = formNom.trim();
         if (!nom) {
             setErrorMessage("Le nom du lieu est obligatoire.");
+            return null;
+        }
+        if (formUsages.length === 0) {
+            setErrorMessage("Vous devez sélectionner au moins un usage pour ce lieu.");
             return null;
         }
         const rawCap = formNombreMax.trim();
@@ -139,6 +147,7 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
             nombreMax,
             partageableEntreAnimateurs: formPartageable,
             nombreMaxActivitesSimultanees,
+            usages: formUsages,
         };
     };
 
@@ -290,6 +299,12 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
                                 <strong>Capacité max :</strong> {lieu.nombreMax != null ? lieu.nombreMax : "—"}
                             </div>
                             <div className={styles.meta}>
+                                <strong>Usages :</strong>{" "}
+                                {lieu.usages && lieu.usages.length > 0
+                                    ? lieu.usages.map((u) => UsageLieuLabels[u]).join(", ")
+                                    : "—"}
+                            </div>
+                            <div className={styles.meta}>
                                 <strong>Partage possible :</strong>{" "}
                                 {lieu.partageableEntreAnimateurs && lieu.nombreMaxActivitesSimultanees != null
                                     ? `Oui, ${lieu.nombreMaxActivitesSimultanees} activités maximum`
@@ -366,6 +381,29 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
                         <p className={styles.hint}>Laissez vide si la capacité ne s&apos;applique pas.</p>
                     </FormGroup>
                     <FormGroup className={styles.modalField}>
+                        <Label>Usages du lieu (obligatoire)</Label>
+                        {UsageLieuValues.map((usage) => (
+                            <div key={usage} className={styles.checkboxRow}>
+                                <Input
+                                    id={`lieu-usage-${usage}`}
+                                    type="checkbox"
+                                    checked={formUsages.includes(usage)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setFormUsages([...formUsages, usage]);
+                                        } else {
+                                            setFormUsages(formUsages.filter((u) => u !== usage));
+                                        }
+                                    }}
+                                    disabled={submitting}
+                                />
+                                <Label for={`lieu-usage-${usage}`} className="mb-0">
+                                    {UsageLieuLabels[usage]}
+                                </Label>
+                            </div>
+                        ))}
+                    </FormGroup>
+                    <FormGroup className={styles.modalField}>
                         <div className={styles.checkboxRow}>
                             <Input
                                 id="lieu-partage"
@@ -378,7 +416,7 @@ function ListeLieux({ lieux, sejourId }: ListeLieuxProps) {
                                 disabled={submitting}
                             />
                             <Label for="lieu-partage" className="mb-0">
-                                Partageable entre animateurs (plusieurs activités le même jour sur ce lieu)
+                                Partageable entre animateurs
                             </Label>
                         </div>
                         {formPartageable ? (
