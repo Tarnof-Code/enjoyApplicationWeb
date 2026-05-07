@@ -538,7 +538,7 @@ export function CalendrierPlanning({
                                                 return (
                                                     <td
                                                         key={ymd}
-                                                        className={`${planningCal.cellShell} ${classeTone} ${
+                                                        className={`${planningCal.cellShell} ${styles.calendrierCell} ${classeTone} ${
                                                             !dansSejour ? planningCal.cellToneHorsSejour : ""
                                                         } ${celluleAjoutClic ? planningCal.cellAjoutClic : ""}`}
                                                         {...proprietesTdAjoutPlanning(

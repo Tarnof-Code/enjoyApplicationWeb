@@ -530,6 +530,18 @@ $cal-table-border-strong: #c4cad4;
     font-size: 0.88rem;
 }
 
+/**
+ * `.cellShell` (PlanningCalendrier) enlève droite / bas sur dernière colonne et ligne (le tableau menus a une
+ * bordure sur `.calTable`). Ici le contour n’existe pas — on rétablit ces côtés sur les `<td>` du corps.
+ */
+.calendrierTable tbody tr .calendrierCell:last-child {
+    border-right: 1px solid $cal-table-border;
+}
+
+.calendrierTable tbody tr:last-child .calendrierCell {
+    border-bottom: 1px solid $cal-table-border;
+}
+
 /** Première colonne (noms animateurs) : largeur fixe ; le reste se répartit à parts égales via les <col>. */
 .calendrierColAnimateur {
     width: 8rem;
