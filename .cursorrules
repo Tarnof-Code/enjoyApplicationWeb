@@ -151,7 +151,7 @@ L'assistant doit répondre exclusivement en français.
   This refactoring improves code maintainability and component reusability while reducing code duplication in the admin user management section.
 
 # Post-commit / Post-push
-- **Quand un commit est fait ET qu'un push est fait** : mettre à jour la Memory Bank (**`AI_MEMORY.md` pivot** + **fiches `docs/ai/*.md` concernées**) et `.cursorrules` si besoin.
+- **Quand un commit est fait ET qu'un push est fait** : mettre à jour la Memory Bank (**fiches `docs/ai/*.md` concernées en priorité** + **ajustement minimal** du pivot **`AI_MEMORY.md`** — ne pas le surcharger) et `.cursorrules` si besoin.
 - Vérifier si les changements poussés justifient une mise à jour de la mémoire (nouveaux patterns, décisions architecturales, tâches accomplies, etc.).
 - Vérifier si les changements poussés justifient une mise à jour des règles (nouvelles conventions, nouveaux composants à documenter, etc.).
 
@@ -162,18 +162,11 @@ L'assistant doit répondre exclusivement en français.
    - **IMPORTANT :** Lire aussi `../enjoyApi/AI_MEMORY.md` (backend Java) pour l’architecture backend, les DTOs, les patterns d’API et la synchronisation frontend-backend.
 
 2. **MISE À JOUR OBLIGATOIRE :**
-   - **Fin de tâche / décision technique :** mettre à jour le **pivot** (liens ou rappel si nécessaire) et la **fiche** qui porte le détail (`contexte-actif.md`, `decisions-architecturales.md`, `etat-projet.md`, `roadmap.md`, …).
-   - **Demande explicite « mets à jour AI_MEMORY.md » :** mettre à jour **toute** la Memory Bank concernée (pivot + fiches), **créer** une nouvelle fiche si aucune n’existe pour le sujet, **référencer** dans `AI_MEMORY.md` et `docs/ai/README.md`.
+   - **Fondement :** les fiches et le pivot reflètent le **code réel** — toujours recouper avec le dépôt (**`git status`**, **`git diff`**, historique récent, **`src/`**, `services/`, `types/api.d.ts`, **`App.tsx`**, loaders) ; **interdit** de mettre à jour la mémoire uniquement depuis le chat ou d’affirmer que tout est à jour sans inspection git/code.
+   - **Pivot `AI_MEMORY.md` — ne pas surcharger :** garder ce fichier **court** (liens vers `docs/ai/`, **brève** ligne de dernière synchro ou thème majeur, rappel du protocole). **Ne pas** y dupliquer journaux longs ni détail d’implémentation : le détail vit dans **`docs/ai/`** (`contexte-actif.md` pour le journal, `decisions-architecturales.md`, `documentation-ui-routing.md`, `etat-projet.md`, etc.). Si le pivot grossit, **déplacer** le contenu vers la fiche adaptée et ne laisser dans `AI_MEMORY.md` qu’un **renvoi** ou une phrase.
+   - **Fin de tâche / décision technique :** mettre à jour **surtout** la **fiche** qui porte le détail (`contexte-actif.md`, `decisions-architecturales.md`, `etat-projet.md`, `roadmap.md`, …) ; **`AI_MEMORY.md`** : **ajustement minimal** (lien + synthèse courte si nécessaire).
+   - **Demande de mise à jour Memory Bank** (formulation libre : « mets à jour AI_MEMORY.md », « synchronise la mémoire avec le code », etc.) : **créer** une nouvelle fiche si aucune n’existe pour le sujet, **référencer** dans `AI_MEMORY.md` (ligne légère ou lien) et dans `docs/ai/README.md` ; **avant** d’écrire : relire **`.cursorrules`**, analyser le dépôt comme ci-dessus ; **interdit** de ne répondre que par un résumé dans le chat sans édition des fichiers.
    - **Roadmap :** cases à cocher et nouvelles étapes dans `docs/ai/roadmap.md`.
    - **Synchronisation backend :** si l’API change, mettre à jour `types/api.d.ts` et la fiche **`docs/ai/etat-projet.md`** (ou une fiche dédiée sync), en référence au `AI_MEMORY.md` enjoyApi.
 
 3. **RÉFLEXIVITÉ :** Si le code contredit la Memory Bank, signaler : soit le code est faux, soit la mémoire doit être mise à jour.
-
-4. **Commande utilisateur `#MAJ` :**
-   - **Déclencheur :** uniquement si le message utilisateur est **exactement** `#MAJ`, avec tolérance **uniquement** pour des **espaces** en début ou fin de message (aucun autre texte ; pas de `#MAJ …`).
-   - **Lecture des règles :** en premier, **relire le fichier** `.cursorrules` **sur disque** (conventions à jour du dépôt).
-   - **Codebase avant les markdowns :** **analyser le dépôt frontend** pour refléter l’état réel du code — au minimum `git status`, `git diff`, historique de commits récents ; ouvrir les fichiers pertinents (`src/`, `services/`, `types/api.d.ts`, `App.tsx`, loaders, etc.) **jusqu’à** une description fidèle du travail effectué. **Interdit :** se contenter de paraphraser les fiches existantes sans recouper le code.
-   - **Lecture du pivot (référence) :** lire `AI_MEMORY.md` et les fiches `docs/ai/*.md` nécessaires **pour savoir quoi mettre à jour** par rapport aux constats codebase (pas comme seule source de vérité).
-   - **Écriture obligatoire :** **modifier** `AI_MEMORY.md` **et** les fiches `docs/ai/` concernées selon le protocole déjà défini aux points **1 et 2** ci-dessus (même logique qu’une **demande explicite** de mise à jour de la Memory Bank : pivot + détail dans les bonnes fiches ; **nouvelle** fiche `docs/ai/*.md` seulement si aucune fiche existante ne couvre le sujet, puis **référencer** dans `AI_MEMORY.md` et `docs/ai/README.md`).
-   - **Alignement API :** si les constats impliquent un changement de contrat ou de DTOs, **prendre en compte** `../enjoyApi/AI_MEMORY.md` et la doc API côté backend (`../enjoyApi/docs/ai/`, notamment `documentation-api-rest.md`) pour cohérence ; mettre à jour côté front `types/api.d.ts` et **`docs/ai/etat-projet.md`** (ou fiche dédiée) comme prévu au point **2** du présent protocole.
-   - **Interdictions explicites** dans ce flux : répondre uniquement par un résumé dans le chat **sans éditer les fichiers** ; affirmer « tout est à jour » **sans** avoir inspecté git/code ; ignorer `.cursorrules`.
