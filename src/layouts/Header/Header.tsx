@@ -25,6 +25,7 @@ import {
   FaSlidersH,
   FaTable,
   FaUtensils,
+  FaNotesMedical,
 } from "react-icons/fa";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
@@ -211,6 +212,15 @@ const Admin_header: React.FC = () => {
                       >
                         <FaUtensils size={14} aria-hidden />
                         Menus
+                      </NavLink>
+                      <NavLink
+                        to={`/mes-sejours/${effectiveNavId}/sanitaire`}
+                        className={({ isActive }) =>
+                          `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
+                        }
+                      >
+                        <FaNotesMedical size={14} aria-hidden />
+                        Sanitaire
                       </NavLink>
                       {peutAfficherNavParametrage ? (
                         <NavLink

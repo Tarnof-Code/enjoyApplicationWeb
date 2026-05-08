@@ -47,7 +47,7 @@ const formatReferencesLine = (refs: ReferenceAlimentaireDto[] | undefined): stri
 };
 
 interface DossierLocationState {
-    from?: 'groupes' | 'enfants';
+    from?: 'groupes' | 'enfants' | 'sanitaire';
     openAccordion?: string;
     expandedGroupeId?: number;
 }
@@ -98,18 +98,24 @@ const DossierEnfant: React.FC = () => {
     }, []);
 
     const handleRetour = () => {
-        if (sejourId && returnState?.openAccordion) {
+        if (!sejourId) {
+            navigate(-1);
+            return;
+        }
+        if (returnState?.from === "sanitaire") {
+            navigate(`/mes-sejours/${sejourId}/sanitaire`, { replace: true });
+            return;
+        }
+        if (returnState?.openAccordion) {
             navigate(`/mes-sejours/${sejourId}`, {
                 state: {
                     openAccordion: returnState.openAccordion,
-                    expandedGroupeId: returnState.expandedGroupeId
+                    expandedGroupeId: returnState.expandedGroupeId,
                 },
-                replace: true
+                replace: true,
             });
-        } else if (sejourId) {
-            navigate(`/mes-sejours/${sejourId}`, { replace: true });
         } else {
-            navigate(-1);
+            navigate(`/mes-sejours/${sejourId}`, { replace: true });
         }
     };
 

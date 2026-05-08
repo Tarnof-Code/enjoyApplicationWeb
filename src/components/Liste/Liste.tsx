@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Button,
   Row,
@@ -54,6 +54,10 @@ export interface ListeProps<T = any> {
   canDossier?: boolean;
   onDossier?: (item: T) => void;
   deleteConfirmationMessage?: (item: T) => string;
+  /**
+   * Clé unique pour persister les filtres du tableau dans sessionStorage (ex. liste sanitaire après navigation dossier puis retour).
+   */
+  persistFiltersStorageKey?: string;
 }
 
 const checkValidityFilter = (itemValue: string | number | undefined, filterValue: string): boolean => {
@@ -114,6 +118,38 @@ const applyFilters = <T extends Record<string, any>>(
   }
 };
 
+const LISTE_FILTERS_STORAGE_PREFIX = "enjoy.liste.filters.";
+
+function buildInitialFilters(columnsArg: ColumnConfig[], persistKey: string | undefined): FilterState {
+  const initial: FilterState = {};
+  columnsArg.forEach((col) => {
+    if (col.filterable) {
+      initial[`${col.key}Filter`] = "";
+    }
+  });
+
+  if (!persistKey) {
+    return initial;
+  }
+
+  try {
+    const raw = sessionStorage.getItem(`${LISTE_FILTERS_STORAGE_PREFIX}${persistKey}`);
+    if (!raw) return initial;
+    const saved = JSON.parse(raw) as FilterState;
+    if (!saved || typeof saved !== "object") return initial;
+    for (const col of columnsArg) {
+      if (!col.filterable) continue;
+      const fk = `${col.key}Filter`;
+      if (typeof saved[fk] === "string") {
+        initial[fk] = saved[fk];
+      }
+    }
+  } catch {
+    /* ignore parse / quota */
+  }
+  return initial;
+}
+
 const Liste = <T extends Record<string, any>>({
   columns,
   data,
@@ -131,6 +167,7 @@ const Liste = <T extends Record<string, any>>({
   onView,
   onDossier,
   deleteConfirmationMessage,
+  persistFiltersStorageKey,
 }: ListeProps<T>) => {
 
   const revalidator = useRevalidator();
@@ -153,16 +190,22 @@ const Liste = <T extends Record<string, any>>({
     setModalState({ show: false, editingItem: null });
   };
 
-  // Initialisation des filtres avec useState
-  const [filters, setFilters] = useState<FilterState>(() => {
-    const initialFilters: FilterState = {};
-    columns.forEach(col => {
-      if (col.filterable) {
-        initialFilters[`${col.key}Filter`] = "";
-      }
-    });
-    return initialFilters;
-  });
+  // Initialisation des filtres (+ relecture sessionStorage si clé persistée — ex. retour depuis dossier enfant).
+  const [filters, setFilters] = useState<FilterState>(() =>
+    buildInitialFilters(columns, persistFiltersStorageKey),
+  );
+
+  useEffect(() => {
+    if (!persistFiltersStorageKey) return;
+    try {
+      sessionStorage.setItem(
+        `${LISTE_FILTERS_STORAGE_PREFIX}${persistFiltersStorageKey}`,
+        JSON.stringify(filters),
+      );
+    } catch {
+      /* ignore quota */
+    }
+  }, [persistFiltersStorageKey, filters]);
 
   // État pour la modale de suppression
   const [deleteModalState, setDeleteModalState] = useState<{

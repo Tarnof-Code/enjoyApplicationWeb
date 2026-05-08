@@ -1,7 +1,15 @@
 import Axios from "./caller.service";
 import { trierEnfantsParNom } from "../helpers/trierUtilisateurs";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
-import { EnfantDto, CreateEnfantRequest, ExcelImportResponse, ExcelImportSpecResponse, DossierEnfantDto, UpdateDossierEnfantRequest } from "../types/api";
+import {
+  EnfantDto,
+  CreateEnfantRequest,
+  ExcelImportResponse,
+  ExcelImportSpecResponse,
+  DossierEnfantDto,
+  UpdateDossierEnfantRequest,
+  EnfantDossierSanitaireLigneDto,
+} from "../types/api";
 
 let getEnfantsDuSejour = async (sejourId: number): Promise<EnfantDto[]> => {
   try {
@@ -13,6 +21,21 @@ let getEnfantsDuSejour = async (sejourId: number): Promise<EnfantDto[]> => {
   } catch (error) {
     console.error("Une erreur s'est produite lors de la récupération des enfants :", error);
     throw error;
+  }
+};
+
+let listerDossiersEnfantsSanitaire = async (sejourId: number): Promise<EnfantDossierSanitaireLigneDto[]> => {
+  try {
+    const response = await Axios.get(`/sejours/${sejourId}/dossiers-enfants`);
+    if (response.data && Array.isArray(response.data)) {
+      return response.data as EnfantDossierSanitaireLigneDto[];
+    }
+    return [];
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors du chargement des dossiers sanitaires",
+      logContext: "listerDossiersEnfantsSanitaire",
+    });
   }
 };
 
@@ -133,6 +156,7 @@ let importerEnfantsExcel = async (sejourId: number, file: File): Promise<ExcelIm
 
 export const sejourEnfantService = {
   getEnfantsDuSejour,
+  listerDossiersEnfantsSanitaire,
   getDossierEnfant,
   updateDossierEnfant,
   supprimerEnfantDuSejour,

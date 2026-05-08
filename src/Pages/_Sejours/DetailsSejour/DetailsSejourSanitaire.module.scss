@@ -1,0 +1,58 @@
+@use "../../../_variables" as *;
+
+/** Pleine largeur : le contenu sanitaire n’est pas limité à 1400px. */
+.pageSanitaire {
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/** Barre : cases à cocher des colonnes optionnelles. */
+.optionsBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    width: 100%;
+    margin-bottom: 0.65rem;
+    padding: 0.65rem 1rem;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.optionToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.listeWrap {
+    width: 100%;
+    min-width: 0;
+
+    /** Liste enveloppée dans `.page-main` — léger écart sous le bandeau colonnes sans retrouver le plein padding 2rem. */
+    :global(.page-main) {
+        padding-top: 0.45rem;
+    }
+}
+
+.erreurBanner {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: #fde8e8;
+    color: #8a1f1f;
+    margin-bottom: 1rem;
+}
+
+.emptyState {
+    padding: 2rem;
+    text-align: center;
+    color: #666;
+}

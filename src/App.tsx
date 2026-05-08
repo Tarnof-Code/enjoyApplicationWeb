@@ -18,6 +18,7 @@ import DetailsSejourParametrage from "./Pages/_Sejours/DetailsSejour/DetailsSejo
 import DetailsSejourOrganisationLayout from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisationLayout";
 import DetailsSejourOrganisation from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisation";
 import DetailsSejourMenus from "./Pages/_Sejours/DetailsSejour/DetailsSejourMenus";
+import DetailsSejourSanitaire from "./Pages/_Sejours/DetailsSejour/DetailsSejourSanitaire";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Sejours/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 import { chargerProfilEtCheminAccueil } from "./helpers/redirectApresAuthentification";
@@ -92,6 +93,10 @@ const App: React.FC = () => {
             {
               path: "menus",
               element: <DetailsSejourMenus />,
+            },
+            {
+              path: "sanitaire",
+              element: <DetailsSejourSanitaire />,
             },
             {
               path: "organisation",

@@ -85,7 +85,7 @@ L'assistant doit répondre exclusivement en français.
 - Propose des alternatives quand pertinent
 - Respecte l'architecture existante (Form générique, loaders, SCSS Modules)
 - Utilise les composants existants (`Form.tsx`, `Liste.tsx`, `Equipe.tsx`, `ListeEnfants.tsx`, `ListeGroupes.tsx`, `CreateGroupeForm.tsx`, `DossierEnfant`, `DossierEnfantForm`, `ListeLieux`, `ListeMoments`, `ListeTypesActivite`, **`DetailsSejourAccordionItem`** (`components/DetailsSejour/`), `ListeActivites`, `Acces_non_autorise`) plutôt que de créer de nouveaux patterns
-- **Liste.tsx** : Supporte les props `canDossier`/`onDossier` pour afficher une icône dossier (faFolder) ; utiliser pour naviguer vers la page dossier d'un enfant. Depuis ListeEnfants : `state: { from: 'enfants', openAccordion: '3' }`. Depuis ListeGroupes : `state: { from: 'groupes', openAccordion: '4', expandedGroupeId }` (retour vers `/directeur/sejours/:id`, vue générale).
+- **Liste.tsx** : Supporte les props `canDossier`/`onDossier` pour afficher une icône dossier (faFolder) ; utiliser pour naviguer vers la page dossier d'un enfant. Depuis ListeEnfants : `state: { from: 'enfants', openAccordion: '3' }`. Depuis ListeGroupes : `state: { from: 'groupes', openAccordion: '4', expandedGroupeId }` (retour vers `/mes-sejours/:id`, vue générale). Prop optionnelle **`persistFiltersStorageKey`** : persistance des filtres du tableau en **`sessionStorage`** sous **`enjoy.liste.filters.{clé}`** (ex. liste sanitaire au retour depuis le dossier enfant).
 - **Formulaires** : 
   - Utiliser le composant générique `Form.tsx` avec configuration via `fields` (FormField[])
   - Validation via fonction `validation` dans chaque FormField (retourne `string | null`)

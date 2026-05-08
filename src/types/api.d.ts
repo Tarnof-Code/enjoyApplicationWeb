@@ -309,6 +309,25 @@ export interface DossierEnfantDto {
 }
 
 /**
+ * Groupe résumé (liste sanitaire) — correspond à GroupeResumeDto.java
+ */
+export interface GroupeResumeDto {
+  id: number;
+  libelle: string;
+}
+
+/**
+ * Ligne tableau sanitaire — correspond à EnfantDossierSanitaireLigneDto.java
+ */
+export interface EnfantDossierSanitaireLigneDto {
+  enfantId: number;
+  prenom: string;
+  nom: string;
+  groupes: GroupeResumeDto[];
+  dossier: DossierEnfantDto | null;
+}
+
+/**
  * Correspond à UpdateDossierEnfantRequest.java
  * Champs texte comme le DTO sans les tableaux imbriqués ; les ids alimentaires sont optionnels (omit / null = inchangé).
  */
