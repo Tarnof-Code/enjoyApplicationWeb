@@ -66,7 +66,10 @@ const Admin_header: React.FC = () => {
   let role = useSelector((state: RootState) => state.auth.role);
   let genre = useSelector((state: RootState) => state.auth.genre);
 
-  const roleLabel = utilisateurService.getRoleSystemeByGenre(role, genre);
+  const profilDisplayLabel =
+    role === RoleSysteme.ADMIN || role === RoleSysteme.DIRECTION
+      ? `${prenom ?? ""} (${utilisateurService.getRoleSystemeByGenre(role, genre)})`
+      : (prenom ?? "");
 
   const sejourMatch = useMatch({ path: "/mes-sejours/:id", end: false });
   const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | Error | undefined;
@@ -244,9 +247,7 @@ const Admin_header: React.FC = () => {
               <NavLink to={"/profil"} className={styles.link}>
                 <div className={styles.iconWithText}>
                   <FaUser size={20} />
-                  <span>
-                    {prenom} ({roleLabel})
-                  </span>
+                  <span>{profilDisplayLabel}</span>
                 </div>
               </NavLink>
             </NavItem>
