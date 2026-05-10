@@ -2,6 +2,7 @@ import Axios from "./caller.service";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
 import type {
     HistoriqueModificationPlanningCelluleDto,
+    ModifierMaPresenceCelluleMembreEquipeRequest,
     PlanningGrilleDetailDto,
     PlanningGrilleSummaryDto,
     PlanningLigneDto,
@@ -175,6 +176,31 @@ async function remplacerCellules(
     }
 }
 
+/** Membre d’équipe : ajoute ou retire uniquement le `tokenId` connecté (`GESTION_SEJOURS` utilise plutôt `remplacerCellules`). Réponse vide si **204**. */
+async function modifierMaPresenceCelluleMembreEquipe(
+    sejourId: number,
+    grilleId: number,
+    ligneId: number,
+    jour: string,
+    body: ModifierMaPresenceCelluleMembreEquipeRequest
+): Promise<PlanningCelluleDto | null> {
+    try {
+        const j = jour.trim();
+        const response = await Axios.patch(
+            `${base(sejourId)}/${grilleId}/lignes/${ligneId}/cellules/${encodeURIComponent(j)}/ma-presence`,
+            body
+        );
+        if (response.status === 204) return null;
+        return response.data;
+    } catch (error: unknown) {
+        adaptAxiosError(error, {
+            defaultMessage: "Impossible de mettre à jour votre inscription sur cette case",
+            logContext: "modifierMaPresenceCelluleMembreEquipe planning-grilles",
+            preserveResponseData: true,
+        });
+    }
+}
+
 export const sejourPlanningGrilleService = {
     listerGrilles,
     getGrilleDetail,
@@ -186,4 +212,5 @@ export const sejourPlanningGrilleService = {
     supprimerLigne,
     getHistoriqueCellulesLigne,
     remplacerCellules,
+    modifierMaPresenceCelluleMembreEquipe,
 };

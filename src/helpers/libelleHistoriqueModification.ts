@@ -42,7 +42,7 @@ const CHAMPS_SNAPSHOT_ACTIVITE = [
     "Lieu",
     "Moment",
     "Type d’activité",
-    "Membres",
+    "Animateurs",
     "Groupes",
 ] as const;
 
@@ -85,6 +85,19 @@ function segmentsSnapshotIdentiques(va: string, vn: string): boolean {
     );
 }
 
+/** Colonne « Date » du snapshot activité : `yyyy-MM-dd` ou ISO → affichage `jj/mm/aaaa`. */
+function formaterSegmentDateSnapshotActivite(segment: string): string {
+    const t = segment.trim();
+    if (t === "") return t;
+    const d = parseDate(t);
+    if (!d) return t;
+    return d.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    });
+}
+
 /**
  * Compare ancienne / nouvelle valeur pour affichage lisible : **`champ : ancien → nouveau`** par ligne
  * (snapshots pipe-separated doc API), ou blocs JSON / texte sinon.
@@ -108,8 +121,12 @@ export function formaterComparaisonHistoriqueSnapshots(
             const va = (parsedA?.parts[i] ?? "").trim();
             const vn = (parsedN?.parts[i] ?? "").trim();
             if (segmentsSnapshotIdentiques(va, vn)) continue;
-            const affA = normaliserSegmentSnapshotPourComparaison(va) === "" ? "Vide" : va;
-            const affN = normaliserSegmentSnapshotPourComparaison(vn) === "" ? "Vide" : vn;
+            let affA = normaliserSegmentSnapshotPourComparaison(va) === "" ? "Vide" : va;
+            let affN = normaliserSegmentSnapshotPourComparaison(vn) === "" ? "Vide" : vn;
+            if (domaine === "activite" && labels[i] === "Date") {
+                if (affA !== "Vide") affA = formaterSegmentDateSnapshotActivite(affA);
+                if (affN !== "Vide") affN = formaterSegmentDateSnapshotActivite(affN);
+            }
             lines.push(`${labels[i]} : ${affA} → ${affN}`);
         }
         return lines.length > 0 ? lines.join("\n") : null;
@@ -152,7 +169,16 @@ export function formaterValeurHistoriquePourAffichage(
 
     const pipe = parseSnapshotPipe(valeur, domaine);
     if (pipe) {
-        return pipe.parts.map((segment, i) => `${pipe.labels[i]} : ${segment}`).join("\n");
+        return pipe.parts
+            .map((segment, i) => {
+                const label = pipe.labels[i];
+                const display =
+                    domaine === "activite" && label === "Date"
+                        ? formaterSegmentDateSnapshotActivite(segment)
+                        : segment;
+                return `${label} : ${display}`;
+            })
+            .join("\n");
     }
 
     const c0 = t[0];

@@ -784,3 +784,8 @@ export interface PlanningCellulePayload {
 export interface UpsertPlanningCellulesRequest {
   cellules: PlanningCellulePayload[];
 }
+
+/** PATCH .../cellules/{jour}/ma-presence — inscription / désinscription du seul utilisateur connecté (grille à contenu `MEMBRE_EQUIPE`). */
+export interface ModifierMaPresenceCelluleMembreEquipeRequest {
+  present: boolean;
+}

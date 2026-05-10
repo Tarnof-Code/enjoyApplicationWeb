@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRevalidator } from "react-router-dom";
 import { FaEdit, FaGripVertical, FaHistory, FaTrashAlt } from "react-icons/fa";
 import {
@@ -70,6 +70,8 @@ export interface ListePlanningsOrganisationProps {
     onNavigateToPlanning?: (grilleId: number) => void;
     /** Directeur / adjoint : créer/supprimer/modifier grille, lignes, sections ; les autres suivent les règles « animateur ». */
     peutGererPlanningStructure: boolean;
+    /** JWT `sub` (= `tokenId` utilisateur) — pour PATCH « ma présence » sur les cellules `MEMBRE_EQUIPE`. */
+    tokenUtilisateurConnecte?: string | null;
 }
 
 /** L’API n’expose plus de hiérarchie parent / enfant sur les lignes : profondeur d’indentation toujours nulle. */
@@ -850,6 +852,7 @@ function ListePlanningsOrganisation({
     onCloseEmbeddedEditor,
     onNavigateToPlanning,
     peutGererPlanningStructure,
+    tokenUtilisateurConnecte = null,
 }: ListePlanningsOrganisationProps) {
     const isEmbeddedEditor =
         embeddedEditorGrilleId != null &&
@@ -960,6 +963,9 @@ function ListePlanningsOrganisation({
     const [cellLieuIdsSelection, setCellLieuIdsSelection] = useState<number[]>([]);
     const [cellTexte, setCellTexte] = useState("");
     const [cellMembresTokensSelection, setCellMembresTokensSelection] = useState<string[]>([]);
+    const cellMembresTokensInitialRef = useRef<string[]>([]);
+
+    const tokenSelfPlanning = (tokenUtilisateurConnecte ?? "").trim();
 
     const [cellHistModalOpen, setCellHistModalOpen] = useState(false);
     const [cellHistJour, setCellHistJour] = useState("");
@@ -1580,22 +1586,35 @@ function ListePlanningsOrganisation({
         setCellGroupeIdsSelection(cell?.groupeIds?.length ? [...cell.groupeIds] : []);
         setCellLieuIdsSelection(cell?.lieuIds?.length ? [...cell.lieuIds] : []);
         setCellTexte(cell?.texteLibre ?? "");
-        setCellMembresTokensSelection(
-            normaliserTokenIdsAnimateursCellule(
-                cell == null
-                    ? undefined
-                    : cell.membreTokenIds?.length
-                      ? cell.membreTokenIds
-                      : (cell as { animateurIds?: string[] | null }).animateurIds
-            )
+        const tokensListe = normaliserTokenIdsAnimateursCellule(
+            cell == null
+                ? undefined
+                : cell.membreTokenIds?.length
+                  ? cell.membreTokenIds
+                  : (cell as { animateurIds?: string[] | null }).animateurIds
         );
+        cellMembresTokensInitialRef.current = [...tokensListe];
+        setCellMembresTokensSelection(tokensListe);
         setCellModalOpen(true);
     };
 
     const toggleCellMembreToken = (tokenId: string) => {
-        setCellMembresTokensSelection((prev) =>
-            prev.includes(tokenId) ? prev.filter((x) => x !== tokenId) : [...prev, tokenId]
-        );
+        const tid = tokenId.trim();
+        if (
+            !peutGererPlanningStructure &&
+            detail &&
+            sourceContenuCellulesEffectif(detail) === "MEMBRE_EQUIPE"
+        ) {
+            const self = tokenSelfPlanning;
+            if (!self || tid !== self) return;
+        }
+        setCellMembresTokensSelection((prev) => {
+            const idx = prev.findIndex((x) => x.trim() === tid);
+            if (idx >= 0) {
+                return prev.filter((_, i) => i !== idx);
+            }
+            return [...prev, tid];
+        });
     };
 
     const toggleCellHoraireId = (id: number) => {
@@ -1625,6 +1644,41 @@ function ListePlanningsOrganisation({
             peutGererPlanningStructure || planningAnimateurPeutModifierCellules(detail);
         if (!peutModifierCetteCellule) return;
         const contenuSrc = sourceContenuCellulesEffectif(detail);
+
+        if (!peutGererPlanningStructure && contenuSrc === "MEMBRE_EQUIPE") {
+            const self = tokenSelfPlanning;
+            if (!self) {
+                setCellError(
+                    "Impossible de vous identifier pour cette inscription. Reconnectez-vous si nécessaire."
+                );
+                return;
+            }
+            const hadSelf = cellMembresTokensInitialRef.current.some((t) => t.trim() === self);
+            const hasSelf = cellMembresTokensSelection.some((t) => t.trim() === self);
+            if (hadSelf === hasSelf) {
+                setCellModalOpen(false);
+                return;
+            }
+            setCellError(null);
+            setCellSubmitting(true);
+            try {
+                await sejourPlanningGrilleService.modifierMaPresenceCelluleMembreEquipe(
+                    sejourId,
+                    editorGrilleId,
+                    cellLigneId,
+                    cellJour,
+                    { present: hasSelf }
+                );
+                setCellModalOpen(false);
+                await reloadDetail();
+                refreshAfterMutation();
+            } catch (e: unknown) {
+                setCellError(e instanceof Error ? e.message : "Enregistrement impossible");
+            } finally {
+                setCellSubmitting(false);
+            }
+            return;
+        }
 
         let horaireIds: number[] | null = null;
         let momentIds: number[] | null = null;
@@ -1717,6 +1771,34 @@ function ListePlanningsOrganisation({
     const sectionsListe = detail ? sectionsDepuisLignes(detail.lignes) : [];
     const contenuCellulesPourModal =
         cellModalOpen && detail ? sourceContenuCellulesEffectif(detail) : null;
+    /** Membre non gestionnaire : sur contenu animateurs, PATCH « ma présence » — cases des autres désactivées. */
+    const animateurRestrictionsMembreEquipeCellModal =
+        cellModalOpen && !peutGererPlanningStructure && contenuCellulesPourModal === "MEMBRE_EQUIPE";
+
+    /** Animateur : n’affiche que soi (+ les autres déjà présents sur la cellule), en lecture seule pour ceux-ci. */
+    const membresListeModaleCelluleMembreEquipe = useMemo(() => {
+        if (!animateurRestrictionsMembreEquipeCellModal || tokenSelfPlanning === "") {
+            return membresPourCellulesModal;
+        }
+        const selfT = tokenSelfPlanning;
+        const tokensSelectionTrim = new Set(cellMembresTokensSelection.map((x) => x.trim()));
+        const autresCochés = membresPourCellulesModal.filter(
+            (m) => m.tokenId.trim() !== selfT && tokensSelectionTrim.has(m.tokenId.trim()),
+        );
+        const ligneSoi =
+            membresPourCellulesModal.find((m) => m.tokenId.trim() === selfT) ?? {
+                tokenId: selfT,
+                prenom: "Vous",
+                nom: "",
+            };
+        return [ligneSoi, ...autresCochés];
+    }, [
+        membresPourCellulesModal,
+        animateurRestrictionsMembreEquipeCellModal,
+        tokenSelfPlanning,
+        cellMembresTokensSelection,
+    ]);
+
     const afficherColonneRegroupement =
         detail != null ? grilleAfficheColonneRegroupement(detail.lignes) : false;
     const afficherColonneLibelleLigne = detail != null ? grilleAfficheColonneLibelleLigne(detail) : false;
@@ -2876,6 +2958,11 @@ function ListePlanningsOrganisation({
                     {contenuCellulesPourModal === "MEMBRE_EQUIPE" ? (
                         <FormGroup className={styles.modalField}>
                             <Label>Membres de l’équipe</Label>
+                            {!animateurRestrictionsMembreEquipeCellModal || tokenSelfPlanning ? null : (
+                                <p className={styles.fieldHintWarn}>
+                                    Impossible de confirmer une inscription sans identité de session. Reconnectez-vous.
+                                </p>
+                            )}
                             {membresPourCellulesModal.length === 0 ? (
                                 <p className={styles.fieldHintWarn}>
                                     Aucun membre dans l’équipe de ce séjour (ou <code>tokenId</code> manquant sur les
@@ -2883,21 +2970,40 @@ function ListePlanningsOrganisation({
                                 </p>
                             ) : (
                                 <div className={styles.membresCheckboxes}>
-                                    {membresPourCellulesModal.map((m) => (
+                                    {membresListeModaleCelluleMembreEquipe.map((m) => {
+                                        const autresMembresLectureSeuleAnimateur =
+                                            animateurRestrictionsMembreEquipeCellModal &&
+                                            (!tokenSelfPlanning ||
+                                                m.tokenId.trim() !== tokenSelfPlanning);
+                                        return (
                                         <FormGroup check key={m.tokenId} className={styles.membreCheckboxRow}>
                                             <Label check>
                                                 <Input
                                                     type="checkbox"
-                                                    checked={cellMembresTokensSelection.includes(m.tokenId)}
+                                                    checked={cellMembresTokensSelection.some(
+                                                        (x) => x.trim() === m.tokenId.trim()
+                                                    )}
                                                     onChange={() => toggleCellMembreToken(m.tokenId)}
-                                                    disabled={cellSubmitting}
+                                                    disabled={
+                                                        cellSubmitting ||
+                                                        (animateurRestrictionsMembreEquipeCellModal &&
+                                                            (!tokenSelfPlanning ||
+                                                                m.tokenId.trim() !== tokenSelfPlanning))
+                                                    }
                                                 />{" "}
-                                                <span className={styles.membreCheckboxLabel}>
+                                                <span
+                                                    className={
+                                                        autresMembresLectureSeuleAnimateur
+                                                            ? `${styles.membreCheckboxLabel} ${styles.membreCheckboxLabelMuted}`
+                                                            : styles.membreCheckboxLabel
+                                                    }
+                                                >
                                                     {m.prenom} {m.nom}
                                                 </span>
                                             </Label>
                                         </FormGroup>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </FormGroup>
@@ -3015,7 +3121,14 @@ function ListePlanningsOrganisation({
                         <Button color="secondary" onClick={() => setCellModalOpen(false)} disabled={cellSubmitting}>
                             Annuler
                         </Button>
-                        <Button color="primary" onClick={handleCellSubmit} disabled={cellSubmitting}>
+                        <Button
+                            color="primary"
+                            onClick={handleCellSubmit}
+                            disabled={
+                                cellSubmitting ||
+                                (animateurRestrictionsMembreEquipeCellModal && !tokenSelfPlanning)
+                            }
+                        >
                             {cellSubmitting ? "Enregistrement…" : "Enregistrer"}
                         </Button>
                     </div>

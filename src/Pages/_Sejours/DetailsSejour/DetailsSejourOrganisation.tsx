@@ -53,6 +53,8 @@ const DetailsSejourOrganisation: React.FC = () => {
         );
     }, [sejour.directeur, sejour.equipe]);
 
+    const tokenConnecteSub = accountService.getTokenInfo()?.payload?.sub;
+
     return (
         <ListePlanningsOrganisation
             sejourId={sejour.id}
@@ -69,6 +71,7 @@ const DetailsSejourOrganisation: React.FC = () => {
             onCloseEmbeddedEditor={() => navigate(baseOrganisation)}
             onNavigateToPlanning={(id) => navigate(`${baseOrganisation}/${id}`)}
             peutGererPlanningStructure={peutGererPlanningStructure}
+            tokenUtilisateurConnecte={typeof tokenConnecteSub === "string" ? tokenConnecteSub : null}
         />
     );
 };
