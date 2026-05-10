@@ -687,6 +687,49 @@
     box-sizing: border-box;
 }
 
+.planningCellWrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.2rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.planningCellMain {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.cellHistoriqueBtn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: center;
+    margin-top: 0.1rem;
+    padding: 0.12rem;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: rgba(26, 90, 158, 0.55);
+    cursor: pointer;
+    line-height: 0;
+
+    &:hover,
+    &:focus-visible {
+        color: #1a5a9e;
+        background: #e8f0fa;
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35);
+    }
+}
+
 .cellButton {
     position: relative;
     display: flex;

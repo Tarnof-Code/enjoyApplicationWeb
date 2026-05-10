@@ -1,6 +1,11 @@
 import Axios from "./caller.service";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
-import { ActiviteDto, CreateActiviteRequest, UpdateActiviteRequest } from "../types/api";
+import {
+  ActiviteDto,
+  CreateActiviteRequest,
+  HistoriqueModificationActiviteDto,
+  UpdateActiviteRequest,
+} from "../types/api";
 
 let getActivitesDuSejour = async (sejourId: number): Promise<ActiviteDto[]> => {
   try {
@@ -63,10 +68,28 @@ let supprimerActivite = async (sejourId: number, activiteId: number) => {
   }
 };
 
+let getHistoriqueActivite = async (
+  sejourId: number,
+  activiteId: number,
+): Promise<HistoriqueModificationActiviteDto[]> => {
+  try {
+    const response = await Axios.get(
+      `/sejours/${sejourId}/activites/${activiteId}/historique`,
+    );
+    return response.data;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Impossible de charger l'historique de l'activité",
+      logContext: "getHistoriqueActivite",
+    });
+  }
+};
+
 export const sejourActiviteService = {
   getActivitesDuSejour,
   getActiviteById,
   creerActivite,
   modifierActivite,
   supprimerActivite,
+  getHistoriqueActivite,
 };

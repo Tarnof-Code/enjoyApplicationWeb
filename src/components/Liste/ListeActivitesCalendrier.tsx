@@ -415,6 +415,7 @@ export type CalendrierPlanningProps = {
      * (cases des autres lignes en lecture seule).
      */
     tokenEditionCalendrierReserve?: string | null;
+    onOpenHistoriqueActivite?: (a: ActiviteDto) => void;
 };
 
 export function CalendrierPlanning({
@@ -434,6 +435,7 @@ export function CalendrierPlanning({
     onDelete,
     deletingActiviteId,
     tokenEditionCalendrierReserve = null,
+    onOpenHistoriqueActivite,
 }: CalendrierPlanningProps) {
     return (
         <div className={styles.calendrierWrap}>
@@ -572,6 +574,12 @@ export function CalendrierPlanning({
                                                                     deletingActiviteId === a.id ||
                                                                     !ligneEditableCalendrier
                                                                 }
+                                                                onHistoriqueClick={
+                                                                    onOpenHistoriqueActivite
+                                                                        ? () => onOpenHistoriqueActivite(a)
+                                                                        : undefined
+                                                                }
+                                                                historiqueAriaLabel={`Historique de « ${a.nom} »`}
                                                             >
                                                                 {a.moment ? (
                                                                     <span className={styles.calendrierActiviteMoment}>

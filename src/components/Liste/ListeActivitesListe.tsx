@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FaHistory } from "react-icons/fa";
 import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, LieuDto, TypeActiviteDto } from "../../types/api";
 import type { MembreEquipeSejour } from "./listeActivitesTypes";
@@ -227,6 +228,7 @@ export type ListeActivitesListeResultatProps = {
     onDelete: (id: number) => void;
     peutGererToutesActivites?: boolean;
     tokenUtilisateurConnecte?: string | null;
+    onOpenHistoriqueActivite?: (a: ActiviteDto) => void;
 };
 
 export function ListeActivitesListeResultat({
@@ -238,6 +240,7 @@ export function ListeActivitesListeResultat({
     onDelete,
     peutGererToutesActivites = true,
     tokenUtilisateurConnecte = null,
+    onOpenHistoriqueActivite,
 }: ListeActivitesListeResultatProps) {
     if (activites.length === 0) {
         return <p className={styles.empty}>Aucune activité planifiée pour ce séjour.</p>;
@@ -260,7 +263,20 @@ export function ListeActivitesListeResultat({
                     <div className={styles.cardBody}>
                         <div className={styles.cardHeader}>
                             <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
-                            <span className={styles.nom}>{a.nom}</span>
+                            <span className={styles.cardHeaderTitleRow}>
+                                <span className={styles.nom}>{a.nom}</span>
+                                {onOpenHistoriqueActivite ? (
+                                    <button
+                                        type="button"
+                                        className={styles.cardHistoriqueBtn}
+                                        aria-label={`Historique pour l'activité « ${a.nom} »`}
+                                        title="Historique des modifications"
+                                        onClick={() => onOpenHistoriqueActivite(a)}
+                                    >
+                                        <FaHistory aria-hidden size={14} />
+                                    </button>
+                                ) : null}
+                            </span>
                         </div>
                         <div className={styles.metaGrid}>
                             {a.moment ? (

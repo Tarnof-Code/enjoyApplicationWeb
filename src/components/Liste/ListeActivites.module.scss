@@ -919,6 +919,43 @@ thead .calendrierColHead {
     margin-bottom: 0.5rem;
 }
 
+.cardHeaderTitleRow {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+.cardHistoriqueBtn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.22rem;
+    margin: 0;
+    margin-left: 0.05rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: rgba($bleu_principal, 0.55);
+    cursor: pointer;
+    vertical-align: middle;
+
+    &:hover,
+    &:focus-visible {
+        color: $bleu_principal;
+        background: rgba($bleu_principal, 0.1);
+        outline: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid rgba($bleu_principal, 0.35);
+        outline-offset: 1px;
+    }
+}
+
 .dateBadge {
     font-size: 0.85rem;
     font-weight: 600;

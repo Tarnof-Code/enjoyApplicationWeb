@@ -1,6 +1,7 @@
 import Axios from "./caller.service";
 import { validateResponseStatus, adaptAxiosError } from "../helpers/axiosError";
 import type {
+    HistoriqueModificationPlanningCelluleDto,
     PlanningGrilleDetailDto,
     PlanningGrilleSummaryDto,
     PlanningLigneDto,
@@ -129,6 +130,30 @@ async function supprimerLigne(sejourId: number, grilleId: number, ligneId: numbe
     }
 }
 
+async function getHistoriqueCellulesLigne(
+    sejourId: number,
+    grilleId: number,
+    ligneId: number,
+    jour?: string | null
+): Promise<HistoriqueModificationPlanningCelluleDto[]> {
+    try {
+        const params =
+            jour != null && jour.trim() !== ""
+                ? { params: { jour: jour.trim() } }
+                : undefined;
+        const response = await Axios.get(
+            `${base(sejourId)}/${grilleId}/lignes/${ligneId}/historique-cellules`,
+            params
+        );
+        return response.data;
+    } catch (error: unknown) {
+        adaptAxiosError(error, {
+            defaultMessage: "Impossible de charger l'historique des cellules",
+            logContext: "historique-cellules planning-grilles",
+        });
+    }
+}
+
 async function remplacerCellules(
     sejourId: number,
     grilleId: number,
@@ -159,5 +184,6 @@ export const sejourPlanningGrilleService = {
     creerLigne,
     modifierLigne,
     supprimerLigne,
+    getHistoriqueCellulesLigne,
     remplacerCellules,
 };

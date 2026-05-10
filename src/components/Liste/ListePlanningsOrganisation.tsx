@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRevalidator } from "react-router-dom";
-import { FaEdit, FaGripVertical, FaTrashAlt } from "react-icons/fa";
+import { FaEdit, FaGripVertical, FaHistory, FaTrashAlt } from "react-icons/fa";
 import {
     Button,
     FormGroup,
@@ -27,6 +27,12 @@ import type {
     SavePlanningLigneRequest,
 } from "../../types/api";
 import { sejourPlanningGrilleService } from "../../services/sejour-planning-grille.service";
+import { HistoriqueModificationListeModal, type HistoriqueModificationListeModalLigne } from "../common/HistoriqueModificationListeModal";
+import {
+    formatDateHeureHistorique,
+    formatNomModificateurHistorique,
+    libelleActionHistorique,
+} from "../../helpers/libelleHistoriqueModification";
 import {
     planningLibelleLignesSourceOptions,
     planningLigneLibelleSourceOptions,
@@ -955,6 +961,11 @@ function ListePlanningsOrganisation({
     const [cellTexte, setCellTexte] = useState("");
     const [cellMembresTokensSelection, setCellMembresTokensSelection] = useState<string[]>([]);
 
+    const [cellHistModalOpen, setCellHistModalOpen] = useState(false);
+    const [cellHistJour, setCellHistJour] = useState("");
+    const [cellHistChargement, setCellHistChargement] = useState(false);
+    const [cellHistErreur, setCellHistErreur] = useState<string | null>(null);
+    const [cellHistLignes, setCellHistLignes] = useState<HistoriqueModificationListeModalLigne[] | null>(null);
     const [sectionModalOpen, setSectionModalOpen] = useState(false);
     const [sectionModalError, setSectionModalError] = useState<string | null>(null);
     const [sectionBusy, setSectionBusy] = useState(false);
@@ -1013,6 +1024,50 @@ function ListePlanningsOrganisation({
         const d = await sejourPlanningGrilleService.getGrilleDetail(sejourId, editorGrilleId);
         setDetail(d);
     };
+
+    const fermerCellHistModal = useCallback(() => {
+        setCellHistModalOpen(false);
+        setCellHistJour("");
+        setCellHistErreur(null);
+        setCellHistLignes(null);
+        setCellHistChargement(false);
+    }, []);
+
+    const ouvrirCellHistModal = useCallback(
+        async (ligneId: number, jourYmd: string) => {
+            if (editorGrilleId == null) return;
+            setCellHistJour(jourYmd);
+            setCellHistModalOpen(true);
+            setCellHistChargement(true);
+            setCellHistErreur(null);
+            setCellHistLignes(null);
+            try {
+                const rows = await sejourPlanningGrilleService.getHistoriqueCellulesLigne(
+                    sejourId,
+                    editorGrilleId,
+                    ligneId,
+                    jourYmd
+                );
+                setCellHistLignes(
+                    rows.map((r) => ({
+                        id: r.id,
+                        quand: formatDateHeureHistorique(r.dateModification),
+                        qui: formatNomModificateurHistorique(r.modificateurPrenom, r.modificateurNom),
+                        action: libelleActionHistorique(r.action),
+                        ancienneValeur: r.ancienneValeur,
+                        nouvelleValeur: r.nouvelleValeur,
+                    }))
+                );
+            } catch (e: unknown) {
+                setCellHistErreur(
+                    e instanceof Error ? e.message : "Impossible de charger l'historique"
+                );
+            } finally {
+                setCellHistChargement(false);
+            }
+        },
+        [editorGrilleId, sejourId]
+    );
 
     const appliquerDeplacementSectionEntreBlocs = async (fromBlocIdx: number, toBlocIdx: number) => {
         if (!peutGererPlanningStructure) return;
@@ -2017,37 +2072,58 @@ function ListePlanningsOrganisation({
                                                 );
                                                 return (
                                                     <td key={j} className={styles.planningGridCell}>
-                                                        {peutModifierCellulesPlanning ? (
+                                                        <div className={styles.planningCellWrapper}>
+                                                            <div className={styles.planningCellMain}>
+                                                                {peutModifierCellulesPlanning ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        className={styles.cellButton}
+                                                                        onClick={() =>
+                                                                            openCellModal(ligne.id, j)
+                                                                        }
+                                                                    >
+                                                                        <span
+                                                                            className={
+                                                                                texteCellule === "—"
+                                                                                    ? styles.cellMuted
+                                                                                    : undefined
+                                                                            }
+                                                                        >
+                                                                            {texteCellule}
+                                                                        </span>
+                                                                    </button>
+                                                                ) : (
+                                                                    <span
+                                                                        className={`${styles.cellButton} ${styles.cellButtonReadOnly}`}
+                                                                    >
+                                                                        <span
+                                                                            className={
+                                                                                texteCellule === "—"
+                                                                                    ? styles.cellMuted
+                                                                                    : undefined
+                                                                            }
+                                                                        >
+                                                                            {texteCellule}
+                                                                        </span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <button
                                                                 type="button"
-                                                                className={styles.cellButton}
-                                                                onClick={() => openCellModal(ligne.id, j)}
+                                                                className={styles.cellHistoriqueBtn}
+                                                                aria-label={`Historique pour le jour ${libelleJourCommeCalendrierActivites(
+                                                                    j
+                                                                )}, cette ligne de planning`}
+                                                                title="Historique des modifications"
+                                                                onClick={(ev) => {
+                                                                    ev.preventDefault();
+                                                                    ev.stopPropagation();
+                                                                    void ouvrirCellHistModal(ligne.id, j);
+                                                                }}
                                                             >
-                                                                <span
-                                                                    className={
-                                                                        texteCellule === "—"
-                                                                            ? styles.cellMuted
-                                                                            : undefined
-                                                                    }
-                                                                >
-                                                                    {texteCellule}
-                                                                </span>
+                                                                <FaHistory aria-hidden size={13} />
                                                             </button>
-                                                        ) : (
-                                                            <span
-                                                                className={`${styles.cellButton} ${styles.cellButtonReadOnly}`}
-                                                            >
-                                                                <span
-                                                                    className={
-                                                                        texteCellule === "—"
-                                                                            ? styles.cellMuted
-                                                                            : undefined
-                                                                    }
-                                                                >
-                                                                    {texteCellule}
-                                                                </span>
-                                                            </span>
-                                                        )}
+                                                        </div>
                                                     </td>
                                                 );
                                             })}
@@ -2945,6 +3021,23 @@ function ListePlanningsOrganisation({
                     </div>
                 </ModalFooter>
             </Modal>
+
+            <HistoriqueModificationListeModal
+                isOpen={cellHistModalOpen}
+                onFermer={fermerCellHistModal}
+                titre="Historique de la cellule"
+                sousTitre={
+                    cellHistJour.trim() !== ""
+                        ? `${detail?.titre ?? "Planning"} · ${libelleJourCommeCalendrierActivites(
+                              cellHistJour
+                          )}`
+                        : (detail?.titre ?? undefined)
+                }
+                chargement={cellHistChargement}
+                erreur={cellHistErreur}
+                lignes={cellHistLignes}
+                formatSnapshots="planning_cellule"
+            />
 
             <Modal isOpen={successModalOpen} toggle={() => setSuccessModalOpen(false)}>
                 <ModalHeader toggle={() => setSuccessModalOpen(false)}>Succès</ModalHeader>

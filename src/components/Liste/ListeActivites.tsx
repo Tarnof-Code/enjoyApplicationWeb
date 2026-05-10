@@ -4,6 +4,12 @@ import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHe
 import { ActiviteDto, CreateActiviteRequest, EmplacementLieu, UpdateActiviteRequest } from "../../types/api";
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
+import { HistoriqueModificationListeModal, type HistoriqueModificationListeModalLigne } from "../common/HistoriqueModificationListeModal";
+import {
+    formatDateHeureHistorique,
+    formatNomModificateurHistorique,
+    libelleActionHistorique,
+} from "../../helpers/libelleHistoriqueModification";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import styles from "./ListeActivites.module.scss";
 import { PlanningModalFooterFormulaire } from "../PlanningCalendrier/PlanningModalFooterFormulaire";
@@ -84,6 +90,14 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     /** Filtres vue calendrier : ensemble vide = tout afficher (animateurs / groupes d’activité). */
     const [filtreCalendrierTokens, setFiltreCalendrierTokens] = useState<Set<string>>(() => new Set());
     const [filtreCalendrierGroupeIds, setFiltreCalendrierGroupeIds] = useState<Set<number>>(() => new Set());
+
+    const [historiqueActiviteModalOpen, setHistoriqueActiviteModalOpen] = useState(false);
+    const [historiqueActiviteNom, setHistoriqueActiviteNom] = useState("");
+    const [historiqueActiviteChargement, setHistoriqueActiviteChargement] = useState(false);
+    const [historiqueActiviteErreur, setHistoriqueActiviteErreur] = useState<string | null>(null);
+    const [historiqueActiviteLignes, setHistoriqueActiviteLignes] = useState<
+        HistoriqueModificationListeModalLigne[] | null
+    >(null);
 
     const momentsTriés = trierMomentsChronologiquement(moments);
     const typesPredefinisSelect = useMemo(
@@ -188,6 +202,44 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         setFiltreEmplacementLieu(EMPLACEMENT_FILTRE_TOUS_ACTIVITE);
         setModalOpen(true);
     };
+
+    const fermerHistoriqueActiviteModal = useCallback(() => {
+        setHistoriqueActiviteModalOpen(false);
+        setHistoriqueActiviteNom("");
+        setHistoriqueActiviteErreur(null);
+        setHistoriqueActiviteLignes(null);
+        setHistoriqueActiviteChargement(false);
+    }, []);
+
+    const ouvrirHistoriqueActivite = useCallback(
+        async (activite: ActiviteDto) => {
+            setHistoriqueActiviteNom(activite.nom);
+            setHistoriqueActiviteModalOpen(true);
+            setHistoriqueActiviteChargement(true);
+            setHistoriqueActiviteErreur(null);
+            setHistoriqueActiviteLignes(null);
+            try {
+                const rows = await sejourActiviteService.getHistoriqueActivite(sejour.id, activite.id);
+                setHistoriqueActiviteLignes(
+                    rows.map((r) => ({
+                        id: r.id,
+                        quand: formatDateHeureHistorique(r.dateModification),
+                        qui: formatNomModificateurHistorique(r.modificateurPrenom, r.modificateurNom),
+                        action: libelleActionHistorique(r.action),
+                        ancienneValeur: r.ancienneValeur,
+                        nouvelleValeur: r.nouvelleValeur,
+                    }))
+                );
+            } catch (e: unknown) {
+                setHistoriqueActiviteErreur(
+                    e instanceof Error ? e.message : "Impossible de charger l'historique"
+                );
+            } finally {
+                setHistoriqueActiviteChargement(false);
+            }
+        },
+        [sejour.id]
+    );
 
     const toggleToken = (tokenId: string) => {
         if (estAnimateurRestreintActivites && tokenSelf && (tokenId ?? "").trim() === tokenSelf) return;
@@ -853,6 +905,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     tokenEditionCalendrierReserve={
                         estAnimateurRestreintActivites && tokenSelf ? tokenSelf : null
                     }
+                    onOpenHistoriqueActivite={ouvrirHistoriqueActivite}
                 />
             ) : (
                 <ListeActivitesListeResultat
@@ -864,6 +917,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     onDelete={requestDeleteActivite}
                     peutGererToutesActivites={peutGererActivitesComplet}
                     tokenUtilisateurConnecte={tokenSelf || null}
+                    onOpenHistoriqueActivite={ouvrirHistoriqueActivite}
                 />
             )}
 
@@ -1185,6 +1239,19 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     </Button>
                 </ModalFooter>
             </Modal>
+
+            <HistoriqueModificationListeModal
+                isOpen={historiqueActiviteModalOpen}
+                onFermer={fermerHistoriqueActiviteModal}
+                titre="Historique de l'activité"
+                sousTitre={
+                    historiqueActiviteNom.trim() !== "" ? `« ${historiqueActiviteNom} »` : undefined
+                }
+                chargement={historiqueActiviteChargement}
+                erreur={historiqueActiviteErreur}
+                lignes={historiqueActiviteLignes}
+                formatSnapshots="activite"
+            />
         </div>
     );
 };

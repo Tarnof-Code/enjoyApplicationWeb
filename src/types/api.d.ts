@@ -627,6 +627,54 @@ export interface UpdateActiviteRequest {
   typeActiviteId: number;
 }
 
+/** Champs issus de `HistoriqueModificationBaseDto` (déballé `@JsonUnwrapped` dans les DTO fils). */
+export type HistoriqueModificationAction = "CREATION" | "MODIFICATION" | "SUPPRESSION";
+export type HistoriqueModificationType = "ACTIVITE" | "PLANNING_CELLULE";
+
+/**
+ * Snapshots compacts **`ancienneValeur` / `nouvelleValeur`** (pipe-separated, voir doc API REST) :
+ * `date|nom|description|lieuId|momentId|typeId|membreIds|groupeIds`.
+ */
+export interface HistoriqueModificationActiviteDto {
+  id: number;
+  type: HistoriqueModificationType;
+  dateModification: string;
+  modificateurTokenId: string;
+  modificateurNom: string | null;
+  modificateurPrenom: string | null;
+  action: HistoriqueModificationAction;
+  /**
+   * Snapshot avant l’opération : format compact **ou** ancien JSON (rétrocompat).
+   * `null` si non applicable (ex. création).
+   */
+  ancienneValeur: string | null;
+  /**
+   * Snapshot après l’opération : format compact **ou** ancien JSON.
+   * `null` si non applicable (ex. suppression).
+   */
+  nouvelleValeur: string | null;
+  activiteId: number;
+}
+
+/**
+ * Snapshots : `texteLibre|membreTokenIds|horaireIds|momentIds|groupeIds|lieuIds` (doc API REST).
+ */
+export interface HistoriqueModificationPlanningCelluleDto {
+  id: number;
+  type: HistoriqueModificationType;
+  dateModification: string;
+  modificateurTokenId: string;
+  modificateurNom: string | null;
+  modificateurPrenom: string | null;
+  action: HistoriqueModificationAction;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  planningLigneId: number;
+  /** LocalDate ISO */
+  planningJour: string;
+  planningCelluleId: number;
+}
+
 // ============================================================================
 // Plannings direction (grilles génériques) — PlanningGrilleController
 // ============================================================================
