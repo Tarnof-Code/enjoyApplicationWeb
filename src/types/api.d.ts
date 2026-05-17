@@ -629,7 +629,74 @@ export interface UpdateActiviteRequest {
 
 /** Champs issus de `HistoriqueModificationBaseDto` (déballé `@JsonUnwrapped` dans les DTO fils). */
 export type HistoriqueModificationAction = "CREATION" | "MODIFICATION" | "SUPPRESSION";
-export type HistoriqueModificationType = "ACTIVITE" | "PLANNING_CELLULE";
+export type HistoriqueModificationType = "ACTIVITE" | "PLANNING_CELLULE" | "CAHIER_INFIRMERIE";
+
+/** Cahier d'infirmerie — enums alignés sur enjoyApi. */
+export type TypeSoinInfirmerie =
+  | "DESINFECTANT"
+  | "GLACE"
+  | "PANSEMENT"
+  | "SERUM_PHYSIOLOGIQUE"
+  | "GEL_COUPS"
+  | "PRISE_TEMPERATURE"
+  | "AUTRE";
+
+export type TypeAppelInfirmerie = "PARENTS" | "POMPIERS" | "SAMU" | "AUTRE";
+
+export interface CahierInfirmerieEntreeDto {
+  id: number;
+  sejourId: number;
+  enfantId: number;
+  enfantNom: string;
+  enfantPrenom: string;
+  createurTokenId: string | null;
+  createurNom: string | null;
+  createurPrenom: string | null;
+  /** Instant (ISO 8601 ou epoch s/ms selon sérialisation JSON). */
+  dateHeure: string | number;
+  localisationCorps: string | null;
+  soins: TypeSoinInfirmerie[];
+  soinsAutrePrecision: string | null;
+  /** Mesure en °C si `PRISE_TEMPERATURE` ∈ soins, sinon null. */
+  temperatureCelsius: number | null;
+  appels: TypeAppelInfirmerie[];
+  appelAutrePrecision: string | null;
+  /** Utilisateur en charge du soin (directeur ou membre d'équipe). */
+  soigneurTokenId: string | null;
+  soigneurNom: string | null;
+  soigneurPrenom: string | null;
+}
+
+/** Body création / mise à jour (`SaveCahierInfirmerieEntreeRequest`). */
+export interface SaveCahierInfirmerieEntreeRequest {
+  /** Instant ISO 8601 */
+  dateHeure: string;
+  enfantId: number;
+  description: string;
+  localisationCorps?: string | null;
+  soins: TypeSoinInfirmerie[];
+  soinsAutrePrecision?: string | null;
+  /** Obligatoire si `PRISE_TEMPERATURE` ∈ soins (30–45, au plus 2 décimales). */
+  temperatureCelsius?: number | null;
+  appels?: TypeAppelInfirmerie[];
+  appelAutrePrecision?: string | null;
+  /** tokenId : directeur du séjour ou utilisateur présent dans `sejour_equipe`. */
+  soigneurTokenId: string;
+}
+
+/** Réponse `HistoriqueModificationCahierInfirmerieDto` (@JsonUnwrapped base). */
+export interface HistoriqueModificationCahierInfirmerieDto {
+  id: number;
+  type: HistoriqueModificationType;
+  dateModification: string;
+  modificateurTokenId: string;
+  modificateurNom: string | null;
+  modificateurPrenom: string | null;
+  action: HistoriqueModificationAction;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  cahierInfirmerieEntreeId: number;
+}
 
 /**
  * Snapshots compacts **`ancienneValeur` / `nouvelleValeur`** (pipe-separated, voir doc API REST) :

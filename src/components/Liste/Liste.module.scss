@@ -26,6 +26,13 @@
       cursor: pointer;
     }
   }
+
+  table.table {
+    > :not(caption) > * > th,
+    > :not(caption) > * > td {
+      vertical-align: middle !important;
+    }
+  }
 }
 
 .enTete {
@@ -36,13 +43,25 @@
 .icones_box {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
+}
+
+/** Une icône par colonne fixe (évite le glissement quand une action est masquée). */
+.icone_emplacement {
+  flex: 0 0 1.35rem;
+  width: 1.35rem;
+  min-height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .actions_cell {
   vertical-align: middle !important;
-  width: 50px;
+  width: 1%;
+  min-width: 6.5rem;
+  white-space: nowrap;
 }
 
 .filterContainer {

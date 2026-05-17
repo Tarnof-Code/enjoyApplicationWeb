@@ -1,17 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouteLoaderData } from "react-router-dom";
-import { Input } from "reactstrap";
+import { Button, Input } from "reactstrap";
 import styles from "./DetailsSejour.module.scss";
 import sanStyles from "./DetailsSejourSanitaire.module.scss";
-import type { EnfantDossierSanitaireLigneDto, SejourDTO } from "../../../types/api";
+import type { CahierInfirmerieEntreeDto, EnfantDossierSanitaireLigneDto, SejourDTO } from "../../../types/api";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
+import { cahierInfirmerieService } from "../../../services/cahier-infirmerie.service";
 import ListeSanitaireDossiers, {
   type SanitaireColonnesOptionnelles,
 } from "../../../components/Liste/ListeSanitaireDossiers";
+import ListeCahierInfirmerie from "../../../components/Liste/ListeCahierInfirmerie";
+import type { EnfantOptionCahier } from "../../../components/Forms/CahierInfirmerieForm";
 
 type LoaderOk = { sejour: SejourDTO };
 
 const OPTS_STORAGE_PREFIX = "enjoy.sanitaire.opts.";
+const VUE_STORAGE_PREFIX = "enjoy.sanitaire.vue.";
+
+type VueSanitaire = "dossiers" | "cahier";
 
 const CLES_OPTS = [
   "allergies",
@@ -54,6 +60,24 @@ function ecrireOptsColonnes(sejourId: number, next: SanitaireColonnesOptionnelle
   }
 }
 
+function lireVueSanitaire(sejourId: number): VueSanitaire {
+  try {
+    const raw = localStorage.getItem(`${VUE_STORAGE_PREFIX}${sejourId}`);
+    if (raw === "cahier" || raw === "dossiers") return raw;
+  } catch {
+    /* ignore */
+  }
+  return "cahier";
+}
+
+function ecrireVueSanitaire(sejourId: number, vue: VueSanitaire) {
+  try {
+    localStorage.setItem(`${VUE_STORAGE_PREFIX}${sejourId}`, vue);
+  } catch {
+    /* ignore */
+  }
+}
+
 function cleListeSanitaire(sejourId: number, o: SanitaireColonnesOptionnelles): string {
   const bits = CLES_OPTS.map((k) => (o[k] ? "1" : "0")).join("");
   return `sanitaire-${sejourId}-${bits}`;
@@ -66,9 +90,17 @@ const DetailsSejourSanitaire = () => {
   const loaderData = useRouteLoaderData("sejour-detail") as LoaderOk | Error | undefined;
   const sejour = loaderData && !(loaderData instanceof Error) ? loaderData.sejour : undefined;
 
+  const [vue, setVue] = useState<VueSanitaire>(() =>
+    Number.isFinite(sejourId) ? lireVueSanitaire(sejourId) : "cahier",
+  );
+
   const [lignes, setLignes] = useState<EnfantDossierSanitaireLigneDto[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  const [entreesCahier, setEntreesCahier] = useState<CahierInfirmerieEntreeDto[]>([]);
+  const [chargementCahier, setChargementCahier] = useState(false);
+  const [erreurCahier, setErreurCahier] = useState<string | null>(null);
 
   const [optsColonnes, setOptsColonnes] = useState<SanitaireColonnesOptionnelles>(() =>
     Number.isFinite(sejourId) ? lireOptsColonnes(sejourId) : { ...OPTS_DEFAUT },
@@ -77,8 +109,18 @@ const DetailsSejourSanitaire = () => {
   useEffect(() => {
     if (Number.isFinite(sejourId)) {
       setOptsColonnes(lireOptsColonnes(sejourId));
+      setVue(lireVueSanitaire(sejourId));
     }
   }, [sejourId]);
+
+  const changerVue = useCallback(
+    (v: VueSanitaire) => {
+      if (!Number.isFinite(sejourId)) return;
+      setVue(v);
+      ecrireVueSanitaire(sejourId, v);
+    },
+    [sejourId],
+  );
 
   const changerOpts = useCallback(
     (patch: Partial<SanitaireColonnesOptionnelles>) => {
@@ -92,7 +134,7 @@ const DetailsSejourSanitaire = () => {
     [sejourId],
   );
 
-  const charger = useCallback(async () => {
+  const chargerDossiers = useCallback(async () => {
     if (!Number.isFinite(sejourId)) return;
     setChargement(true);
     setErreur(null);
@@ -107,14 +149,45 @@ const DetailsSejourSanitaire = () => {
     }
   }, [sejourId]);
 
+  const chargerCahier = useCallback(async () => {
+    if (!Number.isFinite(sejourId)) return;
+    setChargementCahier(true);
+    setErreurCahier(null);
+    try {
+      const data = await cahierInfirmerieService.listerEntrees(sejourId);
+      setEntreesCahier(Array.isArray(data) ? data : []);
+    } catch (e: unknown) {
+      setEntreesCahier([]);
+      setErreurCahier(e instanceof Error ? e.message : "Impossible de charger le cahier d'infirmerie.");
+    } finally {
+      setChargementCahier(false);
+    }
+  }, [sejourId]);
+
   useEffect(() => {
-    void charger();
-  }, [charger]);
+    void chargerDossiers();
+  }, [chargerDossiers]);
+
+  useEffect(() => {
+    if (vue === "cahier" && Number.isFinite(sejourId)) {
+      void chargerCahier();
+    }
+  }, [vue, sejourId, chargerCahier]);
 
   const listeKey = useMemo(() => {
     if (!Number.isFinite(sejourId)) return "sanitaire";
     return cleListeSanitaire(sejourId, optsColonnes);
   }, [sejourId, optsColonnes]);
+
+  const enfantsPourCahier: EnfantOptionCahier[] = useMemo(
+    () =>
+      lignes.map((l) => ({
+        id: l.enfantId,
+        prenom: l.prenom,
+        nom: l.nom,
+      })),
+    [lignes],
+  );
 
   if (!sejour || !Number.isFinite(sejourId)) {
     return (
@@ -126,65 +199,109 @@ const DetailsSejourSanitaire = () => {
 
   return (
     <main className={`${styles.pageContainer} ${sanStyles.pageSanitaire}`}>
-      {erreur ? <div className={sanStyles.erreurBanner}>{erreur}</div> : null}
+      <nav className={sanStyles.sanitaireTopBar} aria-label="Vue sanitaire">
+        <div className={sanStyles.vueSwitchButtons}>
+          <Button
+            type="button"
+            color={vue === "cahier" ? "primary" : "secondary"}
+            outline={vue !== "cahier"}
+            onClick={() => changerVue("cahier")}
+            className={sanStyles.vueSwitchBtn}
+          >
+            Cahier d'infirmerie
+          </Button>
+          <Button
+            type="button"
+            color={vue === "dossiers" ? "primary" : "secondary"}
+            outline={vue !== "dossiers"}
+            onClick={() => changerVue("dossiers")}
+            className={sanStyles.vueSwitchBtn}
+          >
+            Dossiers sanitaires
+          </Button>
+        </div>
+        {vue === "dossiers" ? (
+          <section className={sanStyles.optionsBar} aria-label="Colonnes affichées">
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.allergies}
+                onChange={(e) => changerOpts({ allergies: e.target.checked })}
+              />
+              Allergies
+            </label>
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.traitements}
+                onChange={(e) => changerOpts({ traitements: e.target.checked })}
+              />
+              Traitements
+            </label>
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.contactsParents}
+                onChange={(e) => changerOpts({ contactsParents: e.target.checked })}
+              />
+              Contacts parents
+            </label>
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.medical}
+                onChange={(e) => changerOpts({ medical: e.target.checked })}
+              />
+              Infos médicales &amp; PAI
+            </label>
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.alimentation}
+                onChange={(e) => changerOpts({ alimentation: e.target.checked })}
+              />
+              Alimentation
+            </label>
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.complements}
+                onChange={(e) => changerOpts({ complements: e.target.checked })}
+              />
+              Autres infos
+            </label>
+          </section>
+        ) : null}
+      </nav>
 
-      <section className={sanStyles.optionsBar} aria-label="Colonnes affichées">
-        <label className={sanStyles.optionToggle}>
-          <Input
-            type="checkbox"
-            checked={optsColonnes.allergies}
-            onChange={(e) => changerOpts({ allergies: e.target.checked })}
-          />
-          Allergies
-        </label>
-        <label className={sanStyles.optionToggle}>
-          <Input
-            type="checkbox"
-            checked={optsColonnes.traitements}
-            onChange={(e) => changerOpts({ traitements: e.target.checked })}
-          />
-          Traitements
-        </label>
-        <label className={sanStyles.optionToggle}>
-          <Input
-            type="checkbox"
-            checked={optsColonnes.contactsParents}
-            onChange={(e) => changerOpts({ contactsParents: e.target.checked })}
-          />
-          Contacts parents
-        </label>
-        <label className={sanStyles.optionToggle}>
-          <Input type="checkbox" checked={optsColonnes.medical} onChange={(e) => changerOpts({ medical: e.target.checked })} />
-          Infos médicales &amp; PAI
-        </label>
-        <label className={sanStyles.optionToggle}>
-          <Input
-            type="checkbox"
-            checked={optsColonnes.alimentation}
-            onChange={(e) => changerOpts({ alimentation: e.target.checked })}
-          />
-          Alimentation
-        </label>
-        <label className={sanStyles.optionToggle}>
-          <Input
-            type="checkbox"
-            checked={optsColonnes.complements}
-            onChange={(e) => changerOpts({ complements: e.target.checked })}
-          />
-          Autres infos
-        </label>
-      </section>
+      {vue === "dossiers" ? (
+        <>
+          {erreur ? <div className={sanStyles.erreurBanner}>{erreur}</div> : null}
 
-      <div className={sanStyles.listeWrap}>
-        <ListeSanitaireDossiers
-          listeKey={listeKey}
-          sejourId={sejourId}
-          lignes={lignes}
-          loading={chargement}
-          colonnesOptionnelles={optsColonnes}
-          errorMessage={null}
-        />
-      </div>
+          <div className={sanStyles.listeWrap}>
+            <ListeSanitaireDossiers
+              listeKey={listeKey}
+              sejourId={sejourId}
+              lignes={lignes}
+              loading={chargement}
+              colonnesOptionnelles={optsColonnes}
+              errorMessage={null}
+            />
+          </div>
+        </>
+      ) : (
+        <div className={sanStyles.listeWrap}>
+          <ListeCahierInfirmerie
+            sejourId={sejourId}
+            sejour={sejour}
+            entrees={entreesCahier}
+            chargement={chargementCahier}
+            enfantsOptions={enfantsPourCahier}
+            onRafraichir={() => void chargerCahier()}
+            messageErreur={erreurCahier}
+          />
+        </div>
+      )}
     </main>
   );
 };

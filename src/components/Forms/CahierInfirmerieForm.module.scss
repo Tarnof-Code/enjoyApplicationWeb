@@ -1,0 +1,60 @@
+.enfantCombobox {
+    position: relative;
+}
+
+.enfantListe {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 0;
+    margin-top: 2px;
+    padding: 0.25rem 0;
+    list-style: none;
+    max-height: 14rem;
+    overflow-y: auto;
+    z-index: 1080;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.12);
+}
+
+.enfantOption {
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1.35;
+
+    &:hover,
+    &:focus {
+        background: #e7f1ff;
+        outline: none;
+    }
+}
+
+.enfantOptionActif {
+    background: #cfe2ff;
+}
+
+.enfantListeVide {
+    padding: 0.6rem 0.75rem;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.soinLigneTemperature {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+}
+
+.mesureTemperature {
+    flex: 0 0 auto;
+    width: 7rem;
+    max-width: 100%;
+}
+
+.mesureTemperatureInputGroup {
+    width: 100%;
+}

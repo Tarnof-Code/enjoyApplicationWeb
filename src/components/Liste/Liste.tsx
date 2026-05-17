@@ -440,7 +440,7 @@ const Liste = <T extends Record<string, any>>({
       </Row>
 
       <div className={styles.table_container}>
-        <table className="table">
+        <table className="table align-middle">
           <thead className={styles.enTete}>
             <tr>
               <th></th>
