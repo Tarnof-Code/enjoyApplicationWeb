@@ -16,15 +16,17 @@ import { accountService } from "../../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 import { SectionReunionsSejour } from "../../../components/ReunionSejour/SectionReunionsSejour";
 
-/** Ancienne suite par défaut (avant mise de Réunions en 2e place) — pour migration du localStorage. */
+/** Anciennes suites par défaut — pour migration du localStorage. */
 const OVERVIEW_ACCORDION_DEFAULT_ORDER_LEGACY = ["1", "2", "3", "4", "5"] as const;
+const OVERVIEW_ACCORDION_DEFAULT_ORDER_WITH_INFOS = ["1", "5", "2", "3", "4"] as const;
 
 /**
  * Accordéons vue générale — ordre par défaut affiché :
- * 1 Informations générales → 2 Réunions → 3 Équipe → 4 Liste des enfants → 5 Groupes.
- * (Réglages lieux/moments/horaires/types → Paramétrage ; plannings organisation → page Organisation.)
+ * Réunions → Équipe → Liste des enfants → Groupes.
+ * (Informations générales affichées en en-tête ; réglages → Paramétrage ; plannings → Organisation.)
  */
-const OVERVIEW_ACCORDION_IDS = ["1", "5", "2", "3", "4"] as const;
+const OVERVIEW_ACCORDION_IDS = ["5", "2", "3", "4"] as const;
+const OVERVIEW_ACCORDION_DEFAULT_OPEN = "5";
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -43,9 +45,10 @@ function readOverviewAccordionOrder(sejourId: number): string[] {
             const parsed = JSON.parse(raw) as unknown;
             if (Array.isArray(parsed)) {
                 const normalized = normalizeOverviewAccordionOrder(parsed as string[]);
-                const encoreOrdreLegacyParDefaut = OVERVIEW_ACCORDION_DEFAULT_ORDER_LEGACY.every(
-                    (id, i) => normalized[i] === id
-                );
+                const encoreOrdreLegacyParDefaut =
+                    OVERVIEW_ACCORDION_DEFAULT_ORDER_LEGACY.every((id, i) => normalized[i] === id) ||
+                    OVERVIEW_ACCORDION_DEFAULT_ORDER_WITH_INFOS.every((id, i) => normalized[i] === id) ||
+                    normalized.includes("1");
                 if (encoreOrdreLegacyParDefaut) {
                     localStorage.setItem(overviewKey, JSON.stringify(defaultOrder));
                     return defaultOrder;
@@ -108,7 +111,11 @@ const DetailsSejourOverview: React.FC = () => {
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
         const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
-        return state?.openAccordion ? [state.openAccordion] : ["1"];
+        const accordionFromState = state?.openAccordion;
+        if (accordionFromState && OVERVIEW_ACCORDION_ID_SET.has(accordionFromState)) {
+            return [accordionFromState];
+        }
+        return [OVERVIEW_ACCORDION_DEFAULT_OPEN];
     });
     const expandedGroupeIdFromState = (location.state as { expandedGroupeId?: number } | null)?.expandedGroupeId;
     const navigate = useNavigate();
@@ -299,8 +306,6 @@ const DetailsSejourOverview: React.FC = () => {
 
     const accordionPanelTitle = (panelId: string): string => {
         switch (panelId) {
-            case "1":
-                return "Informations générales";
             case "2":
                 return "Équipe";
             case "3":
@@ -316,33 +321,6 @@ const DetailsSejourOverview: React.FC = () => {
 
     const accordionPanelBody = (panelId: string): ReactNode => {
         switch (panelId) {
-            case "1":
-                return (
-                    <div className={styles.singleRow}>
-                        <div className={styles.infoGroup}>
-                            <span className={styles.label}>Description</span>
-                            <span className={styles.value}>{sejour.description}</span>
-                        </div>
-                        <div className={styles.infoGroup}>
-                            <span className={styles.label}>Lieu</span>
-                            <span className={styles.value}>{sejour.lieuDuSejour}</span>
-                        </div>
-                        <div className={styles.infoGroup}>
-                            <span className={styles.label}>Date de début</span>
-                            <span className={styles.value}>{formaterDate(new Date(sejour.dateDebut))}</span>
-                        </div>
-                        <div className={styles.infoGroup}>
-                            <span className={styles.label}>Date de fin</span>
-                            <span className={styles.value}>{formaterDate(new Date(sejour.dateFin))}</span>
-                        </div>
-                        <div className={styles.infoGroup}>
-                            <span className={styles.label}>Durée</span>
-                            <span className={styles.value}>
-                                {duree} jour{duree > 1 ? "s" : ""}
-                            </span>
-                        </div>
-                    </div>
-                );
             case "2":
                 return (
                     <Equipe
@@ -390,7 +368,30 @@ const DetailsSejourOverview: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            <h1 className={styles.overviewSectionTitle}>Vue générale</h1>
+            <div className={styles.overviewInfos}>
+                <div className={styles.infoGroup}>
+                    <span className={styles.label}>Description</span>
+                    <span className={styles.value}>{sejour.description}</span>
+                </div>
+                <div className={styles.infoGroup}>
+                    <span className={styles.label}>Lieu</span>
+                    <span className={styles.value}>{sejour.lieuDuSejour}</span>
+                </div>
+                <div className={styles.infoGroup}>
+                    <span className={styles.label}>Date de début</span>
+                    <span className={styles.value}>{formaterDate(new Date(sejour.dateDebut))}</span>
+                </div>
+                <div className={styles.infoGroup}>
+                    <span className={styles.label}>Date de fin</span>
+                    <span className={styles.value}>{formaterDate(new Date(sejour.dateFin))}</span>
+                </div>
+                <div className={styles.infoGroup}>
+                    <span className={styles.label}>Durée</span>
+                    <span className={styles.value}>
+                        {duree} jour{duree > 1 ? "s" : ""}
+                    </span>
+                </div>
+            </div>
             <div className={styles.accordion}>
                 {accordionOrder.map((panelId) => (
                     <DetailsSejourAccordionItem
