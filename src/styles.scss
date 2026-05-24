@@ -176,3 +176,55 @@ body.modal-open {
   font-family: $police_titres;
   font-size: 2rem;
 }
+
+/** Curseurs au survol : champs de saisie, choix et boutons (cohérence toute l’app). */
+input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([disabled]):hover,
+textarea:not([disabled]):hover {
+  cursor: text;
+}
+
+select:not([disabled]):hover {
+  cursor: pointer;
+}
+
+label[for]:not([aria-disabled="true"]):hover {
+  cursor: pointer;
+}
+
+input[type="checkbox"]:not(:disabled):hover,
+input[type="radio"]:not(:disabled):hover,
+input[type="file"]:not(:disabled):hover,
+input[type="range"]:not(:disabled):hover {
+  cursor: pointer;
+}
+
+button:not(:disabled):hover,
+.btn:not(:disabled):hover,
+[type="submit"]:hover:not(:disabled),
+[type="reset"]:hover:not(:disabled) {
+  cursor: pointer;
+}
+
+a.btn:not(.disabled):hover {
+  cursor: pointer;
+}
+
+input[disabled]:hover,
+textarea[disabled]:hover,
+select[disabled]:hover,
+button:disabled:hover,
+.btn:disabled:hover,
+.btn.disabled:hover {
+  cursor: not-allowed;
+}
+
+input[readonly]:hover,
+textarea[readonly]:hover {
+  cursor: default;
+}
+
+/* Éditeurs riches (TipTap / ProseMirror) */
+.ProseMirror:hover,
+.tiptap:hover {
+  cursor: text;
+}

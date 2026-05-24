@@ -282,6 +282,29 @@ export interface SaveMenuRepasRequest {
   regimePreferenceIds?: number[] | null;
 }
 
+/** Document TipTap sérialisé (JSON ProseMirror, `editor.getJSON()`). */
+export type ReunionContenuTipTapJson = Record<string, unknown>;
+
+/** Réponse GET / POST / PUT — comptes rendus de réunion du séjour. */
+export interface ReunionDto {
+  id: number;
+  sejourId: number;
+  /** Format `yyyy-MM-dd`. */
+  date: string;
+  ordreDuJour: string | null;
+  contenu: ReunionContenuTipTapJson;
+}
+
+/** POST `/sejours/{sejourId}/reunions` — PUT même corps avec remplacement. */
+export interface SaveReunionRequest {
+  /** Obligatoire, `yyyy-MM-dd`. */
+  date: string;
+  /** Optionnel : absent, `null` ou chaîne vide → absence côté API. */
+  ordreDuJour?: string | null;
+  /** Obligatoire — JSON TipTap. */
+  contenu: ReunionContenuTipTapJson;
+}
+
 /**
  * Correspond à DossierEnfantDto.java
  * DTO pour les informations de dossier d'un enfant (contacts parents, médical, traitements)
@@ -654,6 +677,8 @@ export interface CahierInfirmerieEntreeDto {
   createurPrenom: string | null;
   /** Instant (ISO 8601 ou epoch s/ms selon sérialisation JSON). */
   dateHeure: string | number;
+  /** Texte métier décrivant l’épisode ou le soin. */
+  description: string;
   localisationCorps: string | null;
   soins: TypeSoinInfirmerie[];
   soinsAutrePrecision: string | null;

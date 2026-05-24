@@ -14,13 +14,17 @@ import {
 } from "../../../types/api";
 import { accountService } from "../../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
+import { SectionReunionsSejour } from "../../../components/ReunionSejour/SectionReunionsSejour";
+
+/** Ancienne suite par défaut (avant mise de Réunions en 2e place) — pour migration du localStorage. */
+const OVERVIEW_ACCORDION_DEFAULT_ORDER_LEGACY = ["1", "2", "3", "4", "5"] as const;
 
 /**
  * Accordéons vue générale — ordre par défaut affiché :
- * 1 Informations générales → 2 Équipe → 3 Liste des enfants → 4 Groupes.
+ * 1 Informations générales → 2 Réunions → 3 Équipe → 4 Liste des enfants → 5 Groupes.
  * (Réglages lieux/moments/horaires/types → Paramétrage ; plannings organisation → page Organisation.)
  */
-const OVERVIEW_ACCORDION_IDS = ["1", "2", "3", "4"] as const;
+const OVERVIEW_ACCORDION_IDS = ["1", "5", "2", "3", "4"] as const;
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -37,7 +41,17 @@ function readOverviewAccordionOrder(sejourId: number): string[] {
         const raw = localStorage.getItem(overviewKey);
         if (raw) {
             const parsed = JSON.parse(raw) as unknown;
-            if (Array.isArray(parsed)) return normalizeOverviewAccordionOrder(parsed as string[]);
+            if (Array.isArray(parsed)) {
+                const normalized = normalizeOverviewAccordionOrder(parsed as string[]);
+                const encoreOrdreLegacyParDefaut = OVERVIEW_ACCORDION_DEFAULT_ORDER_LEGACY.every(
+                    (id, i) => normalized[i] === id
+                );
+                if (encoreOrdreLegacyParDefaut) {
+                    localStorage.setItem(overviewKey, JSON.stringify(defaultOrder));
+                    return defaultOrder;
+                }
+                return normalized;
+            }
         }
         const legacyRaw = localStorage.getItem(`${LEGACY_FULL_STORAGE_PREFIX}${sejourId}`);
         if (legacyRaw) {
@@ -293,6 +307,8 @@ const DetailsSejourOverview: React.FC = () => {
                 return `Liste des enfants (${enfants?.length || 0})`;
             case "4":
                 return `Groupes (${groupes?.length || 0})`;
+            case "5":
+                return "Réunions";
             default:
                 return "";
         }
@@ -357,6 +373,14 @@ const DetailsSejourOverview: React.FC = () => {
                         onGroupRendered={(groupeId) => {
                             requestAnimationFrame(() => scrollToGroupeRef.current?.(groupeId));
                         }}
+                    />
+                );
+            case "5":
+                return (
+                    <SectionReunionsSejour
+                        sejourId={sejour.id}
+                        sejourDirecteur={sejour.directeur}
+                        equipe={sejour.equipe}
                     />
                 );
             default:

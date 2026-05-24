@@ -1,0 +1,304 @@
+/* Section Réunions (vue générale) + éditeur TipTap */
+@use "../../_variables" as *;
+
+$form-border: #ced4da;
+$form-bg-reading: #fafafa;
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+
+.toolbarBtn {
+    min-width: 2rem;
+}
+
+/**
+ * Champs date / ordre du jour : au-dessus du bloc TipTap en empilement.
+ */
+.reunionModalChampsHaut {
+    position: relative;
+    z-index: 2;
+    isolation: isolate;
+    background-color: var(--bs-body-bg, #fff);
+}
+
+/** Champ date modal réunion — plus compact que la grille pleine largeur */
+.reunionModalChampDate {
+    width: auto !important;
+    max-width: 10rem;
+}
+
+/** Filet contre toute interception de clavier pointeur hors TipTap sur le champ ODJ */
+.reunionOrdreDuJourTextarea {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+/**
+ * TipTap peut laisser une « hitbox » large : sans toucher au layout, on laisse passer
+ * les clics hors barre + ProseMirror (ex. champ ordre du jour au-dessus).
+ */
+.reunionModalBlocEditeur.formEditorBlock {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.reunionModalBlocEditeur.formEditorBlock .toolbar,
+.reunionModalBlocEditeur.formEditorBlock .toolbar * {
+    pointer-events: auto;
+}
+
+.reunionModalBlocEditeur.formEditorBlock :global(.tiptap.ProseMirror),
+.reunionModalBlocEditeur.formEditorBlock :global(.ProseMirror) {
+    pointer-events: auto;
+}
+
+.formEditorBlock {
+    border: 1px solid $form-border;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #fff;
+}
+
+.richOuter {
+    border: 1px solid transparent;
+}
+
+.richOuter.editing {
+    border-color: $form-border;
+    border-radius: 6px;
+    min-height: 200px;
+    background: #fff;
+}
+
+.richOuter.reading {
+    background: $form-bg-reading;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+}
+
+/** ProseMirror — formulaire modal */
+.proseMirrorRootEditing {
+    min-height: 180px;
+    padding: 0.5rem 0.65rem;
+    /* Interligne plus serré que le corps de page Bootstrap (~1.5). */
+    line-height: 1.3;
+
+    &:focus-visible {
+        outline: 2px solid rgba($bleu_principal, 0.35);
+        outline-offset: 1px;
+    }
+
+    /*
+     * Rythme vertical : une seule règle (évite cumul Bootstrap `p` + marge adjunct `> * + *`).
+     */
+    & > :global(*) {
+        margin-block: 0 0.35em;
+    }
+
+    & > :global(*:last-child) {
+        margin-block-end: 0;
+    }
+}
+
+/** ProseMirror — accordéon lecture */
+.proseMirrorRoot {
+    min-height: 1rem;
+
+    &:focus-visible {
+        outline: none;
+    }
+
+    p {
+        margin-bottom: 0.5rem;
+    }
+
+    ul,
+    ol {
+        padding-left: 1.35rem;
+        margin-bottom: 0.5rem;
+    }
+
+    h1 {
+        font-size: 1.35rem;
+    }
+
+    h2 {
+        font-size: 1.2rem;
+    }
+
+    h3 {
+        font-size: 1.05rem;
+    }
+}
+
+.reunionsBloc {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.toolbarActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 0.85rem;
+}
+
+.toolbarActionsGauche {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: calc(1.5em + 0.75rem); /* même hauteur de ligne approx. que bsSize sm inputs */
+}
+
+.toolbarActionsFiltres {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    justify-content: flex-end;
+}
+
+/** Une ligne avec le bouton principal : champ date compact */
+.toolbarFiltreDate {
+    width: auto;
+    max-width: 11rem;
+    flex-shrink: 0;
+}
+
+/** Une ligne de hauteur (input simple) pour la recherche ODJ + CR */
+.toolbarFiltreTexte {
+    width: clamp(11rem, 28vw, 18rem);
+    max-width: 100%;
+}
+
+.toolbarFiltreReset {
+    flex-shrink: 0;
+}
+
+.reunionList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.reunionAccordionItem {
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.reunionAccordionHeaderBtn {
+    width: 100%;
+    text-align: left;
+    background: rgba($bleu_principal, 0.06);
+    border: none;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
+    cursor: pointer;
+    font: inherit;
+
+    &:hover {
+        background: rgba($bleu_principal, 0.1);
+    }
+}
+
+.reunionDateLine {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #1a1a1a;
+    flex-shrink: 0;
+}
+
+.reunionHeaderSep {
+    flex-shrink: 0;
+    color: #999;
+    font-weight: 400;
+}
+
+/** Ordre du jour dans l’entête accordéon (à droite / suite de la date) */
+.reunionOdjLineHeader {
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.35;
+    flex: 1 1 10rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reunionBody {
+    padding: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.reunionOdJDetail {
+    font-size: 0.92rem;
+    color: #333;
+    margin-bottom: 0.85rem;
+    white-space: pre-wrap;
+
+    strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: #1a1a1a;
+    }
+}
+
+.detailActionsRow {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed #e0e0e0;
+}
+
+.skeletonLine {
+    height: 0.95rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 40%, #eee 80%);
+    background-size: 200% 100%;
+    animation: reunionShimmer 1.25s infinite linear;
+
+    &_short {
+        width: 60%;
+    }
+
+    &_medium {
+        width: 80%;
+        margin-top: 0.5rem;
+    }
+}
+
+@keyframes reunionShimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+.skeletonBloc {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+}
