@@ -5,6 +5,8 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import formaterDate from "../../helpers/formaterDate";
 import dateToISO from "../../helpers/dateToISO";
+import { canEditEmail, getEmailReadOnlyMessage } from "../../helpers/canEditEmail";
+import { getApiErrorMessage } from "../../helpers/axiosError";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { Navigate, useLoaderData } from "react-router-dom";
@@ -115,40 +117,47 @@ const Profil: React.FC = () => {
   };
 
   const handleValidate = async () => {
-    if (!utilisateur) return;
+    if (!utilisateur || !initialUtilisateur) return;
+    const emailEditable = canEditEmail(
+      { role: utilisateur.role, tokenId: utilisateur.tokenId },
+      { role: utilisateur.role, tokenId: utilisateur.tokenId }
+    );
     try {
       const utilisateurPourApi = {
         ...utilisateur,
+        email: emailEditable ? utilisateur.email : initialUtilisateur.email,
         dateNaissance: dateToISO(utilisateur.dateNaissance) ?? new Date().toISOString(),
         dateExpirationCompte: dateToISO(utilisateur.dateExpirationCompte) ?? new Date().toISOString()
       };
       await utilisateurService.updateUser(utilisateurPourApi);
       setEditingField(null);
       setInitialUtilisateur(utilisateur);
-    } catch (error: any) {
-      if (error.response?.data?.status === 400) {
-        let messageTransmis = error.response.data.message;
-        setErrorMessage(messageTransmis);
-        console.error(
-          "Erreur lors de la mise à jour de l'utilisateur :",
-          messageTransmis
-        );
-      } else {
-        let messageTransmis = Object.values(error.response?.data || {})[0];
-        setErrorMessage(String(messageTransmis));
-        console.error(
-          "Erreur lors de la mise à jour de l'utilisateur :",
-          messageTransmis
-        );
-      }
+      setErrorMessage(null);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status?: number; data?: unknown } };
+      const status = axiosError.response?.status;
+      const defaultMessage =
+        status === 404 ? "Utilisateur introuvable" : "Erreur lors de la mise à jour de l'utilisateur";
+      const message = getApiErrorMessage(axiosError.response?.data, defaultMessage);
+      setErrorMessage(message);
+      console.error("Erreur lors de la mise à jour de l'utilisateur :", message);
     }
   };
 
   if (!accountService.isLogged()) return <Navigate to="/" />;
 
+  const emailEditable = utilisateur
+    ? canEditEmail(
+        { role: utilisateur.role, tokenId: utilisateur.tokenId },
+        { role: utilisateur.role, tokenId: utilisateur.tokenId }
+      )
+    : false;
+  const emailReadOnlyMessage = getEmailReadOnlyMessage(utilisateur?.role);
+
   const renderField = (mapping: any) => {
     const isEditing = editingField === mapping.property;
-    const isReadOnly = mapping.property === "dateExpirationCompte";
+    const isEmailReadOnly = mapping.property === "email" && !emailEditable;
+    const isReadOnly = mapping.property === "dateExpirationCompte" || isEmailReadOnly;
     const isPassword = mapping.isPassword === true;
     const handleEditClick = () => {
       if (isPassword) {
@@ -215,13 +224,16 @@ const Profil: React.FC = () => {
         
         <div className={styles.contentCol}>
           <span className={styles.label}>{mapping.display}</span>   
-          <div className={styles.valueContainer}>
+          <div className={`${styles.valueContainer} ${isEmailReadOnly ? styles.withHint : ""}`}>
             {isEditing && !isPassword ? (
               renderEditingInput()
             ) : (
               <span className={styles.value}>
                 {renderValue()}
               </span>
+            )}
+            {isEmailReadOnly && emailReadOnlyMessage && (
+              <small className="text-muted">{emailReadOnlyMessage}</small>
             )}
           </div>
         </div>

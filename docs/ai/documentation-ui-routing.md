@@ -6,8 +6,8 @@
 - Routes définies dans `App.tsx` avec `createBrowserRouter`.
 - Routes principales :
   - `/` : Page de connexion ; **loader** si déjà authentifié : **`chargerProfilEtCheminAccueil()`** (**`profil`** chargé puis **`Navigate`** HTTP vers **`/mes-sejours/{dernierId}`** si utilisateur **DIRECTION** ou **BASIC_USER** **et** un dernier séjour est mémorisé (**`localStorage`** **`enjoy.dernierSejourId.{sub}`**, posé depuis **`Header`** à l’affichage du détail séjour) ; sinon **`/profil`**. **`loginAction`** (`Connexion`) : même logique après **`saveAccessToken`** ; **`Navigate`** côté client si déjà connecté : **`cheminAccueilDepuisEtatActuel`** (profil Redux déjà disponible → pas d’appel réseau). **ADMIN** sans route **`mes-sejours`** → **`/profil`**.
-  - `/profil` : Page de profil utilisateur (accessible à tous les utilisateurs connectés)
-  - `/utilisateurs` : Liste des utilisateurs (ADMIN uniquement)
+  - `/profil` : Page de profil utilisateur (accessible à tous les utilisateurs connectés) — **`Profil.tsx`** : édition champ par champ ; **email** modifiable **ADMIN** uniquement (auto-modification) ; **DIRECTION** / **BASIC_USER** : email lecture seule + message **`getEmailReadOnlyMessage`** ; autres champs personnels modifiables ; **`role`** / **`dateExpirationCompte`** non éditables ici
+  - `/utilisateurs` : Liste des utilisateurs (ADMIN uniquement) — édition via **`UserForm`** sans **`sejourId`** : **email**, **`role`**, **`dateExpirationCompte`** éditables
   - `/sejours` : Liste de **tous** les séjours (ADMIN uniquement)
   - `/mes-sejours` : Liste des séjours de l'utilisateur connecté — **DIRECTION** (séjours dont il est directeur) ou **BASIC_USER** (séjours dont il est membre d'équipe). Loader `mesSejoursLoader` → `sejourService.getAllSejoursByUtilisateur()` → `GET /sejours/utilisateur/{utilisateurTokenId}` (l'API filtre selon le rôle, l'ADMIN reçoit tous les séjours mais cette route ne lui est pas servie)
   - `/mes-sejours/:id` : Détail séjour — **index** = vue générale (`DetailsSejourOverview`), loader `detailsSejourLoader`, id de route **`sejour-detail`**

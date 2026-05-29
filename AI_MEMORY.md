@@ -10,6 +10,6 @@ Fiches utiles :
 - `docs/ai/documentation-ui-routing.md` : routes, navigation, accès.
 - `docs/ai/roadmap.md` : suivi des tâches.
 
-Rappels essentiels : réponses en français ; paquets avec `pnpm` ; secrets / `.env*` / dumps interdits ; types partagés dans `src/types/api.d.ts`; backend à consulter seulement si la tâche touche le contrat API.
+Rappels essentiels : réponses en français ; paquets avec `pnpm` ; secrets / `.env*` / dumps interdits ; types partagés dans `src/types/api.d.ts`; backend à consulter seulement si la tâche touche le contrat API. **Modification email utilisateur** : helper **`canEditEmail`** (`helpers/canEditEmail.ts`) — **`Profil.tsx`**, **`UserForm.tsx`** ; détail dans **`docs/ai/contexte-actif.md`** (2026-05-29).
 
 Mise à jour mémoire : utiliser la règle `.cursor/rules/10-memory-bank.mdc`, recouper avec le code réel et placer les détails dans `docs/ai/`. Garder ce fichier entre 10 et 20 lignes.

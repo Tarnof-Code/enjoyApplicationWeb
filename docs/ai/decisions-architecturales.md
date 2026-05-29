@@ -54,6 +54,8 @@
     - `CreateGroupeForm.tsx` : Formulaire création/édition de groupe (types THEMATIQUE, AGE, NIVEAU_SCOLAIRE ; `ReferentsSelector` pour les référents ; sync API après sauvegarde ; fallback ajout enfants si backend renvoie groupe vide ; messages d’échec via **`getApiErrorMessage`** ; **`errorMessagePlacement="bottom"`** sur **`Form`** si besoin d’afficher l’erreur sous les boutons)
     - `ReferentsSelector.tsx` : Sélection multi-référents parmi l'équipe (valeur = JSON array de `tokenId`, voir section Types)
     - `Acces_non_autorise.tsx` : Page d'erreur 403 (utilisée dans `ListeUtilisateurs` quand l'utilisateur n'a pas le rôle ADMIN)
+    - **`UserForm.tsx`** : création / édition utilisateur (admin **`/utilisateurs`**, équipe séjour via **`TableauUtilisateurs`** + **`sejourId`**) — champ **email** piloté par **`canEditEmail(currentUser, targetUser)`** ; en édition équipe (**directeur** sur **`BASIC_USER`**), **`updateUser`** puis **`modifierRoleMembreEquipe`** ; **`role`** / **`dateExpiration`** réservés admin (hors contexte séjour)
+    - **`Profil.tsx`** : auto-modification profil (**`/profil`**) — email via **`canEditEmail`** (soi × soi) ; message lecture seule **`getEmailReadOnlyMessage`**
   - **Formatage des enums** : Utiliser les objets `Labels` (ex: `NiveauScolaireLabels`, `RoleSejourLabels`, `RoleSystemeLabels`, `EmplacementLieuLabels`) pour formater l'affichage des valeurs enum dans l'UI plutôt que d'afficher directement les valeurs brutes.
 - **Styles :** SCSS Modules (`.module.scss`) pour l'isolation CSS. Un fichier `.module.scss` par composant. Classes utilitaires : `.infoStack` (flex column, gap 1rem) pour espacer les blocs d'infos empilés verticalement ; `.grid` pour les grilles responsives (repeat auto-fill minmax).
 - **API :** 
@@ -132,6 +134,7 @@ Routes détaillées et layout : [documentation-ui-routing.md](documentation-ui-r
   - `calculerDureeEnJours(dateDebut, dateFin)` : Calcule la durée en jours entre deux dates (arrondi au supérieur avec Math.ceil).
 - **Utilisateurs :**
   - `trierUtilisateursParNom(utilisateurs)` : Trie un tableau d'utilisateurs par nom (alphabétique, insensible à la casse).
+  - **`canEditEmail(currentUser, targetUser)`** / **`getEmailReadOnlyMessage(role)`** (`helpers/canEditEmail.ts`) : droits UI sur le champ **email** — **ADMIN** (toute cible) ; **DIRECTION** modifiant un autre **`BASIC_USER`** (`tokenId` différent) ; sinon lecture seule. Utilisé par **`Profil.tsx`** et **`UserForm.tsx`**. Utilisateur connecté : **`state.auth.role`** + **`accountService.getTokenInfo()?.payload?.sub`**.
   - `trierEnfantsParNom(enfants)` : Trie un tableau d'enfants par nom puis par prénom (alphabétique, insensible à la casse). Utilisé automatiquement dans `getEnfantsDuSejour()`.
   - `calculerAge(dateNaissance, referenceDate?)` : Calcule l'âge à partir d'une date de naissance. Si `referenceDate` est fourni, l'âge est calculé à cette date (ex. date de début du séjour pour les groupes par âge). Sinon, utilise la date du jour. Utilisé dans `ListeEnfants`, `ListeGroupes` et `groupeTranche`.
   - `getEnfantsMatchingTranche(groupe, enfants, dateDebutSejour, idsExclus?)` : Retourne les enfants correspondant à la tranche du groupe (âge ou niveau scolaire). Utilisé par `ListeGroupes` (bouton « Ajouter les enfants de la tranche ») et `CreateGroupeForm` (fallback création).

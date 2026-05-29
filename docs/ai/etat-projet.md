@@ -23,6 +23,7 @@
 
 - Types partagés : `src/types/api.d.ts` — rester aligné avec les DTO / payloads documentés côté API.
 - Références utilisateur côté JSON : **`tokenId`**, pas l’id SQL interne (conventions enjoyApi).
+- **Utilisateurs** (`PUT /utilisateurs`, body **`UpdateUserRequest`**) : modification du champ **`email`** soumise aux droits backend — **ADMIN** (toute cible, y compris soi) ; **DIRECTION** sur un autre **`BASIC_USER`** (ex. membre d’équipe via **`UserForm`** + **`sejourId`**) ; interdit en auto-modification **DIRECTION** / **BASIC_USER**. Le front **envoie toujours `email`** dans le payload (valeur existante si champ UI désactivé). Erreurs typiques : **403**, **409**, **400**, **404** — affichage via **`getApiErrorMessage`** (**`Profil.tsx`**, **`UserForm.tsx`**). Helper UI : **`canEditEmail`** (`helpers/canEditEmail.ts`).
 
 ## Services API (inventaire)
 
@@ -95,7 +96,7 @@
   - Fonctions de formatage des rôles selon le genre : `getRoleSystemeByGenre()`, `getRoleSejourByGenre()`
   - Recherche par email : `getUserByEmail()` (retourne null si 404, throw Error si 400)
   - `getUser()` : Récupère le profil utilisateur et met à jour le store Redux automatiquement
-  - `updateUser()` : Mise à jour d'un utilisateur avec header `X-Skip-Token-Refresh`
+  - `updateUser()` : **`PUT /utilisateurs`** — mise à jour avec header `X-Skip-Token-Refresh` ; restrictions **email** côté backend (voir section *Utilisateurs* ci‑dessus) ; UI **`canEditEmail`** + **`Profil`** / **`UserForm`**
   - `changePassword()` : Changement de mot de passe (utilise `adaptAxiosError`)
   - Utilise `adaptAxiosError` et `validateResponseStatus` pour `deleteUser()` et `changePassword()`
 

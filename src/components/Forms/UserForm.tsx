@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useSelector } from "react-redux";
 import Form, { FormField } from "./Form";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
@@ -6,6 +7,8 @@ import { sejourEquipeService } from "../../services/sejour-equipe.service";
 import { regexValidation } from "../../helpers/regexValidation";
 import formatDateAnglais from "../../helpers/formatDateAnglais";
 import dateToISO from "../../helpers/dateToISO";
+import { canEditEmail } from "../../helpers/canEditEmail";
+import { getApiErrorMessage } from "../../helpers/axiosError";
 import { RoleSejour, RoleSejourLabels } from "../../enums/RoleSejour";
 import { MembreEquipeRequest, RegisterRequest, ChangePasswordRequest } from "../../types/api";
 import { RoleSysteme, RoleSystemeLabels } from "../../enums/RoleSysteme";
@@ -41,8 +44,19 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
   const [step, setStep] = useState<'email_check' | 'form'>((!isEditMode && sejourId) ? 'email_check' : 'form');
   const [checkedEmail, setCheckedEmail] = useState<string>("");
   const [foundUser, setFoundUser] = useState<UserFormData & { tokenId?: string; dateExpirationCompte?: string | number; id?: number } | null>(null);
-  
-  // Déterminer si on édite un membre existant de l'équipe (seul le rôle peut être modifié)
+  const currentUserRole = useSelector((state: { auth: { role: string | null } }) => state.auth.role);
+  const currentUserTokenId = accountService.getTokenInfo()?.payload?.sub ?? "";
+
+  const targetUser = foundUser || data;
+  const emailEditable =
+    !isEditMode ||
+    !targetUser?.tokenId ||
+    canEditEmail(
+      { role: currentUserRole, tokenId: currentUserTokenId },
+      { role: targetUser.role, tokenId: targetUser.tokenId }
+    );
+
+  // Édition d'un membre existant de l'équipe (rôle de séjour + email si directeur)
   const isEditingTeamMember = !!(isEditMode && sejourId && data?.tokenId);
 
   const initialData = useMemo(() => {
@@ -169,10 +183,23 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
       if (sejourId) {
         // Gestion des membres d'un séjour - l'API gère la date d'expiration
         if (isEditMode && userData?.tokenId) {
-          // Modification du rôle d'un membre existant
+          if (emailEditable) {
+            const updatedUser = {
+              tokenId: userData.tokenId,
+              prenom: userData.prenom || '',
+              nom: userData.nom || '',
+              genre: userData.genre || '',
+              email: formData.email || userData.email || '',
+              telephone: userData.telephone || '',
+              dateNaissance: userData.dateNaissance || '',
+              role: (userData.role as RoleSysteme) || RoleSysteme.BASIC_USER,
+              dateExpirationCompte: dateToISO(userData.dateExpirationCompte),
+            };
+            await utilisateurService.updateUser(updatedUser);
+          }
           await sejourEquipeService.modifierRoleMembreEquipe(
-            sejourId, 
-            userData.tokenId, 
+            sejourId,
+            userData.tokenId,
             formData.roleSejour as RoleSejour
           );
         } else if (foundUser) {
@@ -217,7 +244,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
             prenom: formData.prenom || userData.prenom || '',
             nom: formData.nom || userData.nom || '',
             genre: formData.genre || userData.genre || '',
-            email: formData.email || userData.email || '',
+            email: emailEditable ? (formData.email || userData.email || '') : (userData.email || ''),
             telephone: formData.telephone || userData.telephone || '',
             dateNaissance: formData.dateNaissance || userData.dateNaissance || '',
             role: (formData.role as RoleSysteme) || userData.role as RoleSysteme,
@@ -254,12 +281,11 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
     } catch (error: unknown) {
       console.error("Erreur lors de l'opération", error);
       if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: { error?: string } } };
-        if (axiosError.response?.data?.error) {
-          setErrorMessage(axiosError.response.data.error);
-        } else {
-          setErrorMessage("Une erreur est survenue lors de l'opération");
-        }
+        const axiosError = error as { response?: { status?: number; data?: unknown } };
+        const status = axiosError.response?.status;
+        const defaultMessage =
+          status === 404 ? "Utilisateur introuvable" : "Une erreur est survenue lors de l'opération";
+        setErrorMessage(getApiErrorMessage(axiosError.response?.data, defaultMessage));
       } else {
         setErrorMessage("Une erreur est survenue lors de l'opération");
       }
@@ -309,7 +335,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
   const fullFormFields: FormField[] = [
     {
         ...emailField,
-        disabled: !!foundUser || isEditingTeamMember // Email non modifiable si utilisateur trouvé ou édition d'un membre de l'équipe
+        disabled: !!foundUser || (isEditMode && !emailEditable)
     }, 
     // Utiliser roleSejour (enum) si on est dans un séjour, sinon role système
     sejourId ? roleSejourField : roleField,
@@ -426,7 +452,7 @@ function UserForm({ handleCloseModal, data, isEditMode = false, excludedRoles = 
     }
     
     // Si on édite un membre existant de l'équipe (avec sejourId et isEditMode)
-    // Seul le rôle de séjour peut être modifié, les autres champs sont en lecture seule
+    // Rôle de séjour modifiable ; email modifiable si directeur sur un BASIC_USER
     if (isEditingTeamMember) {
       return fullFormFields.filter(field => 
         ['email', roleFieldName, 'prenom', 'nom', 'dateNaissance'].includes(field.name)
