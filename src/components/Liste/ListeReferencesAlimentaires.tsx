@@ -34,7 +34,6 @@ function ListeReferencesAlimentaires() {
     const [submitting, setSubmitting] = useState(false);
 
     const [formLibelle, setFormLibelle] = useState("");
-    const [formOrdre, setFormOrdre] = useState("");
     const [formActif, setFormActif] = useState(true);
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -71,7 +70,6 @@ function ListeReferencesAlimentaires() {
         setEditingId(null);
         setModalCreateType(type);
         setFormLibelle("");
-        setFormOrdre(String(prochainOrdreSuggest(liste, type)));
         setFormActif(true);
         setModalOpen(true);
     };
@@ -81,7 +79,6 @@ function ListeReferencesAlimentaires() {
         setEditingId(r.id);
         setModalCreateType(null);
         setFormLibelle(r.libelle);
-        setFormOrdre(String(r.ordre));
         setFormActif(r.actif);
         setModalOpen(true);
     };
@@ -93,12 +90,6 @@ function ListeReferencesAlimentaires() {
             setErrorMessage("Le libellé est obligatoire.");
             return;
         }
-        const ordreNum = Number.parseInt(formOrdre.trim(), 10);
-        if (Number.isNaN(ordreNum)) {
-            setErrorMessage("L’ordre doit être un entier (tri d’affichage : valeurs plus petites en premier).");
-            return;
-        }
-
         setSubmitting(true);
         try {
             if (editingId == null) {
@@ -108,13 +99,20 @@ function ListeReferencesAlimentaires() {
                     setSubmitting(false);
                     return;
                 }
-                const body: SaveReferenceAlimentaireRequest = { type, libelle, ordre: ordreNum };
+                const ordre = prochainOrdreSuggest(liste, type);
+                const body: SaveReferenceAlimentaireRequest = { type, libelle, ordre };
                 await referencesAlimentairesService.creerReference(body);
                 showSuccess("Référence créée.");
             } else {
+                const refExistante = liste.find((r) => r.id === editingId);
+                if (!refExistante) {
+                    setErrorMessage("Référence introuvable.");
+                    setSubmitting(false);
+                    return;
+                }
                 const body: UpdateReferenceAlimentaireRequest = {
                     libelle,
-                    ordre: ordreNum,
+                    ordre: refExistante.ordre,
                     actif: formActif,
                 };
                 await referencesAlimentairesService.modifierReference(editingId, body);
@@ -177,7 +175,6 @@ function ListeReferencesAlimentaires() {
                             <div className={styles.cardHeader}>
                                 <span className={styles.libelle}>{r.libelle}</span>
                                 {!r.actif && <span className={styles.badgeInactive}>Inactif</span>}
-                                <span className={styles.meta}>ordre {r.ordre}</span>
                             </div>
                             <div className={styles.cardActions}>
                                 <Button color="primary" size="sm" onClick={() => openEdit(r)} disabled={deletingId === r.id}>
@@ -229,17 +226,6 @@ function ListeReferencesAlimentaires() {
                             disabled={submitting}
                             autoComplete="off"
                         />
-                    </FormGroup>
-                    <FormGroup className={styles.modalField}>
-                        <Label for="ref-ordre">Ordre d&apos;affichage</Label>
-                        <Input
-                            id="ref-ordre"
-                            type="number"
-                            value={formOrdre}
-                            onChange={(e) => setFormOrdre(e.target.value)}
-                            disabled={submitting}
-                        />
-                        <p className={styles.hint}>Entier : valeurs plus petites apparaissent en premier dans les listes.</p>
                     </FormGroup>
                     {editingId != null && (
                         <FormGroup check className={styles.modalField}>
