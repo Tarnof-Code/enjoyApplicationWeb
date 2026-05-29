@@ -5,7 +5,7 @@ import Layout from "./layouts/Layout";
 import ErrorPage from "./Pages/Erreurs/error-page";
 import Erreur from "./Pages/Erreurs/Erreur";
 import Profil, { profilLoader } from "./Pages/Profil/Profil";
-import Connexion, { loginAction } from "./Pages/Connexion/Connexion";
+import Connexion, { connexionShouldRevalidate, loginAction } from "./Pages/Connexion/Connexion";
 import { accountService } from "./services/account.service";
 import ListeSejoursAdmin, { sejoursAdminLoader } from "./Pages/_Admin/ListeSejoursAdmin/ListeSejoursAdmin.tsx";
 import ListeUtilisateurs, { utilisateursLoader } from "./Pages/_Admin/ListeUtilisateurs/ListeUtilisateurs.tsx";
@@ -26,24 +26,24 @@ import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Sejours/DossierEnfa
 import { RoleSysteme } from "./enums/RoleSysteme";
 import { chargerProfilEtCheminAccueil } from "./helpers/redirectApresAuthentification";
 
-const App: React.FC = () => {
-  const router = createBrowserRouter([
-    {
-      path: "/",
-      element: <Layout />,
-      errorElement: <ErrorPage />,
-      children: [
-        {
-          index: true,
-          loader: async () => {
-            if (accountService.isLogged()) {
-              return redirect(await chargerProfilEtCheminAccueil());
-            }
-            return null;
-          },
-          action: loginAction,
-          element: <Connexion />,
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        loader: async () => {
+          if (accountService.isLogged()) {
+            return redirect(await chargerProfilEtCheminAccueil());
+          }
+          return null;
         },
+        shouldRevalidate: connexionShouldRevalidate,
+        action: loginAction,
+        element: <Connexion />,
+      },
         {
           path: "/utilisateurs",
           loader: utilisateursLoader,
@@ -139,15 +139,12 @@ const App: React.FC = () => {
             );
           },
         },
-      ],
-    },
-  ]);
+    ],
+  },
+]);
 
-  return (
-    <>
-      <RouterProvider router={router} />
-    </>
-  );
+const App: React.FC = () => {
+  return <RouterProvider router={router} />;
 };
 
 export default App;

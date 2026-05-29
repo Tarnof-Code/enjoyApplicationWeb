@@ -1,10 +1,23 @@
 import { FormGroup, Input, Button } from "reactstrap";
-import { Form as RouterForm, redirect, useActionData, useNavigation, Navigate, ActionFunctionArgs } from "react-router-dom";
+import {
+  Form as RouterForm,
+  redirect,
+  useActionData,
+  useNavigation,
+  ActionFunctionArgs,
+  type ShouldRevalidateFunction,
+} from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
 import { getApiErrorMessage, NETWORK_ERROR_MESSAGE } from "../../helpers/axiosError";
-import { chargerProfilEtCheminAccueil, cheminAccueilDepuisEtatActuel } from "../../helpers/redirectApresAuthentification";
+import { chargerProfilEtCheminAccueil } from "../../helpers/redirectApresAuthentification";
 import { AxiosError } from "axios";
+
+/** Après POST login, l'action gère déjà redirect + profil : éviter une 2e exécution du loader "/". */
+export const connexionShouldRevalidate: ShouldRevalidateFunction = ({ formMethod, defaultShouldRevalidate }) => {
+  if (formMethod === "POST") return false;
+  return defaultShouldRevalidate;
+};
 
 export async function loginAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -44,8 +57,6 @@ function Connexion() {
   const errorMessage = useActionData() as string;
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
-
-  if (accountService.isLogged()) return <Navigate to={cheminAccueilDepuisEtatActuel()} replace />;
 
   return (
     <div className={styles.main}>
