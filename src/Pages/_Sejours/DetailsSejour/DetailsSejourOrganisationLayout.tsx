@@ -23,7 +23,7 @@ type SejourDetailLoaderSuccess = {
 
 /** Conteneur pleine page pour la liste et l’éditeur (`organisation`, `organisation/:grilleId`). */
 const DetailsSejourOrganisationLayout: FC = () => {
-    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
+    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
     const navigate = useNavigate();
 
     if (loaderData === undefined) {
@@ -33,17 +33,6 @@ const DetailsSejourOrganisationLayout: FC = () => {
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Chargement du séjour…</p>
-            </div>
-        );
-    }
-
-    if (loaderData instanceof Error) {
-        return (
-            <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
-                    ← Retour à la liste
-                </button>
-                <p className={styles.error}>Erreur lors du chargement du séjour</p>
             </div>
         );
     }

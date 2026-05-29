@@ -6,14 +6,13 @@ import formaterDate from '../../../helpers/formaterDate';
 import calculerDureeEnJours from '../../../helpers/calculerDureeEnJours';
 import { useLoaderData } from 'react-router-dom';
 import { SejourDTO } from '../../../types/api';
+import { throwRouteLoaderError } from '../../../helpers/routeError';
 
 export async function sejoursAdminLoader() {
   try {
-    const response = await sejourService.getAllSejours();
-    return response;
+    return await sejourService.getAllSejours();
   } catch (error) {
-    console.error("Erreur chargement sejours admin", error);
-    return [];
+    throwRouteLoaderError(error);
   }
 }
 

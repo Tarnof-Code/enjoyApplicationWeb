@@ -1,5 +1,6 @@
-import { LoaderFunctionArgs } from "react-router-dom";
+import { LoaderFunctionArgs, json } from "react-router-dom";
 import { sejourService } from "../../../services/sejour.service";
+import { throwRouteLoaderError } from "../../../helpers/routeError";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { sejourGroupeService } from "../../../services/sejour-groupe.service";
 import { sejourActiviteService } from "../../../services/sejour-activite.service";
@@ -10,10 +11,16 @@ import { sejourHoraireService } from "../../../services/sejour-horaire.service";
 import { sejourPlanningGrilleService } from "../../../services/sejour-planning-grille.service";
 
 export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
-    if (!params.id) throw new Error("ID du séjour manquant");
+    if (!params.id) {
+        throw json(
+            { kind: "not-found", message: "La ressource demandée est introuvable." },
+            { status: 404 }
+        );
+    }
     try {
         const sejourId = parseInt(params.id, 10);
-        const [sejour, enfants, groupes, lieux, moments, horaires, activites, typesActivite] = await Promise.all([
+        const [sejour, enfants, groupes, lieux, moments, horaires, activites, typesActivite, planningGrilles] =
+            await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(sejourId),
             sejourGroupeService.getGroupesDuSejour(sejourId),
@@ -22,13 +29,8 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             sejourHoraireService.getHorairesDuSejour(sejourId),
             sejourActiviteService.getActivitesDuSejour(sejourId),
             sejourTypeActiviteService.getTypesActiviteDuSejour(sejourId),
+            sejourPlanningGrilleService.listerGrilles(sejourId),
         ]);
-        let planningGrilles: Awaited<ReturnType<typeof sejourPlanningGrilleService.listerGrilles>> = [];
-        try {
-            planningGrilles = await sejourPlanningGrilleService.listerGrilles(sejourId);
-        } catch {
-            console.warn("Plannings grilles non chargés (API indisponible ou erreur réseau)");
-        }
         return {
             sejour,
             enfants,
@@ -41,7 +43,6 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             planningGrilles,
         };
     } catch (error) {
-        console.error("Erreur chargement séjour", error);
-        return error;
+        throwRouteLoaderError(error);
     }
 }

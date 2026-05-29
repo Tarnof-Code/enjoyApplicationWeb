@@ -6,11 +6,7 @@ import { utilisateurService } from "../services/utilisateur.service";
 
 /** Charge le profil (Redux), puis renvoie l’URL d’accueil : dernier séjour visité ou /profil. */
 export async function chargerProfilEtCheminAccueil(): Promise<string> {
-  try {
-    await utilisateurService.getUser();
-  } catch {
-    return "/profil";
-  }
+  await utilisateurService.getUser();
   return cheminAccueilDepuisEtatActuel();
 }
 

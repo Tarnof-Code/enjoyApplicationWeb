@@ -107,7 +107,7 @@ type SejourDetailLoaderSuccess = {
 
 const DetailsSejourOverview: React.FC = () => {
     /** Route index sans loader : données sur la route parent `sejour-detail`. */
-    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
+    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
     const location = useLocation();
     const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
         const state = location.state as { openAccordion?: string; expandedGroupeId?: number } | null;
@@ -123,8 +123,7 @@ const DetailsSejourOverview: React.FC = () => {
     const lastOpenedAccordion = useRef<string | null>(null);
     const hasScrolledFromReturn = useRef(false);
     const scrollToGroupeRef = useRef<((groupeId: number) => void) | null>(null);
-    const sejourIdForStorage =
-        loaderData && !(loaderData instanceof Error) ? loaderData.sejour.id : undefined;
+    const sejourIdForStorage = loaderData?.sejour.id;
     const [accordionOrder, setAccordionOrder] = useState<string[]>(() => [...OVERVIEW_ACCORDION_IDS]);
     const [draggingAccordionId, setDraggingAccordionId] = useState<string | null>(null);
     const [dropTargetAccordionId, setDropTargetAccordionId] = useState<string | null>(null);
@@ -232,17 +231,6 @@ const DetailsSejourOverview: React.FC = () => {
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Chargement du séjour…</p>
-            </div>
-        );
-    }
-
-    if (loaderData instanceof Error) {
-        return (
-            <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
-                    ← Retour à la liste
-                </button>
-                <p className={styles.error}>Erreur lors du chargement du séjour</p>
             </div>
         );
     }

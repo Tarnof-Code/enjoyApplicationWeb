@@ -7,6 +7,7 @@ import formaterDate from "../../helpers/formaterDate";
 import dateToISO from "../../helpers/dateToISO";
 import { canEditEmail, getEmailReadOnlyMessage } from "../../helpers/canEditEmail";
 import { getApiErrorMessage } from "../../helpers/axiosError";
+import { throwRouteLoaderError } from "../../helpers/routeError";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { Navigate, useLoaderData } from "react-router-dom";
@@ -48,10 +49,9 @@ interface Utilisateur {
 export async function profilLoader() {
   try {
     const response = await utilisateurService.getUser();
-    return response?.data;
+    return response.data;
   } catch (error) {
-    console.error("Erreur chargement profil", error);
-    return null;
+    throwRouteLoaderError(error);
   }
 }
 

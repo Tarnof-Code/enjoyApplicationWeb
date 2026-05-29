@@ -27,7 +27,7 @@ type SejourDetailLoaderSuccess = {
 
 /** Liste ou éditeur pleine page selon la sous-route (`organisation` vs `organisation/:grilleId`). */
 const DetailsSejourOrganisation: React.FC = () => {
-    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
+    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
     const navigate = useNavigate();
     const { grilleId } = useParams();
 
@@ -36,7 +36,7 @@ const DetailsSejourOrganisation: React.FC = () => {
     const embeddedEditorGrilleId =
         Number.isFinite(parsedGrille) && parsedGrille > 0 ? parsedGrille : null;
 
-    if (loaderData === undefined || loaderData instanceof Error || !loaderData.sejour) {
+    if (loaderData === undefined || !loaderData.sejour) {
         return null;
     }
 

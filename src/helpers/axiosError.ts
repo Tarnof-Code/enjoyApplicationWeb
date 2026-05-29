@@ -1,4 +1,39 @@
 import type { AxiosResponse } from "axios";
+import { AxiosError } from "axios";
+
+export const NETWORK_ERROR_MESSAGE =
+  "Impossible de joindre le serveur. Vérifiez votre connexion internet ou réessayez dans quelques instants.";
+
+export function isNetworkError(error: unknown): boolean {
+  if (error instanceof AxiosError && !error.response) {
+    return true;
+  }
+  if (error && typeof error === "object") {
+    const candidate = error as { code?: string; message?: string; response?: unknown };
+    if (!candidate.response && candidate.code === "ERR_NETWORK") {
+      return true;
+    }
+    if (
+      typeof candidate.message === "string" &&
+      /^network error$/i.test(candidate.message.trim()) &&
+      !candidate.response
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Message utilisateur à partir d'une erreur catch (réseau, Error, etc.). */
+export function getUserFacingErrorMessage(error: unknown, whenUnknown: string): string {
+  if (isNetworkError(error)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+  if (error instanceof Error && error.message.trim() !== "") {
+    return error.message;
+  }
+  return whenUnknown;
+}
 
 /**
  * Vérifie que la réponse HTTP a le statut attendu.
@@ -87,7 +122,7 @@ export function adaptAxiosError(error: unknown, options: AdaptAxiosErrorOptions)
 
   const axiosError = error as { response?: { status: number; data: unknown; [key: string]: unknown } };
   if (!axiosError.response) {
-    throw error;
+    throw new Error(NETWORK_ERROR_MESSAGE);
   }
 
   const errorMessage = extractErrorMessage(

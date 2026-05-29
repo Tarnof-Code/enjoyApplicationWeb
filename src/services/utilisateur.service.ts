@@ -9,38 +9,28 @@ import { RoleSejour, RoleSejourLabels } from "../enums/RoleSejour";
 import { ChangePasswordRequest } from "../types/api";
 
 let getAllUsers = async () => {
-  try {
-    let response = await Axios.get("/utilisateurs");
-    response.data = trierUtilisateursParNom(response.data);
-    return response;
-  } catch {
-    throw new Error("Impossible de récupérer la liste des utilisateurs");
-  }
+  const response = await Axios.get("/utilisateurs");
+  response.data = trierUtilisateursParNom(response.data);
+  return response;
 };
 
 let getUser = async () => {
-  try {
-    let token_infos = accountService.getTokenInfo();
-    const tokenId = token_infos?.payload.sub;
-    const response = await Axios.get(
-      `/utilisateurs/profil?tokenId=${tokenId}`,
-      {
-        withCredentials: true,
-      }
-    );
-    if (response) {
-      store.dispatch(
-        setUser({
-          role: response.data.role,
-          prenom: response.data.prenom,
-          genre: response.data.genre,
-        })
-      );
-      return response;
-    }
-  } catch {
-    throw new Error("access_token est manquant ou erreur de réseau");
+  const token_infos = accountService.getTokenInfo();
+  const tokenId = token_infos?.payload.sub;
+  if (!tokenId) {
+    throw new Error("Session invalide : identifiant utilisateur manquant.");
   }
+  const response = await Axios.get(`/utilisateurs/profil?tokenId=${tokenId}`, {
+    withCredentials: true,
+  });
+  store.dispatch(
+    setUser({
+      role: response.data.role,
+      prenom: response.data.prenom,
+      genre: response.data.genre,
+    })
+  );
+  return response;
 };
 
 let updateUser = async (utilisateur: any) => {

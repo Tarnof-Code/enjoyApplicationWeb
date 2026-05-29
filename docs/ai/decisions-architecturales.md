@@ -12,9 +12,10 @@
   - Pas d'import React inutile (React 19 auto-import).
 - **Data Fetching :** 
   - Privilégier les loaders React Router (`useLoaderData` / **`useRouteLoaderData`** pour une route ancêtre) plutôt qu’un `useEffect` de chargement initial.
-  - Sous-routes du détail séjour : le loader est sur la route parent (`id: "sejour-detail"`) ; les pages enfants lisent **`useRouteLoaderData("sejour-detail")`**.
-  - Pattern standard : exporter `async function [pageName]Loader({params}: LoaderFunctionArgs)` depuis chaque page (ou un module dédié, ex. `detailsSejourLoader.ts`).
-  - Les loaders doivent gérer les erreurs et retourner les données ou `null`.
+  - Sous-routes du détail séjour : loader parent **`id: "sejour-detail"`** ; pages enfants lisent **`useRouteLoaderData("sejour-detail")`** sauf **Menus** / **Sanitaire** (loaders dédiés + **`useLoaderData`** local).
+  - Pattern standard : exporter `async function [pageName]Loader({params}: LoaderFunctionArgs)` depuis chaque page ou module dédié (ex. **`detailsSejourLoader.ts`**).
+  - Les loaders doivent propager les erreurs bloquantes via **`throwRouteLoaderError`** (`helpers/routeError.ts`) — pas de retour silencieux `[]` / `null` / `Error` inline pour les échecs réseau, auth ou serveur.
+  - Sous-routes **Menus** et **Sanitaire** : loaders dédiés **`menusLoader`**, **`sanitaireLoader`** (`detailsSejourMenusLoader.ts`, `detailsSejourSanitaireLoader.ts`).
 - **Formulaires :** 
   - Utilisation stricte de `src/components/Forms/Form.tsx` (générique) piloté par une configuration (props `fields`).
   - Validation côté client via `validation` dans `FormField` (fonction qui retourne `string | null`).
@@ -35,8 +36,8 @@
   - Composants enfants :
     - `AddEnfantForm.tsx` : Formulaire générique pour créer/modifier un enfant (utilise `Form.tsx` avec configuration `fields`)
     - `ListeEnfants.tsx` : Liste des enfants avec filtres, tri, actions CRUD (création, modification, suppression individuelle et groupée), icône dossier pour accéder au dossier de chaque enfant. Formatage automatique du niveau scolaire avec `NiveauScolaireLabels` (affichage "5ème" au lieu de "CINQUIEME")
-    - **`DetailsSejourSanitaire.tsx`** + **`ListeSanitaireDossiers.tsx`** : vue **Sanitaire** du détail séjour ; données **`GET /sejours/{sejourId}/dossiers-enfants`** ; cases à cocher colonnes optionnelles (**`enjoy.sanitaire.opts.{sejourId}`**) ; filtrage des lignes selon groupes de colonnes affichés (présence de données, **ET** entre groupes) ; ouverture dossier avec **`state: { from: 'sanitaire' }`**
-    - `DossierEnfant.tsx` : Page d'affichage et modification du dossier d'un enfant (contacts parents, médical, traitements). **Bouton d'édition par section** (Contacts parents, Informations médicales, Traitements, Autres informations) avec icône crayon ; ouvre modal avec titre dynamique selon section. Styles **`.sectionHeader`** (flex titre + bouton), **`.sectionEditButton`**. Permissions : **`peutModifierDossierEnfant`** (directeur, adjoint, **AS**). **Retour** : si **`location.state.from === 'sanitaire'`** (ouverture depuis **`ListeSanitaireDossiers`**), navigation vers **`/mes-sejours/:id/sanitaire`** ; sinon comportement existant (vue générale / accordéon selon **`from`**). Si le **loader** rejette avec une erreur Axios adaptée, affichage du message via **`getApiErrorMessage`** sur **`response.data`** (**`AdaptedError`**).
+    - **`DetailsSejourSanitaire.tsx`** + **`ListeSanitaireDossiers.tsx`** : vue **Sanitaire** du détail séjour ; loader **`sanitaireLoader`** ; données **`GET /sejours/{sejourId}/dossiers-enfants`** ; cases à cocher colonnes optionnelles (**`enjoy.sanitaire.opts.{sejourId}`**) ; filtrage des lignes selon groupes de colonnes affichés (présence de données, **ET** entre groupes) ; ouverture dossier avec **`state: { from: 'sanitaire' }`**
+    - `DossierEnfant.tsx` : Page d'affichage et modification du dossier d'un enfant (contacts parents, médical, traitements). **Bouton d'édition par section** (Contacts parents, Informations médicales, Traitements, Autres informations) avec icône crayon ; ouvre modal avec titre dynamique selon section. Styles **`.sectionHeader`** (flex titre + bouton), **`.sectionEditButton`**. Permissions : **`peutModifierDossierEnfant`** (directeur, adjoint, **AS**). **Retour** : si **`location.state.from === 'sanitaire'`** (ouverture depuis **`ListeSanitaireDossiers`**), navigation vers **`/mes-sejours/:id/sanitaire`** ; sinon comportement existant (vue générale / accordéon selon **`from`**). Erreurs loader via **`throwRouteLoaderError`** → boundary / **`/erreur`**.
     - `DossierEnfantForm.tsx` : Formulaire de modification du dossier (13 champs, validation email/téléphone optionnelle, textarea pour les champs longs). Prop **`section?: SectionType`** pour édition ciblée : si fourni, **`sectionFieldsMap`** filtre les champs affichés selon la section (`'contacts' | 'medical' | 'traitements' | 'autres'`).
     - `ImportExcelEnfants.tsx` : Import Excel avec gestion des résultats (`ExcelImportResponse`), affichage des erreurs détaillées (**`getApiErrorMessage`** sur le corps d’erreur), et icône info ouvrant une notice des colonnes (logique groupes ET/OU, colonnes obligatoires/optionnelles, mots-clés formatés, formats acceptés ; majuscules et espaces autorisés)
     - `ListeGroupes.tsx` : Liste des groupes d'un séjour (accordéon, création/édition/suppression, ajout/retrait d'enfants, affichage des **référents**, bouton « Ajouter les enfants de la tranche » pour AGE/NIVEAU_SCOLAIRE)
@@ -53,9 +54,14 @@
     - `ListeLieux.tsx` : Liste des **lieux** du séjour (`LieuDto`) — filtres emplacement / capacité min, CRUD via `sejourLieuService`, formulaire avec **partage entre animateurs** et **nombre max d’activités le même jour**, résumé partage sur les cartes, `useRevalidator` après mutations ; libellés `EmplacementLieuLabels`
     - `CreateGroupeForm.tsx` : Formulaire création/édition de groupe (types THEMATIQUE, AGE, NIVEAU_SCOLAIRE ; `ReferentsSelector` pour les référents ; sync API après sauvegarde ; fallback ajout enfants si backend renvoie groupe vide ; messages d’échec via **`getApiErrorMessage`** ; **`errorMessagePlacement="bottom"`** sur **`Form`** si besoin d’afficher l’erreur sous les boutons)
     - `ReferentsSelector.tsx` : Sélection multi-référents parmi l'équipe (valeur = JSON array de `tokenId`, voir section Types)
-    - `Acces_non_autorise.tsx` : Page d'erreur 403 (utilisée dans `ListeUtilisateurs` quand l'utilisateur n'a pas le rôle ADMIN)
+    - `Acces_non_autorise.tsx` : **supprimé** — remplacé par **`ErreurAffichage`** + **`FORBIDDEN_ROUTE_ERROR`** / boundary route.
     - **`UserForm.tsx`** : création / édition utilisateur (admin **`/utilisateurs`**, équipe séjour via **`TableauUtilisateurs`** + **`sejourId`**) — champ **email** piloté par **`canEditEmail(currentUser, targetUser)`** ; en édition équipe (**directeur** sur **`BASIC_USER`**), **`updateUser`** puis **`modifierRoleMembreEquipe`** ; **`role`** / **`dateExpiration`** réservés admin (hors contexte séjour)
     - **`Profil.tsx`** : auto-modification profil (**`/profil`**) — email via **`canEditEmail`** (soi × soi) ; message lecture seule **`getEmailReadOnlyMessage`**
+  - **Erreurs routes & accès** :
+    - **`helpers/routeError.ts`** : classification (`network`, `unauthorized`, `forbidden`, `not-found`, `server`, `unknown`), **`throwRouteLoaderError`**, **`navigateToRouteError`**, **`FORBIDDEN_ROUTE_ERROR`**, **`getErrorDisplayContent`**.
+    - **`Pages/Erreurs/`** : **`ErreurAffichage.tsx`** (UI commune), **`Erreur.tsx`** (route **`/erreur`**, state), **`error-page.tsx`** (boundary **`errorElement`**).
+    - **`ProtectedRoute`** : rôle absent → **Chargement…** ; mauvais rôle → **`ErreurAffichage`** (403) ; non connecté → **`/`**.
+    - **`ListeUtilisateurs`** : erreurs loader via boundary (plus de page **`Acces_non_autorise`** dédiée).
   - **Formatage des enums** : Utiliser les objets `Labels` (ex: `NiveauScolaireLabels`, `RoleSejourLabels`, `RoleSystemeLabels`, `EmplacementLieuLabels`) pour formater l'affichage des valeurs enum dans l'UI plutôt que d'afficher directement les valeurs brutes.
 - **Styles :** SCSS Modules (`.module.scss`) pour l'isolation CSS. Un fichier `.module.scss` par composant. Classes utilitaires : `.infoStack` (flex column, gap 1rem) pour espacer les blocs d'infos empilés verticalement ; `.grid` pour les grilles responsives (repeat auto-fill minmax).
 - **API :** 
@@ -64,15 +70,17 @@
   - Header `X-Skip-Token-Refresh` pour désactiver le refresh automatique sur certaines requêtes (ex: login, inscription, updateUser).
   - Pattern de gestion d'erreurs centralisé dans `helpers/axiosError.ts` :
     - `validateResponseStatus(response, expectedStatus)` : Vérifie le code HTTP attendu
+    - **`NETWORK_ERROR_MESSAGE`**, **`isNetworkError(error)`**, **`getUserFacingErrorMessage(error)`** : détection absence de **`response`** et message FR utilisateur.
     - **`getApiErrorMessage(errorData, whenUnknown)`** : message utilisateur à partir du corps d’erreur JSON (**`message`** prioritaire si chaîne non vide — texte métier Spring / REST ; sinon **`error`** — synthèse HTTP ; sinon agrégation champs validation).
-    - `adaptAxiosError(error, options)` : Adapte les erreurs Axios avec message (via la même logique d’extraction), format validation (400), et préservation de `response.data`
+    - `adaptAxiosError(error, options)` : Adapte les erreurs Axios avec message ; si pas de **`response`**, lève un **`Error`** avec **`NETWORK_ERROR_MESSAGE`** ; format validation (400), préservation de `response.data`.
+    - **`helpers/routeError.ts`** : couche routes — **`classifyApiError`**, **`throwRouteLoaderError`**, **`navigateToRouteError`**, messages FR fixes **401** / **403**.
     - Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`
     - Utilisé dans : `sejour.service.ts`, `sejour-equipe.service.ts`, `sejour-enfant.service.ts`, `sejour-groupe.service.ts`, `sejour-activite.service.ts`, **`sejour-moment.service.ts`**, **`sejour-horaire.service.ts`** (mutations ; GET avec try/catch simple), **`sejour-type-activite.service.ts`** (mutations ; GET avec try/catch simple), `sejour-lieu.service.ts` (mutations ; GET avec try/catch simple), **`sejour-planning-grille.service.ts`** (mutations), `utilisateur.service.ts`
   - Types API centralisés dans `types/api.d.ts` (DTOs synchronisés avec le backend Java Spring).
 - **État Global :** 
   - Redux Toolkit avec Redux Persist pour la persistance de l'état d'authentification (localStorage).
   - AuthSlice (`redux/auth/authSlice.ts`) gère `role`, `prenom`, `genre`.
-  - **Post-connexion & dernier séjour** : **`helpers/headerSejourContext.ts`** expose aussi **`enregistrerDernierSejourVisite` / `lireDernierSejourVisite`** (**`localStorage`**, préfixe **`enjoy.dernierSejourId.{sub}`**, **`sub`** = JWT) — rempli depuis **`Header`** quand le loader **`sejour-detail`** fournit le séjour ; le snapshot **header** courant reste en **`sessionStorage`** et est **effacé au `logout`** (`effacerHeaderSejourContext`), pas la clé « dernier séjour ». **`helpers/redirectApresAuthentification.ts`** : **`chargerProfilEtCheminAccueil`** (appelle **`getUser`**, puis **`/mes-sejours/:id`** si **DIRECTION** / **BASIC_USER** et id mémorisé, sinon **`/profil`**) ; **`cheminAccueilDepuisEtatActuel`** pour **`Navigate`** quand le store est déjà à jour.
+  - **Post-connexion & dernier séjour** : **`helpers/headerSejourContext.ts`** expose aussi **`enregistrerDernierSejourVisite` / `lireDernierSejourVisite`** (**`localStorage`**, préfixe **`enjoy.dernierSejourId.{sub}`**, **`sub`** = JWT) — rempli depuis **`Header`** quand le loader **`sejour-detail`** fournit le séjour ; le snapshot **header** courant reste en **`sessionStorage`** et est **effacé au `logout`** (`effacerHeaderSejourContext`), pas la clé « dernier séjour ». **`helpers/redirectApresAuthentification.ts`** : **`chargerProfilEtCheminAccueil`** (appelle **`getUser`**, puis **`/mes-sejours/:id`** si **DIRECTION** / **BASIC_USER** et id mémorisé, sinon **`/profil`**) — **échec `getUser`** : erreur propagée (page d’erreur), plus de fallback silencieux **`/profil`** ; **`cheminAccueilDepuisEtatActuel`** pour **`Navigate`** quand le store est déjà à jour.
   - PersistGate dans `main.tsx` pour attendre la réhydratation avant le rendu.
   - Store configuré avec middleware Redux Persist (FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER ignorés dans serializableCheck).
   - Types exportés : `RootState`, `AppDispatch` pour le typage TypeScript.
@@ -145,9 +153,11 @@ Routes détaillées et layout : [documentation-ui-routing.md](documentation-ui-r
   - `trierHorairesChronologiquement(horaires)` (`helpers/trierHorairesChronologiquement.ts`) : tri par heure-minute dérivée du libellé, puis `id`. Utilisé par `ListeHoraires`, `DetailsSejourOverview`.
 - **Plannings organisation (jours du séjour) :**
   - `enumererJoursSejour(dateDebut, dateFin)` (`helpers/enumererJoursSejour.ts`) : liste des dates `yyyy-MM-dd` couvrant la période du séjour (inclus). **ListePlanningsOrganisation** : base pour **`joursDuSejourPlanning`** ; affichage du tableau sur une **fenêtre** **1 / 3 / 7 jours** via **`useCalendrierFenetreJours`** (voir **`listeActivitesUtils`**). En-têtes des colonnes jour : libellés alignés calendrier activités (**`libelleJourCourtPourBouton`** depuis **`listeActivitesUtils`**).
-- **Gestion des erreurs API** (`helpers/axiosError.ts`) :
+- **Gestion des erreurs API** (`helpers/axiosError.ts` + **`helpers/routeError.ts`**) :
   - `validateResponseStatus(response, expectedStatus)` : Vérifie que le code HTTP correspond à l'attendu.
-  - `adaptAxiosError(error, options)` : Adapte les erreurs Axios en Error avec propriété `response` attachée. Gère les formats standard (`error`/`message`) et validation (`{ champ: "msg" }` ou `{ champ: ["msg"] }`).
+  - **`NETWORK_ERROR_MESSAGE`**, **`isNetworkError`**, **`getUserFacingErrorMessage`** : erreurs réseau sans **`response`**.
+  - `adaptAxiosError(error, options)` : Adapte les erreurs Axios en Error avec propriété `response` attachée ; message réseau FR si pas de réponse HTTP. Gère les formats standard (`error`/`message`) et validation (`{ champ: "msg" }` ou `{ champ: ["msg"] }`).
+  - **`routeError.ts`** : **`throwRouteLoaderError`** (loaders), **`navigateToRouteError`** (fetch client), **`ErreurAffichage`** + routes **`/erreur`**, **`*`**, **`errorElement`**.
   - Options : `defaultMessage`, `validationDefault`, `logContext`, `preserveResponseData`.
 - **Validation :**
   - `regexValidation.ts` : Fonctions de validation regex pour les champs de formulaire.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { useRouteLoaderData, useNavigate } from "react-router-dom";
+import { useLoaderData, useRouteLoaderData, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import styles from "./DetailsSejour.module.scss";
 import menuStyles from "./DetailsSejourMenus.module.scss";
@@ -12,7 +12,7 @@ import { PlanningModalFooterFormulaire } from "../../../components/PlanningCalen
 import { CalendrierNavigationPeriode } from "../../../components/Liste/ListeActivitesCalendrier";
 import { enumererJoursDuSejour, libelleJourCourtPourBouton, parseYmdVersDateLocale } from "../../../components/Liste/listeActivitesUtils";
 import { useCalendrierFenetreJours } from "../../../components/Liste/useCalendrierFenetreJours";
-import type { MenuRepasDto, ReferenceAlimentaireDto, SaveMenuRepasRequest, SejourDTO, TypeRepas } from "../../../types/api";
+import type { MenuRepasDto, SaveMenuRepasRequest, SejourDTO, TypeRepas } from "../../../types/api";
 import { normaliserDateRepasISO } from "../../../helpers/dateIsoLocal";
 import formaterDate from "../../../helpers/formaterDate";
 import {
@@ -36,23 +36,25 @@ import { optionsCheckboxReferencesAlimentaires } from "../../../helpers/optionsR
 import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
 import { sejourMenuService } from "../../../services/sejour-menu.service";
 import { accountService } from "../../../services/account.service";
+import { navigateToRouteError } from "../../../helpers/routeError";
+import type { MenusLoaderData } from "./detailsSejourMenusLoader";
 
 type LoaderOk = { sejour: SejourDTO };
 
 const DetailsSejourMenus: React.FC = () => {
-    const loaderData = useRouteLoaderData("sejour-detail") as LoaderOk | Error | undefined;
+    const menusLoaderData = useLoaderData() as MenusLoaderData;
+    const loaderData = useRouteLoaderData("sejour-detail") as LoaderOk | undefined;
     const navigate = useNavigate();
+    const sejour = loaderData?.sejour;
 
     const [modalDateRepasStr, setModalDateRepasStr] = useState<string>("");
-    const [menus, setMenus] = useState<MenuRepasDto[]>([]);
+    const { refsAllergenes, refsRegimes } = menusLoaderData;
+    const [menus, setMenus] = useState<MenuRepasDto[]>(menusLoaderData.menus);
     const [loading, setLoading] = useState(false);
     const [pageError, setPageError] = useState<string | null>(null);
 
-    const [refsAllergenes, setRefsAllergenes] = useState<ReferenceAlimentaireDto[]>([]);
-    const [refsRegimes, setRefsRegimes] = useState<ReferenceAlimentaireDto[]>([]);
-    /** Après la première réponse de `references-alimentaires-agregees-enfants` (succès ou échec). */
-    const [refsChargeTerminee, setRefsChargeTerminee] = useState(false);
-    const [refsErreur, setRefsErreur] = useState<string | null>(null);
+    const refsChargeTerminee = true;
+    const refsErreur = null;
 
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingMenu, setEditingMenu] = useState<MenuRepasDto | null>(null);
@@ -80,8 +82,6 @@ const DetailsSejourMenus: React.FC = () => {
 
     /** Relecture préférences depuis le stockage après changements (paramétrage, autre onglet). */
     const [preferencesMenusNonce, setPreferencesMenusNonce] = useState(0);
-
-    const sejour = loaderData && !(loaderData instanceof Error) ? loaderData.sejour : undefined;
 
     const peutGererMenus = useMemo(() => {
         if (!sejour) return false;
@@ -148,37 +148,6 @@ const DetailsSejourMenus: React.FC = () => {
     const rangeStartStr = datesListe[0] ?? "";
     const rangeEndStr = datesListe[datesListe.length - 1] ?? "";
 
-    useEffect(() => {
-        if (!sejour) return;
-        let cancelled = false;
-        setRefsErreur(null);
-        setRefsChargeTerminee(false);
-        (async () => {
-            try {
-                const agg = await sejourMenuService.getReferencesAlimentairesAgregeesEnfants(sejour.id);
-                if (!cancelled) {
-                    setRefsAllergenes(agg.allergenes);
-                    setRefsRegimes(agg.regimesEtPreferences);
-                }
-            } catch (e: unknown) {
-                if (!cancelled) {
-                    setRefsErreur(
-                        e instanceof Error ? e.message : "Impossible de charger les références des dossiers enfants",
-                    );
-                    setRefsAllergenes([]);
-                    setRefsRegimes([]);
-                }
-            } finally {
-                if (!cancelled) {
-                    setRefsChargeTerminee(true);
-                }
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [sejour]);
-
     const chargerMenus = useCallback(async () => {
         if (!sejour || !rangeStartStr || !rangeEndStr) return;
         setLoading(true);
@@ -197,12 +166,13 @@ const DetailsSejourMenus: React.FC = () => {
                 })),
             );
         } catch (e: unknown) {
+            if (navigateToRouteError(navigate, e)) return;
             setPageError(e instanceof Error ? e.message : "Impossible de charger les menus");
             setMenus([]);
         } finally {
             setLoading(false);
         }
-    }, [sejour, rangeStartStr, rangeEndStr]);
+    }, [sejour, rangeStartStr, rangeEndStr, navigate]);
 
     useEffect(() => {
         void chargerMenus();
@@ -375,13 +345,13 @@ const DetailsSejourMenus: React.FC = () => {
         );
     }
 
-    if (loaderData instanceof Error || !sejour) {
+    if (!sejour) {
         return (
             <div className={styles.pageContainer}>
                 <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
                     ← Retour à la liste
                 </button>
-                <p className={styles.error}>Séjour introuvable ou erreur de chargement</p>
+                <p className={styles.error}>Séjour introuvable</p>
             </div>
         );
     }

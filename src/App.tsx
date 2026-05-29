@@ -1,8 +1,9 @@
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { createBrowserRouter, RouterProvider, redirect } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, redirect, json } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import ErrorPage from "./Pages/Erreurs/error-page";
+import Erreur from "./Pages/Erreurs/Erreur";
 import Profil, { profilLoader } from "./Pages/Profil/Profil";
 import Connexion, { loginAction } from "./Pages/Connexion/Connexion";
 import { accountService } from "./services/account.service";
@@ -18,7 +19,9 @@ import DetailsSejourParametrage from "./Pages/_Sejours/DetailsSejour/DetailsSejo
 import DetailsSejourOrganisationLayout from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisationLayout";
 import DetailsSejourOrganisation from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisation";
 import DetailsSejourMenus from "./Pages/_Sejours/DetailsSejour/DetailsSejourMenus";
+import { menusLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejourMenusLoader";
 import DetailsSejourSanitaire from "./Pages/_Sejours/DetailsSejour/DetailsSejourSanitaire";
+import { sanitaireLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejourSanitaireLoader";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Sejours/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 import { chargerProfilEtCheminAccueil } from "./helpers/redirectApresAuthentification";
@@ -92,10 +95,12 @@ const App: React.FC = () => {
             },
             {
               path: "menus",
+              loader: menusLoader,
               element: <DetailsSejourMenus />,
             },
             {
               path: "sanitaire",
+              loader: sanitaireLoader,
               element: <DetailsSejourSanitaire />,
             },
             {
@@ -117,6 +122,22 @@ const App: React.FC = () => {
           path: "/profil",
           loader: profilLoader,
           element: <Profil />,
+        },
+        {
+          path: "/erreur",
+          element: <Erreur />,
+        },
+        {
+          path: "*",
+          loader: () => {
+            throw json(
+              {
+                kind: "not-found",
+                message: "La page que vous recherchez n'existe pas.",
+              },
+              { status: 404 }
+            );
+          },
         },
       ],
     },

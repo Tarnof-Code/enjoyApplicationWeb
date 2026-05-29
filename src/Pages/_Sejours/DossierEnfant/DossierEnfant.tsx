@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { LoaderFunctionArgs, useLoaderData, useLocation, useNavigate, useParams, useRouteLoaderData } from "react-router-dom";
+import { LoaderFunctionArgs, json, useLoaderData, useLocation, useNavigate, useParams, useRouteLoaderData } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import styles from "./DossierEnfant.module.scss";
-import { getApiErrorMessage, type AdaptedError } from "../../../helpers/axiosError";
+import { throwRouteLoaderError } from "../../../helpers/routeError";
 import { sejourEnfantService } from "../../../services/sejour-enfant.service";
 import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto, SejourDTO } from "../../../types/api";
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
@@ -14,7 +14,12 @@ import { peutModifierDossierEnfant } from "../../../helpers/peutModifierDossierE
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     const sejourId = params.id;
     const enfantId = params.enfantId;
-    if (!sejourId || !enfantId) throw new Error("Paramètres manquants");
+    if (!sejourId || !enfantId) {
+        throw json(
+            { kind: "not-found", message: "La ressource demandée est introuvable." },
+            { status: 404 }
+        );
+    }
     try {
         const [dossierRaw, enfants] = await Promise.all([
             sejourEnfantService.getDossierEnfant(parseInt(sejourId), parseInt(enfantId)),
@@ -28,8 +33,7 @@ export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
         const enfant = enfants.find((e: EnfantDto) => e.id === parseInt(enfantId));
         return { dossier, enfant };
     } catch (error) {
-        console.error("Erreur chargement dossier enfant", error);
-        return error;
+        throwRouteLoaderError(error);
     }
 }
 
@@ -74,8 +78,8 @@ const getSectionTitle = (section: SectionType | null): string => {
 };
 
 const DossierEnfant: React.FC = () => {
-    const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined } | Error;
-    const sejourDetailLoader = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
+    const loaderData = useLoaderData() as { dossier: DossierEnfantDto; enfant: EnfantDto | undefined };
+    const sejourDetailLoader = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
     const navigate = useNavigate();
     const location = useLocation();
     const { id: sejourId, enfantId } = useParams();
@@ -84,7 +88,7 @@ const DossierEnfant: React.FC = () => {
     const returnState = location.state as DossierLocationState | null;
 
     const peutModifierDossier = useMemo(() => {
-        if (!sejourDetailLoader || sejourDetailLoader instanceof Error) return false;
+        if (!sejourDetailLoader) return false;
         const sub = accountService.getTokenInfo()?.payload?.sub;
         return peutModifierDossierEnfant(
             typeof sub === "string" ? sub : undefined,
@@ -118,25 +122,6 @@ const DossierEnfant: React.FC = () => {
             navigate(`/mes-sejours/${sejourId}`, { replace: true });
         }
     };
-
-    if (loaderData instanceof Error) {
-        const err = loaderData as AdaptedError & Error;
-        const message =
-            err.response?.data !== undefined
-                ? getApiErrorMessage(
-                      err.response.data,
-                      err.message || "Erreur lors du chargement du dossier"
-                  )
-                : err.message || "Erreur lors du chargement du dossier";
-        return (
-            <div className={styles.pageContainer}>
-                <button onClick={handleRetour} className={styles.backButton}>
-                    ← Retour
-                </button>
-                <p className={styles.error}>{message}</p>
-            </div>
-        );
-    }
 
     const { dossier, enfant } = loaderData;
     const enfantNom = enfant ? `${enfant.prenom} ${enfant.nom}` : `Enfant #${dossier.enfantId}`;

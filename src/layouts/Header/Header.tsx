@@ -72,9 +72,8 @@ const Admin_header: React.FC = () => {
       : (prenom ?? "");
 
   const sejourMatch = useMatch({ path: "/mes-sejours/:id", end: false });
-  const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | Error | undefined;
-  const sejourDetailData =
-    sejourLoaderRaw && !(sejourLoaderRaw instanceof Error) ? sejourLoaderRaw : undefined;
+  const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | undefined;
+  const sejourDetailData = sejourLoaderRaw;
   const routeIdStr = sejourMatch?.params.id;
   const loaderSejour = sejourDetailData?.sejour;
 

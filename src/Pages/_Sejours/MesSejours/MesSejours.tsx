@@ -3,14 +3,13 @@ import { sejourService } from "../../../services/sejour.service";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import formaterDate from "../../../helpers/formaterDate";
 import { SejourDTO } from "../../../types/api";
+import { throwRouteLoaderError } from "../../../helpers/routeError";
 
 export async function mesSejoursLoader() {
     try {
-        const response = await sejourService.getAllSejoursByUtilisateur();
-        return response;
+        return await sejourService.getAllSejoursByUtilisateur();
     } catch (error) {
-        console.error("Erreur chargement de mes séjours", error);
-        return [];
+        throwRouteLoaderError(error);
     }
 }
 

@@ -1,8 +1,66 @@
-.main {
-  color: red;
-  margin-top: 6rem;
-  font-size: 6em;
+.page {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+}
+
+.card {
+  max-width: 32rem;
+  width: 100%;
+  padding: 2.5rem 2rem;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.message {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #444;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.hint {
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+  color: #777;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0392b;
+  font-size: 2rem;
+  font-weight: 600;
 }

@@ -87,7 +87,7 @@ type SejourDetailLoaderSuccess = {
 };
 
 const DetailsSejourParametrage: React.FC = () => {
-    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | Error | undefined;
+    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
     const navigate = useNavigate();
     const revalidator = useRevalidator();
     const refreshLoaderData = useCallback(() => {
@@ -97,8 +97,7 @@ const DetailsSejourParametrage: React.FC = () => {
     const [openAccordions, setOpenAccordions] = useState<string[]>([]);
     const accordionRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const lastOpenedAccordion = useRef<string | null>(null);
-    const sejourIdForStorage =
-        loaderData && !(loaderData instanceof Error) ? loaderData.sejour.id : undefined;
+    const sejourIdForStorage = loaderData?.sejour.id;
     const [accordionOrder, setAccordionOrder] = useState<string[]>(() => [...PARAM_ACCORDION_IDS]);
     const [draggingAccordionId, setDraggingAccordionId] = useState<string | null>(null);
     const [dropTargetAccordionId, setDropTargetAccordionId] = useState<string | null>(null);
@@ -127,7 +126,7 @@ const DetailsSejourParametrage: React.FC = () => {
     const [typesActivite, setTypesActivite] = useState<TypeActiviteDto[]>([]);
 
     useEffect(() => {
-        if (!loaderData || loaderData instanceof Error) return;
+        if (!loaderData) return;
         const { moments: m, horaires: h, activites: a, typesActivite: t } = loaderData;
         setMoments(m);
         setHoraires(trierHorairesChronologiquement(h));
@@ -136,7 +135,7 @@ const DetailsSejourParametrage: React.FC = () => {
     }, [loaderData]);
 
     const peutGererParametrageSejour = useMemo(() => {
-        if (!loaderData || loaderData instanceof Error) return false;
+        if (!loaderData) return false;
         const sub = accountService.getTokenInfo()?.payload?.sub;
         return peutGererMembresEquipeSejour(
             typeof sub === "string" ? sub : undefined,
@@ -164,17 +163,6 @@ const DetailsSejourParametrage: React.FC = () => {
                     ← Retour à la liste
                 </button>
                 <p className={styles.error}>Chargement du séjour…</p>
-            </div>
-        );
-    }
-
-    if (loaderData instanceof Error) {
-        return (
-            <div className={styles.pageContainer}>
-                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
-                    ← Retour à la liste
-                </button>
-                <p className={styles.error}>Erreur lors du chargement du séjour</p>
             </div>
         );
     }

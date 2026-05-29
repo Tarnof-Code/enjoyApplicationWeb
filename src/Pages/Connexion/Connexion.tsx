@@ -2,7 +2,7 @@ import { FormGroup, Input, Button } from "reactstrap";
 import { Form as RouterForm, redirect, useActionData, useNavigation, Navigate, ActionFunctionArgs } from "react-router-dom";
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
-import { getApiErrorMessage } from "../../helpers/axiosError";
+import { getApiErrorMessage, NETWORK_ERROR_MESSAGE } from "../../helpers/axiosError";
 import { chargerProfilEtCheminAccueil, cheminAccueilDepuisEtatActuel } from "../../helpers/redirectApresAuthentification";
 import { AxiosError } from "axios";
 
@@ -32,6 +32,9 @@ export async function loginAction({ request }: ActionFunctionArgs) {
       if (error.response.status === 401) {
         return "Email ou mot de passe incorrect";
       }
+    }
+    if (error instanceof AxiosError && !error.response) {
+      return NETWORK_ERROR_MESSAGE;
     }
     return "Une erreur s'est produite lors de la connexion";
   }

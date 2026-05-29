@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouteLoaderData } from "react-router-dom";
+import { useLoaderData, useParams, useRouteLoaderData, useNavigate } from "react-router-dom";
 import { Button, Input } from "reactstrap";
 import styles from "./DetailsSejour.module.scss";
 import sanStyles from "./DetailsSejourSanitaire.module.scss";
-import type { CahierInfirmerieEntreeDto, EnfantDossierSanitaireLigneDto, SejourDTO } from "../../../types/api";
-import { sejourEnfantService } from "../../../services/sejour-enfant.service";
+import type { CahierInfirmerieEntreeDto, SejourDTO } from "../../../types/api";
 import { cahierInfirmerieService } from "../../../services/cahier-infirmerie.service";
+import { navigateToRouteError } from "../../../helpers/routeError";
+import type { SanitaireLoaderData } from "./detailsSejourSanitaireLoader";
 import ListeSanitaireDossiers, {
   type SanitaireColonnesOptionnelles,
 } from "../../../components/Liste/ListeSanitaireDossiers";
@@ -84,21 +85,25 @@ function cleListeSanitaire(sejourId: number, o: SanitaireColonnesOptionnelles): 
 }
 
 const DetailsSejourSanitaire = () => {
+  const sanitaireLoaderData = useLoaderData() as SanitaireLoaderData;
+  const navigate = useNavigate();
   const { id: idParam } = useParams<{ id: string }>();
   const sejourId = idParam ? parseInt(idParam, 10) : NaN;
 
-  const loaderData = useRouteLoaderData("sejour-detail") as LoaderOk | Error | undefined;
-  const sejour = loaderData && !(loaderData instanceof Error) ? loaderData.sejour : undefined;
+  const loaderData = useRouteLoaderData("sejour-detail") as LoaderOk | undefined;
+  const sejour = loaderData?.sejour;
 
   const [vue, setVue] = useState<VueSanitaire>(() =>
     Number.isFinite(sejourId) ? lireVueSanitaire(sejourId) : "cahier",
   );
 
-  const [lignes, setLignes] = useState<EnfantDossierSanitaireLigneDto[]>([]);
-  const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur] = useState<string | null>(null);
+  const lignes = sanitaireLoaderData.lignes;
+  const chargement = false;
+  const erreur = null as string | null;
 
-  const [entreesCahier, setEntreesCahier] = useState<CahierInfirmerieEntreeDto[]>([]);
+  const [entreesCahier, setEntreesCahier] = useState<CahierInfirmerieEntreeDto[]>(
+    sanitaireLoaderData.entreesCahier
+  );
   const [chargementCahier, setChargementCahier] = useState(false);
   const [erreurCahier, setErreurCahier] = useState<string | null>(null);
 
@@ -134,21 +139,6 @@ const DetailsSejourSanitaire = () => {
     [sejourId],
   );
 
-  const chargerDossiers = useCallback(async () => {
-    if (!Number.isFinite(sejourId)) return;
-    setChargement(true);
-    setErreur(null);
-    try {
-      const data = await sejourEnfantService.listerDossiersEnfantsSanitaire(sejourId);
-      setLignes(Array.isArray(data) ? data : []);
-    } catch (e: unknown) {
-      setLignes([]);
-      setErreur(e instanceof Error ? e.message : "Impossible de charger les dossiers.");
-    } finally {
-      setChargement(false);
-    }
-  }, [sejourId]);
-
   const chargerCahier = useCallback(async () => {
     if (!Number.isFinite(sejourId)) return;
     setChargementCahier(true);
@@ -157,22 +147,13 @@ const DetailsSejourSanitaire = () => {
       const data = await cahierInfirmerieService.listerEntrees(sejourId);
       setEntreesCahier(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
+      if (navigateToRouteError(navigate, e)) return;
       setEntreesCahier([]);
       setErreurCahier(e instanceof Error ? e.message : "Impossible de charger le cahier d'infirmerie.");
     } finally {
       setChargementCahier(false);
     }
-  }, [sejourId]);
-
-  useEffect(() => {
-    void chargerDossiers();
-  }, [chargerDossiers]);
-
-  useEffect(() => {
-    if (vue === "cahier" && Number.isFinite(sejourId)) {
-      void chargerCahier();
-    }
-  }, [vue, sejourId, chargerCahier]);
+  }, [sejourId, navigate]);
 
   const listeKey = useMemo(() => {
     if (!Number.isFinite(sejourId)) return "sanitaire";
