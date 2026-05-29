@@ -48,6 +48,8 @@ export type SectionReunionsSejourProps = {
     sejourId: number;
     sejourDirecteur?: DirecteurInfos | null;
     equipe?: ProfilUtilisateurDTO[];
+    /** Données préchargées par le loader séjour (évite le skeleton au montage). */
+    initialReunions?: ReunionDto[];
 };
 
 /**
@@ -58,6 +60,7 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
     sejourId,
     sejourDirecteur,
     equipe,
+    initialReunions,
 }) => {
     const roleGlobal = useSelector((state: RootState) => state.auth.role);
     const tokenIdConnecte = accountService.getTokenInfo()?.payload?.sub;
@@ -72,8 +75,10 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
         [tokenIdConnecte, roleGlobal, sejourDirecteur, equipe],
     );
 
-    const [reunions, setReunions] = useState<ReunionDto[]>([]);
-    const [chargement, setChargement] = useState(true);
+    const [reunions, setReunions] = useState<ReunionDto[]>(() =>
+        initialReunions ? trierReunionsPlusRecentVersAncien(initialReunions) : [],
+    );
+    const [chargement, setChargement] = useState(initialReunions === undefined);
     const [erreurListe, setErreurListe] = useState<string | null>(null);
 
     const [reunionDeployeeId, setReunionDeployeeId] = useState<number | null>(null);
@@ -152,8 +157,11 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
     }, [sejourId]);
 
     useEffect(() => {
+        if (initialReunions !== undefined) {
+            return;
+        }
         void recharger();
-    }, [recharger]);
+    }, [recharger, initialReunions]);
 
     const ouvrirCreation = () => {
         setReunionEnEdition(null);

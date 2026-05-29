@@ -11,6 +11,7 @@ import {
     SejourDTO,
     EnfantDto,
     GroupeDto,
+    ReunionDto,
 } from "../../../types/api";
 import { accountService } from "../../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
@@ -103,6 +104,7 @@ type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
     enfants: EnfantDto[];
     groupes: GroupeDto[];
+    reunions: ReunionDto[];
 };
 
 const DetailsSejourOverview: React.FC = () => {
@@ -124,11 +126,15 @@ const DetailsSejourOverview: React.FC = () => {
     const hasScrolledFromReturn = useRef(false);
     const scrollToGroupeRef = useRef<((groupeId: number) => void) | null>(null);
     const sejourIdForStorage = loaderData?.sejour.id;
-    const [accordionOrder, setAccordionOrder] = useState<string[]>(() => [...OVERVIEW_ACCORDION_IDS]);
+    const [accordionOrder, setAccordionOrder] = useState<string[]>(() =>
+        sejourIdForStorage !== undefined
+            ? readOverviewAccordionOrder(sejourIdForStorage)
+            : [...OVERVIEW_ACCORDION_IDS],
+    );
     const [draggingAccordionId, setDraggingAccordionId] = useState<string | null>(null);
     const [dropTargetAccordionId, setDropTargetAccordionId] = useState<string | null>(null);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (sejourIdForStorage === undefined) return;
         setAccordionOrder(readOverviewAccordionOrder(sejourIdForStorage));
     }, [sejourIdForStorage]);
@@ -239,6 +245,7 @@ const DetailsSejourOverview: React.FC = () => {
         sejour,
         enfants,
         groupes,
+        reunions,
     } = loaderData;
 
     const toggleAccordion = (id: string) => {
@@ -347,6 +354,7 @@ const DetailsSejourOverview: React.FC = () => {
                         sejourId={sejour.id}
                         sejourDirecteur={sejour.directeur}
                         equipe={sejour.equipe}
+                        initialReunions={reunions}
                     />
                 );
             default:

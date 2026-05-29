@@ -9,6 +9,7 @@ import { sejourMomentService } from "../../../services/sejour-moment.service";
 import { sejourTypeActiviteService } from "../../../services/sejour-type-activite.service";
 import { sejourHoraireService } from "../../../services/sejour-horaire.service";
 import { sejourPlanningGrilleService } from "../../../services/sejour-planning-grille.service";
+import { sejourReunionService } from "../../../services/sejour-reunion.service";
 
 export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
     if (!params.id) {
@@ -19,7 +20,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
     }
     try {
         const sejourId = parseInt(params.id, 10);
-        const [sejour, enfants, groupes, lieux, moments, horaires, activites, typesActivite, planningGrilles] =
+        const [sejour, enfants, groupes, lieux, moments, horaires, activites, typesActivite, planningGrilles, reunions] =
             await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(sejourId),
@@ -30,6 +31,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             sejourActiviteService.getActivitesDuSejour(sejourId),
             sejourTypeActiviteService.getTypesActiviteDuSejour(sejourId),
             sejourPlanningGrilleService.listerGrilles(sejourId),
+            sejourReunionService.listerReunions(sejourId),
         ]);
         return {
             sejour,
@@ -41,6 +43,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             activites,
             typesActivite,
             planningGrilles,
+            reunions,
         };
     } catch (error) {
         throwRouteLoaderError(error);
