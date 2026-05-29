@@ -1,60 +1,14 @@
-# Dépendances
-node_modules/
-.pnp
-.pnp.js
-
-# Build et production
-build/
-dist/
-out/
-.next/
-.vercel/
-*.tsbuildinfo
-
-# Cache
-.cache/
-.parcel-cache/
-.vite/
-.turbo/
-
-# Tests
-coverage/
-.nyc_output/
-
-# Environnement et secrets
+# Accès IA totalement bloqué : secrets et données sensibles uniquement.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.pem
 *.key
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Fichiers volumineux
-*.mp4
-*.mov
-*.avi
-*.zip
-*.tar.gz
-
-# Documentation générée
-docs/build/
-
-# pnpm spécifique
-.pnpm-store/
-pnpm-lock.yaml
+*.p12
+*.crt
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql
+*.bak

@@ -1,0 +1,13 @@
+---
+description: Règles globales minimales Enjoy.
+alwaysApply: true
+---
+
+# Règles Globales
+- Répondre en français ; messages de commit Git en anglais, format détaillé.
+- Utiliser `pnpm` pour les paquets ; respecter ESLint, Prettier, `tsconfig.json` et les patterns existants.
+- React 19 Compiler : éviter `useMemo` / `useCallback` manuels sauf besoin mesuré ou exception locale existante.
+- API / types : centraliser les appels dans `src/services/`, gérer les erreurs via `helpers/axiosError.ts`, utiliser `src/types/api.d.ts`.
+- Ne jamais lire ni exposer `.env*`, secrets, clés, dumps SQL/SQLite ou données sensibles.
+- Périmètre d'exploration : si des fichiers sont ouverts, déduire le dossier racine concerné (`src/Pages/_Sejours`, `src/Pages/_Admin`, `src/components`, `src/services`, `src/helpers`, `src/types`, `src/redux`) et limiter lectures/recherches à ce périmètre + sa fiche `docs/ai/`; demander confirmation avant d'explorer ailleurs.
+- Pour une question ciblée, lire directement le fichier concerné ; élargir à `AI_MEMORY.md` ou `docs/ai/` seulement sur demande explicite ou tâche transverse multi-modules.

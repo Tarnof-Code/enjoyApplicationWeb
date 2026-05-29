@@ -17,7 +17,7 @@ Application Web de gestion de séjours (Enjoy).
 - Helpers dans `helpers/`, types dans `types/`, services dans `services/`.
 - Composants de liste génériques dans `components/Liste/`.
 
-Les règles obligatoires (langue, lint, patterns) restent dans [`.cursorrules`](../../.cursorrules).
+Les règles obligatoires courtes (langue, lint, périmètre) restent dans [`.cursor/rules/`](../../.cursor/rules/).
 
 ## Glossaire métier (très court)
 

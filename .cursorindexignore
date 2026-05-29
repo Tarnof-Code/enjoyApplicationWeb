@@ -1,0 +1,65 @@
+# Dépendances et stores
+node_modules/
+.pnp
+.pnp.js
+.pnpm-store/
+
+# Builds, caches et couverture
+dist/
+build/
+out/
+.next/
+.vercel/
+.cache/
+.parcel-cache/
+.vite/
+.turbo/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Logs et diagnostics
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.stackdump
+
+# VCS, IDE, OS
+.git/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Médias, archives et binaires
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.ico
+*.pdf
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.mp4
+*.mov
+*.avi
+*.zip
+*.tar.gz
+
+# Lockfiles et sauvegardes
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+*.backup
+
+# Documentation générée et prompts source
+docs/build/
+AI_Config/

@@ -1,0 +1,11 @@
+---
+description: Charger pour une demande explicite de mise à jour ou d'audit Memory Bank.
+alwaysApply: false
+---
+
+# Memory Bank
+- Ne pas lire la Memory Bank au début d'une tâche ordinaire.
+- Question ciblée : lire le fichier source ou la fiche `docs/ai/` directement concernée.
+- Tâche transverse ou demande explicite de mémoire : commencer par `AI_MEMORY.md`, puis élargir seulement aux fiches utiles.
+- Mise à jour mémoire : recouper avec le code réel et `git status` / `git diff`; mettre le détail dans `docs/ai/`, garder `AI_MEMORY.md` comme index court.
+- Après commit et push uniquement : vérifier si les fiches `docs/ai/` concernées ou cette règle doivent être ajustées.
