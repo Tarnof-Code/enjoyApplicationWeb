@@ -38,6 +38,7 @@ import { sejourMenuService } from "../../../services/sejour-menu.service";
 import { accountService } from "../../../services/account.service";
 import { navigateToRouteError } from "../../../helpers/routeError";
 import type { MenusLoaderData } from "./detailsSejourMenusLoader";
+import { normaliserMenusRepas, paramsListerMenusPourSejour } from "./menusSejourUtils";
 
 type LoaderOk = { sejour: SejourDTO };
 
@@ -48,13 +49,20 @@ const DetailsSejourMenus: React.FC = () => {
     const sejour = loaderData?.sejour;
 
     const [modalDateRepasStr, setModalDateRepasStr] = useState<string>("");
-    const { refsAllergenes, refsRegimes } = menusLoaderData;
+    const [refsAllergenes, setRefsAllergenes] = useState(menusLoaderData.refsAllergenes);
+    const [refsRegimes, setRefsRegimes] = useState(menusLoaderData.refsRegimes);
     const [menus, setMenus] = useState<MenuRepasDto[]>(menusLoaderData.menus);
     const [loading, setLoading] = useState(false);
     const [pageError, setPageError] = useState<string | null>(null);
 
-    const refsChargeTerminee = true;
-    const refsErreur = null;
+    useEffect(() => {
+        setRefsAllergenes(menusLoaderData.refsAllergenes);
+        setRefsRegimes(menusLoaderData.refsRegimes);
+        setMenus(menusLoaderData.menus);
+    }, [menusLoaderData]);
+
+    const refsChargeTerminee = !loading;
+    const refsErreur = pageError;
 
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingMenu, setEditingMenu] = useState<MenuRepasDto | null>(null);
@@ -145,26 +153,15 @@ const DetailsSejourMenus: React.FC = () => {
         [joursFenetreMenus],
     );
 
-    const rangeStartStr = datesListe[0] ?? "";
-    const rangeEndStr = datesListe[datesListe.length - 1] ?? "";
-
-    const chargerMenus = useCallback(async () => {
-        if (!sejour || !rangeStartStr || !rangeEndStr) return;
+    const rafraichirMenus = useCallback(async () => {
+        if (!sejour) return;
+        const params = paramsListerMenusPourSejour(sejour);
+        if (!params) return;
         setLoading(true);
         setPageError(null);
         try {
-            const params =
-                rangeStartStr === rangeEndStr
-                    ? { date: rangeStartStr }
-                    : { dateDebut: rangeStartStr, dateFin: rangeEndStr };
             const list = await sejourMenuService.listerMenus(sejour.id, params);
-            setMenus(
-                list.map((m) => ({
-                    ...m,
-                    allergenes: m.allergenes ?? [],
-                    regimesEtPreferences: m.regimesEtPreferences ?? [],
-                })),
-            );
+            setMenus(normaliserMenusRepas(list));
         } catch (e: unknown) {
             if (navigateToRouteError(navigate, e)) return;
             setPageError(e instanceof Error ? e.message : "Impossible de charger les menus");
@@ -172,11 +169,7 @@ const DetailsSejourMenus: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [sejour, rangeStartStr, rangeEndStr, navigate]);
-
-    useEffect(() => {
-        void chargerMenus();
-    }, [chargerMenus]);
+    }, [sejour, navigate]);
 
     const menusParJourEtType = useMemo(() => indexerMenusParJourEtType(menus), [menus]);
 
@@ -283,7 +276,7 @@ const DetailsSejourMenus: React.FC = () => {
             setEditingMenu(null);
             setCreatingType(null);
             setModalDateRepasStr("");
-            await chargerMenus();
+            await rafraichirMenus();
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Enregistrement impossible";
             setModalError(msg);
@@ -300,7 +293,7 @@ const DetailsSejourMenus: React.FC = () => {
             await sejourMenuService.supprimerMenu(sejour.id, pendingDelete.id);
             setDeleteOpen(false);
             setPendingDelete(null);
-            await chargerMenus();
+            await rafraichirMenus();
         } catch (e: unknown) {
             setModalError(e instanceof Error ? e.message : "Suppression impossible");
         } finally {

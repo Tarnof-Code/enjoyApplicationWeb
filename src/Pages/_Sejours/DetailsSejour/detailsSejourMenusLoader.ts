@@ -1,22 +1,30 @@
 import { LoaderFunctionArgs, json } from "react-router-dom";
-import { enumererJoursDuSejour } from "../../../components/Liste/listeActivitesUtils";
 import { throwRouteLoaderError } from "../../../helpers/routeError";
 import { sejourMenuService } from "../../../services/sejour-menu.service";
-import { sejourService } from "../../../services/sejour.service";
-import type { MenuRepasDto, ReferenceAlimentaireDto } from "../../../types/api";
+import type { MenuRepasDto, ReferenceAlimentaireDto, SejourDTO } from "../../../types/api";
+import { lireSejourDepuisCacheRoute } from "./sejourDetailRouteCache";
+import { normaliserMenusRepas, paramsListerMenusPourSejour } from "./menusSejourUtils";
 
-export interface MenusLoaderData {
+export type MenusLoaderData = {
   menus: MenuRepasDto[];
   refsAllergenes: ReferenceAlimentaireDto[];
   refsRegimes: ReferenceAlimentaireDto[];
-}
+};
 
-function normaliserMenus(list: MenuRepasDto[]): MenuRepasDto[] {
-  return list.map((m) => ({
-    ...m,
-    allergenes: m.allergenes ?? [],
-    regimesEtPreferences: m.regimesEtPreferences ?? [],
-  }));
+/** Charge refs + menus pour la page Menus (2 appels API, séjour lu depuis le cache du loader parent). */
+export async function chargerDonneesMenusSejour(sejour: SejourDTO): Promise<MenusLoaderData> {
+  const menuParams = paramsListerMenusPourSejour(sejour);
+
+  const [refs, menus] = await Promise.all([
+    sejourMenuService.getReferencesAlimentairesAgregeesEnfants(sejour.id),
+    menuParams ? sejourMenuService.listerMenus(sejour.id, menuParams) : Promise.resolve([]),
+  ]);
+
+  return {
+    menus: normaliserMenusRepas(menus),
+    refsAllergenes: refs.allergenes,
+    refsRegimes: refs.regimesEtPreferences,
+  };
 }
 
 export async function menusLoader({ params }: LoaderFunctionArgs): Promise<MenusLoaderData> {
@@ -28,27 +36,14 @@ export async function menusLoader({ params }: LoaderFunctionArgs): Promise<Menus
   }
 
   try {
-    const sejour = await sejourService.getSejourById(params.id);
-    const jours = enumererJoursDuSejour(sejour);
-    const rangeStartStr = jours[0]?.ymd ?? "";
-    const rangeEndStr = jours[jours.length - 1]?.ymd ?? "";
-    const menuParams =
-      rangeStartStr && rangeEndStr
-        ? rangeStartStr === rangeEndStr
-          ? { date: rangeStartStr }
-          : { dateDebut: rangeStartStr, dateFin: rangeEndStr }
-        : null;
-
-    const [refs, menus] = await Promise.all([
-      sejourMenuService.getReferencesAlimentairesAgregeesEnfants(sejour.id),
-      menuParams ? sejourMenuService.listerMenus(sejour.id, menuParams) : Promise.resolve([]),
-    ]);
-
-    return {
-      menus: normaliserMenus(menus),
-      refsAllergenes: refs.allergenes,
-      refsRegimes: refs.regimesEtPreferences,
-    };
+    const sejour = lireSejourDepuisCacheRoute(params.id);
+    if (!sejour) {
+      throw json(
+        { kind: "not-found", message: "La ressource demandée est introuvable." },
+        { status: 404 }
+      );
+    }
+    return await chargerDonneesMenusSejour(sejour);
   } catch (error) {
     throwRouteLoaderError(error);
   }

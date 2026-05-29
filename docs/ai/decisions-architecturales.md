@@ -16,9 +16,10 @@
 - **Data Fetching :** 
   - Privilégier les loaders React Router (`useLoaderData` / **`useRouteLoaderData`** pour une route ancêtre) plutôt qu’un `useEffect` de chargement initial.
   - Sous-routes du détail séjour : loader parent **`id: "sejour-detail"`** ; pages enfants lisent **`useRouteLoaderData("sejour-detail")`** sauf **Menus** / **Sanitaire** (loaders dédiés + **`useLoaderData`** local). **`detailsSejourLoader`** inclut aussi **`reunions`** (**`sejourReunionService.listerReunions`**) pour la vue générale — passées à **`SectionReunionsSejour`** via **`initialReunions`** (évite double fetch / skeleton).
-  - Pattern standard : exporter `async function [pageName]Loader({params}: LoaderFunctionArgs)` depuis chaque page ou module dédié (ex. **`detailsSejourLoader.ts`**).
+  - **Loaders enfants & cache séjour (RR 6.17)** : **`sejourDetailRouteCache.ts`** — **`mettreEnCacheSejourRoute(params.id, sejour)`** à la fin de **`detailsSejourLoader`** ; loaders enfants (**`menusLoader`**, futurs) lisent **`lireSejourDepuisCacheRoute`** pour dates / id sans refetch séjour. **Menus** : **`chargerDonneesMenusSejour`** = 2 appels parallèles ; **ne pas** recharger refs + menus dans un **`useEffect`** au montage du composant (Strict Mode = doublon) — privilégier le loader de route.
+  - Pattern standard : exporter `async function [pageName]Loader({params}: LoaderFunctionArgs)` depuis chaque page ou module dédié (ex. **`detailsSejourLoader.ts`**, **`detailsSejourMenusLoader.ts`**).
   - Les loaders doivent propager les erreurs bloquantes via **`throwRouteLoaderError`** (`helpers/routeError.ts`) — pas de retour silencieux `[]` / `null` / `Error` inline pour les échecs réseau, auth ou serveur.
-  - Sous-routes **Menus** et **Sanitaire** : loaders dédiés **`menusLoader`**, **`sanitaireLoader`** (`detailsSejourMenusLoader.ts`, `detailsSejourSanitaireLoader.ts`).
+  - Sous-routes **Menus** et **Sanitaire** : loaders dédiés **`menusLoader`**, **`sanitaireLoader`** (`detailsSejourMenusLoader.ts`, `detailsSejourSanitaireLoader.ts`, utils **`menusSejourUtils.ts`**, cache **`sejourDetailRouteCache.ts`**).
 - **Formulaires :** 
   - Utilisation stricte de `src/components/Forms/Form.tsx` (générique) piloté par une configuration (props `fields`).
   - Validation côté client via `validation` dans `FormField` (fonction qui retourne `string | null`).

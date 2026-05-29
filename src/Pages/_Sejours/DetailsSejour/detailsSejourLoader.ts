@@ -10,6 +10,7 @@ import { sejourTypeActiviteService } from "../../../services/sejour-type-activit
 import { sejourHoraireService } from "../../../services/sejour-horaire.service";
 import { sejourPlanningGrilleService } from "../../../services/sejour-planning-grille.service";
 import { sejourReunionService } from "../../../services/sejour-reunion.service";
+import { mettreEnCacheSejourRoute } from "./sejourDetailRouteCache";
 
 export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
     if (!params.id) {
@@ -33,6 +34,9 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             sejourPlanningGrilleService.listerGrilles(sejourId),
             sejourReunionService.listerReunions(sejourId),
         ]);
+        if (params.id) {
+            mettreEnCacheSejourRoute(params.id, sejour);
+        }
         return {
             sejour,
             enfants,
