@@ -10,7 +10,7 @@ import {
 import styles from "./Connexion.module.scss";
 import { accountService } from "../../services/account.service";
 import { getApiErrorMessage, NETWORK_ERROR_MESSAGE } from "../../helpers/axiosError";
-import { chargerProfilEtCheminAccueil } from "../../helpers/redirectApresAuthentification";
+import { chargerProfilEtCheminDestinationApresConnexion } from "../../helpers/redirectApresAuthentification";
 import { AxiosError } from "axios";
 
 /** Après POST login, l'action gère déjà redirect + profil : éviter une 2e exécution du loader "/". */
@@ -34,7 +34,7 @@ export async function loginAction({ request }: ActionFunctionArgs) {
       motDePasse: motDePasse
     } as any);
     accountService.saveAccessToken(response.data.access_token);
-    return redirect(await chargerProfilEtCheminAccueil());
+    return redirect(await chargerProfilEtCheminDestinationApresConnexion());
   } catch (error) {
     console.error("Erreur lors de la connexion", error);
     if (error instanceof AxiosError && error.response) {

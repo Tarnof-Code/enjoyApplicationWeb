@@ -5,10 +5,12 @@ import { RootState } from "../redux/store";
 import { useEffect } from "react";
 import { accountService } from "../services/account.service";
 import { utilisateurService } from "../services/utilisateur.service";
+import { enregistrerCheminApresConnexionDepuisLocation } from "../helpers/cheminApresConnexion";
 import { classifyApiError } from "../helpers/routeError";
 
 const Layout: React.FC = () => {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const navigate = useNavigate();
   const role = useSelector((state: RootState) => state.auth.role);
 
@@ -27,6 +29,7 @@ const Layout: React.FC = () => {
       utilisateurService.getUser().catch((error: unknown) => {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
+          enregistrerCheminApresConnexionDepuisLocation(location);
           accountService.logout();
           navigate("/");
         } else {
@@ -34,7 +37,7 @@ const Layout: React.FC = () => {
         }
       });
     }
-  }, [role, navigate]);
+  }, [role, navigate, location]);
 
   return (
     <>

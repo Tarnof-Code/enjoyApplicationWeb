@@ -2,6 +2,7 @@ import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from "react-router-dom";
+import { effacerCheminApresConnexion } from "../../helpers/cheminApresConnexion";
 import { accountService } from "../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../helpers/peutGererMembresEquipeSejour";
 import {
@@ -58,6 +59,7 @@ const Admin_header: React.FC = () => {
 
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
+    effacerCheminApresConnexion();
     accountService.logout();
     navigate("/");
   };

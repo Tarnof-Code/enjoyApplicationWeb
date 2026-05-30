@@ -1,7 +1,8 @@
 import React from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { accountService } from "../services/account.service";
+import { enregistrerCheminApresConnexionDepuisLocation } from "../helpers/cheminApresConnexion";
 import ErreurAffichage from "../Pages/Erreurs/ErreurAffichage";
 import { FORBIDDEN_ROUTE_ERROR } from "../helpers/routeError";
 import styles from "../Pages/Erreurs/Erreurs.module.scss";
@@ -12,6 +13,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
+  const location = useLocation();
   const role = useSelector((state: { auth: { role: string | null } }) => state.auth.role);
 
   if (!role) {
@@ -22,6 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children 
         </div>
       );
     }
+    enregistrerCheminApresConnexionDepuisLocation(location);
     return <Navigate to="/" replace />;
   }
 

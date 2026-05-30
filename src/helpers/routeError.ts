@@ -1,6 +1,8 @@
 import { AxiosError } from "axios";
-import { isRouteErrorResponse, json, type NavigateFunction } from "react-router-dom";
+import { isRouteErrorResponse, json, redirect, type NavigateFunction } from "react-router-dom";
 import { getApiErrorMessage, isNetworkError, NETWORK_ERROR_MESSAGE } from "./axiosError";
+import { accountService } from "../services/account.service";
+import { enregistrerCheminApresConnexionDepuisNavigateur } from "./cheminApresConnexion";
 
 export type AppErrorKind = "network" | "not-found" | "unauthorized" | "forbidden" | "server" | "unknown";
 
@@ -94,8 +96,17 @@ export function classifyApiError(error: unknown): AppRouteErrorPayload {
   return { kind: "unknown", message: "Une erreur inattendue s'est produite." };
 }
 
+export function logoutAndRedirectToConnexion(): never {
+  enregistrerCheminApresConnexionDepuisNavigateur();
+  accountService.logout();
+  throw redirect("/");
+}
+
 export function throwRouteLoaderError(error: unknown): never {
   const classified = classifyApiError(error);
+  if (classified.kind === "unauthorized") {
+    logoutAndRedirectToConnexion();
+  }
   console.error("Erreur lors du chargement de la route", error);
   throw json(classified, { status: statusForKind(classified) });
 }
@@ -119,6 +130,12 @@ export function navigateToRouteError(
   const classified = classifyApiError(error);
   if (!isRouteLevelError(classified.kind)) {
     return false;
+  }
+  if (classified.kind === "unauthorized") {
+    enregistrerCheminApresConnexionDepuisNavigateur();
+    accountService.logout();
+    navigate("/", { replace: options?.replace ?? true });
+    return true;
   }
   navigate("/erreur", { replace: options?.replace ?? true, state: classified });
   return true;

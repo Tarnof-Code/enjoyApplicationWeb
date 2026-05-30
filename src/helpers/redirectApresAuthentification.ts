@@ -1,4 +1,5 @@
 import { RoleSysteme } from "../enums/RoleSysteme";
+import { lireEtEffacerCheminApresConnexion } from "./cheminApresConnexion";
 import { lireDernierSejourVisite } from "./headerSejourContext";
 import store from "../redux/store";
 import { accountService } from "../services/account.service";
@@ -7,6 +8,14 @@ import { utilisateurService } from "../services/utilisateur.service";
 /** Charge le profil (Redux), puis renvoie l’URL d’accueil : dernier séjour visité ou /profil. */
 export async function chargerProfilEtCheminAccueil(): Promise<string> {
   await utilisateurService.getUser();
+  return cheminAccueilDepuisEtatActuel();
+}
+
+/** Après connexion : page demandée avant redirection, sinon accueil habituel. */
+export async function chargerProfilEtCheminDestinationApresConnexion(): Promise<string> {
+  await utilisateurService.getUser();
+  const retour = lireEtEffacerCheminApresConnexion();
+  if (retour) return retour;
   return cheminAccueilDepuisEtatActuel();
 }
 
