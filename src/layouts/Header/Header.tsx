@@ -199,6 +199,7 @@ const Admin_header: React.FC = () => {
                       </NavLink>
                       <NavLink
                         to={`/mes-sejours/${effectiveNavId}/activites`}
+                        end={false}
                         className={({ isActive }) =>
                           `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
                         }

@@ -305,11 +305,13 @@ $cal-table-border-strong: #c4cad4;
  * L’espace sous la ligne est du padding (inclus dans la hauteur mesurée du .topPinnedStack).
  */
 .addActiviteRow {
-    position: relative;
     margin-bottom: 0;
-    padding-top: 0.5rem;
-    padding-bottom: 0.45rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
     background: #fff;
+    box-sizing: content-box;
+    display: flex;
+    align-items: center;
 }
 
 .addActiviteRowInner {
@@ -317,6 +319,17 @@ $cal-table-border-strong: #c4cad4;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem 1rem;
+    width: 100%;
+    min-height: 2.85rem;
+}
+
+.addActiviteRowStart {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .vueToggle {
@@ -346,6 +359,37 @@ $cal-table-border-strong: #c4cad4;
 .vueToggleBtnActive {
     background: rgba($bleu_principal, 0.2);
     color: $bleu_principal;
+}
+
+.sortiesPrestasLinkBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 2rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid $bleu_principal;
+    border-radius: 8px;
+    background: rgba($bleu_principal, 0.14);
+    color: $bleu_principal;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    line-height: 1.2;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: rgba($bleu_principal, 0.22);
+        color: $bleu_principal;
+        text-decoration: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $bleu_principal;
+        outline-offset: 2px;
+    }
 }
 
 .calendrierWrap {
@@ -693,6 +737,101 @@ thead .calendrierColHead {
     color: #666;
     line-height: 1.2;
     word-break: break-word;
+}
+
+.calendrierCartePrestataire {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid rgba(#0d6e5c, 0.35);
+    background: rgba(#0d6e5c, 0.08);
+}
+
+.calendrierCarteConflit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.5rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid rgba(#c45c00, 0.45);
+    background: rgba(#c45c00, 0.1);
+}
+
+.calendrierConflitTitre {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #8a3d00;
+}
+
+.calendrierConflitDetail {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #444;
+    line-height: 1.35;
+}
+
+.calendrierConflitActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.conflitIntro {
+    margin: 0 0 1rem;
+    color: #444;
+    line-height: 1.4;
+}
+
+.conflitListe {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.conflitItem {
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #e8c9a8;
+    border-radius: 8px;
+    background: #fff8f0;
+}
+
+.conflitItemTitre {
+    margin: 0 0 0.35rem;
+    font-weight: 600;
+}
+
+.conflitItemDetail {
+    margin: 0 0 0.5rem;
+    font-size: 0.92rem;
+    color: #555;
+}
+
+.conflitItemActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.modalFooterConflit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    width: 100%;
+}
+
+.modalFooterConflitMessage {
+    flex: 1 1 12rem;
+    color: #dc3545;
+    margin: 0;
+    font-size: 0.92rem;
 }
 
 /** Bloc filtres : jours du séjour, puis critères (lieu, groupe, etc.) */

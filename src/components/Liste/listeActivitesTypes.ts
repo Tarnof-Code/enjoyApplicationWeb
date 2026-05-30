@@ -1,5 +1,6 @@
 import type {
     ActiviteDto,
+    ActivitePrestataireDto,
     GroupeDto,
     LieuDto,
     MomentDto,
@@ -21,6 +22,7 @@ export const CALENDRIER_FILTRE_AUCUN_GROUPE_ID = -9_999_999_001;
 
 export interface ListeActivitesProps {
     activites: ActiviteDto[];
+    activitesPrestataires?: ActivitePrestataireDto[];
     sejour: SejourDTO;
     groupes: GroupeDto[];
     equipe: MembreEquipeSejour[];
@@ -35,3 +37,5 @@ export interface ListeActivitesProps {
     /** Identifiant utilisateur (JWT `sub`), aligné sur `membre.tokenId`. */
     tokenUtilisateurConnecte?: string | null;
 }
+
+export type ChoixResolutionConflitPrestataire = "sortie" | "activite";

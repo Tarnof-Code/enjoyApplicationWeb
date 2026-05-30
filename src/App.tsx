@@ -15,6 +15,7 @@ import { detailsSejourLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejou
 import SejourDetailOutlet from "./Pages/_Sejours/DetailsSejour/SejourDetailOutlet";
 import DetailsSejourOverview from "./Pages/_Sejours/DetailsSejour/DetailsSejourOverview";
 import DetailsSejourActivites from "./Pages/_Sejours/DetailsSejour/DetailsSejourActivites";
+import DetailsSejourActivitesPrestataires from "./Pages/_Sejours/DetailsSejour/DetailsSejourActivitesPrestataires";
 import DetailsSejourParametrage from "./Pages/_Sejours/DetailsSejour/DetailsSejourParametrage";
 import DetailsSejourOrganisationLayout from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisationLayout";
 import DetailsSejourOrganisation from "./Pages/_Sejours/DetailsSejour/DetailsSejourOrganisation";
@@ -92,6 +93,10 @@ const router = createBrowserRouter([
             {
               path: "activites",
               element: <DetailsSejourActivites />,
+            },
+            {
+              path: "activites/sorties-prestas",
+              element: <DetailsSejourActivitesPrestataires />,
             },
             {
               path: "menus",

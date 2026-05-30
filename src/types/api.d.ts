@@ -650,6 +650,60 @@ export interface UpdateActiviteRequest {
   typeActiviteId: number;
 }
 
+// ============================================================================
+// Activités prestataires (sorties / prestas externalisées)
+// ============================================================================
+
+/**
+ * Correspond à NonParticipationPrestataireDto.java
+ */
+export interface NonParticipationPrestataireDto {
+  tokenId: string;
+  momentId: number;
+}
+
+/**
+ * Correspond à ActivitePrestataireDto.java
+ */
+export interface ActivitePrestataireDto {
+  id: number;
+  nom: string;
+  /** LocalDate : chaîne yyyy-MM-dd ou tableau [année, mois, jour] selon sérialisation JSON */
+  date: string | readonly number[];
+  /** Au moins un moment ; tri chronologique (ordre) côté API */
+  moments: MomentDto[];
+  sejourId: number;
+  /** LocalTime → HH:mm ou null */
+  heureDepart: string | null;
+  heureRetour: string | null;
+  informations: string | null;
+  telephone: string | null;
+  groupeIds: number[];
+  /** Animateurs exclus du calendrier pour un moment (garder activité interne). */
+  nonParticipations: NonParticipationPrestataireDto[];
+}
+
+/**
+ * Correspond à SaveActivitePrestataireRequest.java
+ */
+export interface SaveActivitePrestataireRequest {
+  /** @NotBlank, @Size(max=200) */
+  nom: string;
+  date: string;
+  /** Au moins un id de moment du séjour */
+  momentIds: number[];
+  heureDepart?: string | null;
+  heureRetour?: string | null;
+  informations?: string | null;
+  telephone?: string | null;
+  groupeIds?: number[];
+  /**
+   * POST : liste complète (omis → []).
+   * PUT : fourni → remplacement ; omis → conserve l’existant (élagage serveur).
+   */
+  nonParticipations?: NonParticipationPrestataireDto[];
+}
+
 /** Champs issus de `HistoriqueModificationBaseDto` (déballé `@JsonUnwrapped` dans les DTO fils). */
 export type HistoriqueModificationAction = "CREATION" | "MODIFICATION" | "SUPPRESSION";
 export type HistoriqueModificationType = "ACTIVITE" | "PLANNING_CELLULE" | "CAHIER_INFIRMERIE";

@@ -21,6 +21,7 @@
 - [x] Gestion des **moments** du séjour (`ListeMoments`, `reordonnerMoments`, `trierMomentsChronologiquement`, `sejourMomentService`, `MomentDto` / `SaveMomentRequest` / `ReorderMomentsRequest`, `detailsSejourLoader`)
 - [x] Gestion des **types d’activité** (`ListeTypesActivite`, `sejour-type-activite.service.ts`, panneau accordéon `8`, types `TypeActiviteDto` / `SaveTypeActiviteRequest` / `ActiviteDto.typeActivite`, UX suppression si type encore utilisé)
 - [x] Vue **calendrier** des activités dans l’onglet Activités (`ListeActivitesCalendrier` + bascule depuis `ListeActivites`)
+- [x] **Sorties / prestataires** : loader **`activitesPrestataires`**, route **`/activites/sorties-prestas`**, **`ListeActivitesPrestataires`**, intégration calendrier (**`listeActivitesPrestatairesCalendrier`**, conflits, **`nonParticipations`**, anti-doublon date/moment/groupe)
 - [x] **Plannings organisation (direction)** : grilles par séjour, CRUD, tableau planning (`ListePlanningsOrganisation`, `sejour-planning-grille.service.ts`, panneau accordéon `10`, `detailsSejourLoader.planningGrilles`)
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)
 - [ ] Optimiser les performances des listes si nécessaire (virtualisation si beaucoup d'éléments)

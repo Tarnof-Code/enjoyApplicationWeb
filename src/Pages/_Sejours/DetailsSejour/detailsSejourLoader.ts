@@ -10,6 +10,7 @@ import { sejourTypeActiviteService } from "../../../services/sejour-type-activit
 import { sejourHoraireService } from "../../../services/sejour-horaire.service";
 import { sejourPlanningGrilleService } from "../../../services/sejour-planning-grille.service";
 import { sejourReunionService } from "../../../services/sejour-reunion.service";
+import { sejourActivitePrestataireService } from "../../../services/sejour-activite-prestataire.service";
 import { mettreEnCacheSejourRoute } from "./sejourDetailRouteCache";
 
 export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
@@ -21,8 +22,19 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
     }
     try {
         const sejourId = parseInt(params.id, 10);
-        const [sejour, enfants, groupes, lieux, moments, horaires, activites, typesActivite, planningGrilles, reunions] =
-            await Promise.all([
+        const [
+            sejour,
+            enfants,
+            groupes,
+            lieux,
+            moments,
+            horaires,
+            activites,
+            typesActivite,
+            planningGrilles,
+            reunions,
+            activitesPrestataires,
+        ] = await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(sejourId),
             sejourGroupeService.getGroupesDuSejour(sejourId),
@@ -33,6 +45,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             sejourTypeActiviteService.getTypesActiviteDuSejour(sejourId),
             sejourPlanningGrilleService.listerGrilles(sejourId),
             sejourReunionService.listerReunions(sejourId),
+            sejourActivitePrestataireService.listerActivitesPrestataires(sejourId),
         ]);
         if (params.id) {
             mettreEnCacheSejourRoute(params.id, sejour);
@@ -48,6 +61,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             typesActivite,
             planningGrilles,
             reunions,
+            activitesPrestataires,
         };
     } catch (error) {
         throwRouteLoaderError(error);

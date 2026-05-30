@@ -1,9 +1,17 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useRevalidator } from "react-router-dom";
+import { Link, useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import { ActiviteDto, CreateActiviteRequest, EmplacementLieu, UpdateActiviteRequest } from "../../types/api";
+import {
+    ActiviteDto,
+    ActivitePrestataireDto,
+    CreateActiviteRequest,
+    EmplacementLieu,
+    NonParticipationPrestataireDto,
+    UpdateActiviteRequest,
+} from "../../types/api";
 import { EmplacementLieuLabels, EmplacementLieuValues } from "../../enums/EmplacementLieu";
 import { sejourActiviteService } from "../../services/sejour-activite.service";
+import { sejourActivitePrestataireService } from "../../services/sejour-activite-prestataire.service";
 import { HistoriqueModificationListeModal, type HistoriqueModificationListeModalLigne } from "../common/HistoriqueModificationListeModal";
 import {
     formatDateHeureHistorique,
@@ -22,8 +30,25 @@ import { ListeActivitesListeFiltres, ListeActivitesListeResultat } from "./Liste
 import {
     CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN,
     CALENDRIER_FILTRE_AUCUN_GROUPE_ID,
+    type ChoixResolutionConflitPrestataire,
     type ListeActivitesProps,
 } from "./listeActivitesTypes";
+import {
+    activiteInternePourTokenMomentDate,
+    cleNonParticipation,
+    cleRetraitSortieCalendrier,
+    conflitsSansChoixResolution,
+    construireCellulesPlanningParAnimateurEtDate,
+    construireSortiesParAnimateurEtDate,
+    datePrestataireVersYmd,
+    estNonParticipation,
+    fusionnerNonParticipationsApresChoix,
+    listerConflitsActiviteInterneAvecSortie,
+    sortieVersSaveRequest,
+    type CalendrierCelluleItem,
+    type ConflitActiviteAvecSortie,
+} from "./listeActivitesPrestatairesCalendrier";
+import type { MomentDto } from "../../types/api";
 import {
     EMPLACEMENT_FILTRE_TOUS_ACTIVITE,
     FILTRE_LISTE_LIEU_SANS,
@@ -44,8 +69,18 @@ export type { ListeActivitesProps, MembreEquipeSejour } from "./listeActivitesTy
 
 type VueActivites = "liste" | "calendrier";
 
+function normaliserPrestataireDto(p: ActivitePrestataireDto): ActivitePrestataireDto {
+    return {
+        ...p,
+        groupeIds: p.groupeIds ?? [],
+        moments: p.moments ?? [],
+        nonParticipations: p.nonParticipations ?? [],
+    };
+}
+
 const ListeActivites: React.FC<ListeActivitesProps> = ({
     activites,
+    activitesPrestataires = [],
     sejour,
     groupes,
     equipe,
@@ -56,6 +91,31 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     tokenUtilisateurConnecte = null,
 }) => {
     const revalidator = useRevalidator();
+    const [prestataires, setPrestataires] = useState<ActivitePrestataireDto[]>(() =>
+        activitesPrestataires.map(normaliserPrestataireDto),
+    );
+    const [conflitResolutionEnCours, setConflitResolutionEnCours] = useState<string | null>(null);
+    const [retirerSortieModalOpen, setRetirerSortieModalOpen] = useState(false);
+    const [pendingRetraitSortie, setPendingRetraitSortie] = useState<{
+        sortie: ActivitePrestataireDto;
+        moment: MomentDto;
+        tokenId: string;
+        animateurLabel: string;
+    } | null>(null);
+    const [retirerSortieCalendrierEnCours, setRetirerSortieCalendrierEnCours] = useState<string | null>(
+        null,
+    );
+    const [conflitActiviteModalOpen, setConflitActiviteModalOpen] = useState(false);
+    const [conflitsActiviteEnCours, setConflitsActiviteEnCours] = useState<ConflitActiviteAvecSortie[]>(
+        [],
+    );
+    const [choixConflitsActivite, setChoixConflitsActivite] = useState<
+        Map<string, ChoixResolutionConflitPrestataire>
+    >(() => new Map());
+    const [pendingActiviteSave, setPendingActiviteSave] = useState<{
+        payload: CreateActiviteRequest | UpdateActiviteRequest;
+        membreTokenIds: string[];
+    } | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -98,6 +158,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const [historiqueActiviteLignes, setHistoriqueActiviteLignes] = useState<
         HistoriqueModificationListeModalLigne[] | null
     >(null);
+
+    useEffect(() => {
+        setPrestataires(activitesPrestataires.map(normaliserPrestataireDto));
+    }, [activitesPrestataires]);
 
     const momentsTriés = trierMomentsChronologiquement(moments);
     const typesPredefinisSelect = useMemo(
@@ -554,6 +618,130 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         return map;
     }, [activites, equipeTriéeFiltre]);
 
+    const sortiesParAnimateurEtDate = useMemo(
+        () => construireSortiesParAnimateurEtDate(prestataires, groupes),
+        [prestataires, groupes],
+    );
+
+    const cellulesParAnimateurEtDate = useMemo(
+        () =>
+            construireCellulesPlanningParAnimateurEtDate(
+                activitesParAnimateurEtDate,
+                sortiesParAnimateurEtDate,
+                momentsTriés,
+                peutGererActivitesComplet,
+            ),
+        [
+            activitesParAnimateurEtDate,
+            sortiesParAnimateurEtDate,
+            momentsTriés,
+            peutGererActivitesComplet,
+        ],
+    );
+
+    const requestRetirerSortieCalendrier = (
+        sortie: ActivitePrestataireDto,
+        moment: MomentDto,
+        tokenId: string,
+        animateurLabel: string,
+    ) => {
+        setPendingRetraitSortie({ sortie, moment, tokenId, animateurLabel });
+        setRetirerSortieModalOpen(true);
+    };
+
+    const confirmerRetirerSortieCalendrier = async () => {
+        if (!pendingRetraitSortie) return;
+        const { sortie, moment, tokenId } = pendingRetraitSortie;
+        const tid = tokenId.trim();
+        const sortieCourante = prestataires.find((p) => p.id === sortie.id) ?? sortie;
+        if (estNonParticipation(sortieCourante.nonParticipations, tid, moment.id)) {
+            setRetirerSortieModalOpen(false);
+            setPendingRetraitSortie(null);
+            return;
+        }
+        const cle = cleRetraitSortieCalendrier(sortie.id, moment.id, tid);
+        setRetirerSortieCalendrierEnCours(cle);
+        setErrorMessage(null);
+        try {
+            const ymd = datePrestataireVersYmd(sortieCourante.date);
+            const activiteConflit = activiteInternePourTokenMomentDate(
+                activites,
+                tid,
+                ymd,
+                moment.id,
+            );
+            if (activiteConflit) {
+                await sejourActiviteService.supprimerActivite(sejour.id, activiteConflit.id);
+            }
+
+            const nonParts = fusionnerNonParticipationsApresChoix(
+                sortieCourante.nonParticipations ?? [],
+                [{ tokenId: tid, momentId: moment.id }],
+                [],
+            );
+            const updated = await sejourActivitePrestataireService.modifierActivitePrestataire(
+                sejour.id,
+                sortieCourante.id,
+                sortieVersSaveRequest(sortieCourante, nonParts),
+            );
+            setPrestataires((prev) =>
+                prev.map((p) => (p.id === updated.id ? normaliserPrestataireDto(updated) : p)),
+            );
+            setRetirerSortieModalOpen(false);
+            setPendingRetraitSortie(null);
+            revalidator.revalidate();
+        } catch (e: unknown) {
+            const msg =
+                e instanceof Error ? e.message : "Impossible de retirer la sortie du calendrier";
+            setErrorMessage(msg);
+        } finally {
+            setRetirerSortieCalendrierEnCours(null);
+        }
+    };
+
+    const resoudreConflitPrestataireCalendrier = async (
+        item: Extract<CalendrierCelluleItem, { kind: "conflit" }>,
+        tokenId: string,
+        choix: ChoixResolutionConflitPrestataire,
+    ) => {
+        const tid = tokenId.trim();
+        if (!tid) return;
+
+        const sortieCourante = prestataires.find((p) => p.id === item.sortie.id) ?? item.sortie;
+        const cleConflit = `conflit-${item.sortie.id}-${item.moment.id}-${tid}`;
+        setConflitResolutionEnCours(cleConflit);
+        try {
+            let nonParts = [...(sortieCourante.nonParticipations ?? [])];
+            if (choix === "sortie") {
+                await sejourActiviteService.supprimerActivite(sejour.id, item.activite.id);
+                nonParts = fusionnerNonParticipationsApresChoix(nonParts, [], [
+                    { tokenId: tid, momentId: item.moment.id },
+                ]);
+            } else if (!estNonParticipation(nonParts, tid, item.moment.id)) {
+                nonParts = fusionnerNonParticipationsApresChoix(
+                    nonParts,
+                    [{ tokenId: tid, momentId: item.moment.id }],
+                    [],
+                );
+            }
+            const updated = await sejourActivitePrestataireService.modifierActivitePrestataire(
+                sejour.id,
+                sortieCourante.id,
+                sortieVersSaveRequest(sortieCourante, nonParts),
+            );
+            setPrestataires((prev) =>
+                prev.map((p) => (p.id === updated.id ? normaliserPrestataireDto(updated) : p)),
+            );
+            revalidator.revalidate();
+        } catch (e: unknown) {
+            const msg =
+                e instanceof Error ? e.message : "Impossible de résoudre le conflit sortie / activité";
+            setErrorMessage(msg);
+        } finally {
+            setConflitResolutionEnCours(null);
+        }
+    };
+
     const peutAjouterActivite =
         equipe.length > 0 && groupes.length > 0 && moments.length > 0 && typesActivite.length > 0;
 
@@ -565,7 +753,155 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         setFiltreListeType("");
     };
 
+    const fermerModalActivite = () => {
+        if (submitting) return;
+        setModalOpen(false);
+        setErrorMessage(null);
+    };
+
+    const fermerModalConflitActivite = () => {
+        if (submitting) return;
+        setConflitActiviteModalOpen(false);
+        setErrorMessage(null);
+    };
+
+    const fermerFormulaireActiviteApresConflit = () => {
+        setModalOpen(false);
+        setConflitActiviteModalOpen(false);
+        setConflitsActiviteEnCours([]);
+        setChoixConflitsActivite(new Map());
+        setPendingActiviteSave(null);
+        setEditingActiviteId(null);
+        setErrorMessage(null);
+    };
+
+    const executerEnregistrementActivite = async (
+        payload: CreateActiviteRequest | UpdateActiviteRequest,
+        membreTokenIds: string[],
+        conflits: ConflitActiviteAvecSortie[],
+        choixParCle: Map<string, ChoixResolutionConflitPrestataire>,
+    ) => {
+        const tokensFinaux = new Set(membreTokenIds.map((t) => t.trim()).filter(Boolean));
+
+        for (const c of conflits) {
+            const choix = choixParCle.get(cleNonParticipation(c.tokenId, c.momentId));
+            if (choix === "sortie") {
+                tokensFinaux.delete(c.tokenId.trim());
+            }
+        }
+
+        if (tokensFinaux.size === 0) {
+            fermerFormulaireActiviteApresConflit();
+            showSuccessModal(
+                editingActiviteId == null
+                    ? "Aucune activité créée : la sortie reste affichée sur le calendrier pour le ou les animateurs concernés."
+                    : "Aucune modification enregistrée : la sortie reste affichée sur le calendrier pour le ou les animateurs concernés.",
+            );
+            return;
+        }
+
+        const nonPartsParSortie = new Map<number, NonParticipationPrestataireDto[]>();
+        for (const c of conflits) {
+            const choix = choixParCle.get(cleNonParticipation(c.tokenId, c.momentId));
+            if (choix !== "activite") continue;
+            const sortie = prestataires.find((p) => p.id === c.sortieId);
+            if (!sortie) continue;
+            const base = nonPartsParSortie.get(c.sortieId) ?? sortie.nonParticipations ?? [];
+            nonPartsParSortie.set(
+                c.sortieId,
+                fusionnerNonParticipationsApresChoix(
+                    base,
+                    [{ tokenId: c.tokenId, momentId: c.momentId }],
+                    [],
+                ),
+            );
+        }
+
+        let prestatairesLocaux = prestataires;
+        for (const [sortieId, nonParts] of nonPartsParSortie) {
+            const sortie = prestatairesLocaux.find((p) => p.id === sortieId);
+            if (!sortie) continue;
+            const updated = await sejourActivitePrestataireService.modifierActivitePrestataire(
+                sejour.id,
+                sortieId,
+                sortieVersSaveRequest(sortie, nonParts),
+            );
+            prestatairesLocaux = prestatairesLocaux.map((p) =>
+                p.id === updated.id ? normaliserPrestataireDto(updated) : p,
+            );
+        }
+        if (nonPartsParSortie.size > 0) {
+            setPrestataires(prestatairesLocaux);
+        }
+
+        const payloadFinal: CreateActiviteRequest | UpdateActiviteRequest = {
+            ...payload,
+            membreTokenIds: [...tokensFinaux],
+        };
+
+        let sauvegardee: ActiviteDto;
+        if (editingActiviteId == null) {
+            sauvegardee = await sejourActiviteService.creerActivite(
+                sejour.id,
+                payloadFinal as CreateActiviteRequest,
+            );
+        } else {
+            sauvegardee = await sejourActiviteService.modifierActivite(
+                sejour.id,
+                editingActiviteId,
+                payloadFinal as UpdateActiviteRequest,
+            );
+        }
+
+        let messageSuccès =
+            editingActiviteId == null ? "Activité créée avec succès." : "Activité modifiée avec succès.";
+
+        const exclusSortie = conflits.filter(
+            (c) => choixParCle.get(cleNonParticipation(c.tokenId, c.momentId)) === "activite",
+        );
+        if (exclusSortie.length > 0) {
+            const details = exclusSortie
+                .map((c) => {
+                    const personne =
+                        `${c.animateurPrenom} ${c.animateurNom}`.trim() || "Animateur";
+                    return `${personne} (${c.momentNom}, sortie « ${c.sortieNom} »)`;
+                })
+                .join(", ");
+            const intro =
+                exclusSortie.length > 1
+                    ? "Ne participent plus à la sortie"
+                    : "Ne participe plus à la sortie";
+            messageSuccès += `\n\n${intro} : ${details}.`;
+        }
+
+        const avertissement = sauvegardee.avertissementLieu?.trim();
+        if (avertissement) {
+            messageSuccès += `\n\n${avertissement}`;
+        }
+        showSuccessModal(messageSuccès);
+        fermerFormulaireActiviteApresConflit();
+        revalidator.revalidate();
+    };
+
+    const appliquerChoixConflitActivite = (cle: string, choix: ChoixResolutionConflitPrestataire) => {
+        setChoixConflitsActivite((prev) => {
+            const next = new Map(prev);
+            next.set(cle, choix);
+            return next;
+        });
+        setErrorMessage(null);
+    };
+
+    const tousChoixConflitsActiviteFaits = useMemo(
+        () =>
+            conflitsActiviteEnCours.length > 0 &&
+            conflitsSansChoixResolution(conflitsActiviteEnCours, choixConflitsActivite).length === 0,
+        [conflitsActiviteEnCours, choixConflitsActivite],
+    );
+
     const handleSubmit = async () => {
+        if (conflitActiviteModalOpen) return;
+
         setErrorMessage(null);
         if (!formDate.trim()) {
             setErrorMessage("La date est obligatoire.");
@@ -615,35 +951,81 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             payload.lieuId = null;
         }
 
-        if (moments.length > 0 && formMomentId !== "") {
-            payload.momentId = formMomentId;
+        const momentId =
+            moments.length > 0 && formMomentId !== "" ? (formMomentId as number) : 0;
+        if (momentId > 0) {
+            payload.momentId = momentId;
+        }
+
+        const membreTokenIds = [...idsMembres];
+        const conflits =
+            momentId > 0
+                ? listerConflitsActiviteInterneAvecSortie(
+                      formDate.trim(),
+                      momentId,
+                      membreTokenIds,
+                      prestataires,
+                      groupes,
+                      momentsTriés,
+                      activites,
+                      { exclureActiviteId: editingActiviteId },
+                  )
+                : [];
+
+        if (conflits.length > 0) {
+            if (!peutGererActivitesComplet) {
+                setErrorMessage(
+                    "Une sortie est déjà planifiée sur ce créneau.",
+                );
+                return;
+            }
+            setPendingActiviteSave({ payload, membreTokenIds });
+            setConflitsActiviteEnCours(conflits);
+            setChoixConflitsActivite(new Map());
+            setErrorMessage(null);
+            setConflitActiviteModalOpen(true);
+            return;
         }
 
         setSubmitting(true);
         try {
-            let sauvegardee: ActiviteDto;
-            if (editingActiviteId == null) {
-                sauvegardee = await sejourActiviteService.creerActivite(
-                    sejour.id,
-                    payload as CreateActiviteRequest
-                );
-            } else {
-                sauvegardee = await sejourActiviteService.modifierActivite(
-                    sejour.id,
-                    editingActiviteId,
-                    payload as UpdateActiviteRequest
-                );
-            }
-            let messageSuccès =
-                editingActiviteId == null ? "Activité créée avec succès." : "Activité modifiée avec succès.";
-            const avertissement = sauvegardee.avertissementLieu?.trim();
-            if (avertissement) {
-                messageSuccès += `\n\n${avertissement}`;
-            }
-            showSuccessModal(messageSuccès);
-            setModalOpen(false);
-            setEditingActiviteId(null);
-            revalidator.revalidate();
+            await executerEnregistrementActivite(payload, membreTokenIds, [], new Map());
+        } catch (e: unknown) {
+            const msg =
+                e instanceof Error
+                    ? e.message
+                    : editingActiviteId == null
+                      ? "Impossible de créer l'activité"
+                      : "Impossible de modifier l'activité";
+            setErrorMessage(msg);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const confirmerResolutionConflitsActivite = async () => {
+        if (!pendingActiviteSave) return;
+        const manquants = conflitsSansChoixResolution(
+            conflitsActiviteEnCours,
+            choixConflitsActivite,
+        );
+        if (manquants.length > 0) {
+            setErrorMessage(
+                manquants.length === 1
+                    ? "Choisissez « Afficher la sortie » ou « Créer l’activité » pour l’animateur restant."
+                    : `Choisissez une option pour chaque conflit (${manquants.length} sans réponse).`,
+            );
+            return;
+        }
+        setErrorMessage(null);
+        setSubmitting(true);
+        try {
+            await executerEnregistrementActivite(
+                pendingActiviteSave.payload,
+                pendingActiviteSave.membreTokenIds,
+                conflitsActiviteEnCours,
+                choixConflitsActivite,
+            );
         } catch (e: unknown) {
             const msg =
                 e instanceof Error
@@ -759,56 +1141,64 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             <div ref={topPinnedStackRef} className={styles.topPinnedStack}>
             <div className={styles.addActiviteRow}>
                 <div className={styles.addActiviteRowInner}>
-                    {equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
-                        <div
-                            className={styles.vueToggle}
-                            role="tablist"
-                            aria-label="Mode d'affichage des activités"
+                    <div className={styles.addActiviteRowStart}>
+                        {equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
+                            <div
+                                className={styles.vueToggle}
+                                role="tablist"
+                                aria-label="Mode d'affichage des activités"
+                            >
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    className={`${styles.vueToggleBtn} ${
+                                        vueActivites === "calendrier" ? styles.vueToggleBtnActive : ""
+                                    }`}
+                                    aria-selected={vueActivites === "calendrier"}
+                                    onClick={() => setVueActivites("calendrier")}
+                                >
+                                    Calendrier
+                                </button>
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    className={`${styles.vueToggleBtn} ${
+                                        vueActivites === "liste" ? styles.vueToggleBtnActive : ""
+                                    }`}
+                                    aria-selected={vueActivites === "liste"}
+                                    onClick={() => setVueActivites("liste")}
+                                >
+                                    Liste
+                                </button>
+                            </div>
+                        ) : null}
+                        {vueActivites === "liste" ? (
+                            <Button color="success" onClick={openModal} disabled={!peutAjouterActivite}>
+                                Ajouter une activité
+                            </Button>
+                        ) : null}
+                        <Link
+                            to={`/mes-sejours/${sejour.id}/activites/sorties-prestas`}
+                            className={styles.sortiesPrestasLinkBtn}
                         >
-                            <button
-                                type="button"
-                                role="tab"
-                                className={`${styles.vueToggleBtn} ${
-                                    vueActivites === "calendrier" ? styles.vueToggleBtnActive : ""
-                                }`}
-                                aria-selected={vueActivites === "calendrier"}
-                                onClick={() => setVueActivites("calendrier")}
-                            >
-                                Calendrier
-                            </button>
-                            <button
-                                type="button"
-                                role="tab"
-                                className={`${styles.vueToggleBtn} ${
-                                    vueActivites === "liste" ? styles.vueToggleBtnActive : ""
-                                }`}
-                                aria-selected={vueActivites === "liste"}
-                                onClick={() => setVueActivites("liste")}
-                            >
-                                Liste
-                            </button>
-                        </div>
-                    ) : null}
-                    {vueActivites === "liste" ? (
-                        <Button color="success" onClick={openModal} disabled={!peutAjouterActivite}>
-                            Ajouter une activité
-                        </Button>
-                    ) : null}
-                    {vueActivites === "calendrier" && joursFenetreCalendrier.length > 0 ? (
-                        <CalendrierNavigationPeriode
-                            libellePlage={libellePlageCalendrier}
-                            peutReculer={peutDefilerCalendrierVersPasse}
-                            peutAvancer={peutDefilerCalendrierVersFutur}
-                            onReculer={() => decalageFenetreCalendrier(-1)}
-                            onAvancer={() => decalageFenetreCalendrier(1)}
-                            nombreJoursVue={calendrierNombreJoursVue}
-                            onNombreJoursVueChange={setCalendrierNombreJoursVue}
-                            debutFenetreYmd={calDebutFenetreYmd}
-                            minDebutFenetreYmd={calMinDebutFenetreYmd}
-                            maxDebutFenetreYmd={calMaxDebutFenetreYmd}
-                            onChangerDebutFenetre={definirDebutFenetreCalendrier}
-                        />
-                    ) : null}
+                            Sorties / prestas
+                        </Link>
+                        {vueActivites === "calendrier" && joursFenetreCalendrier.length > 0 ? (
+                            <CalendrierNavigationPeriode
+                                libellePlage={libellePlageCalendrier}
+                                peutReculer={peutDefilerCalendrierVersPasse}
+                                peutAvancer={peutDefilerCalendrierVersFutur}
+                                onReculer={() => decalageFenetreCalendrier(-1)}
+                                onAvancer={() => decalageFenetreCalendrier(1)}
+                                nombreJoursVue={calendrierNombreJoursVue}
+                                onNombreJoursVueChange={setCalendrierNombreJoursVue}
+                                debutFenetreYmd={calDebutFenetreYmd}
+                                minDebutFenetreYmd={calMinDebutFenetreYmd}
+                                maxDebutFenetreYmd={calMaxDebutFenetreYmd}
+                                onChangerDebutFenetre={definirDebutFenetreCalendrier}
+                            />
+                        ) : null}
+                    </div>
                 </div>
             </div>
             {vueActivites === "calendrier" && equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
@@ -883,14 +1273,16 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     Aucun groupe n&apos;est défini pour ce séjour. Créez au moins un groupe pour pouvoir planifier des activités.
                 </p>
             )}
-            {errorMessage && !modalOpen && <div className={styles.errorMessage}>{errorMessage}</div>}
+            {errorMessage && !modalOpen && !conflitActiviteModalOpen ? (
+                <div className={styles.errorMessage}>{errorMessage}</div>
+            ) : null}
 
             {vueActivites === "calendrier" && equipe.length > 0 && joursDuSejourPourFiltre.length > 0 ? (
                 <CalendrierPlanning
                     nombreJoursFenetre={calendrierNombreJoursVue}
                     joursFenetreCalendrier={joursFenetreCalendrier}
                     equipePourCalendrier={equipePourCalendrier}
-                    activitesParAnimateurEtDate={activitesParAnimateurEtDate}
+                    cellulesParAnimateurEtDate={cellulesParAnimateurEtDate}
                     libellesGroupesReferentParToken={libellesGroupesReferentParToken}
                     filtreCalendrierGroupeIds={filtreCalendrierGroupeIds}
                     calendrierFiltreExclutTousLesGroupes={calendrierFiltreExclutTousLesGroupes}
@@ -906,6 +1298,15 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         estAnimateurRestreintActivites && tokenSelf ? tokenSelf : null
                     }
                     onOpenHistoriqueActivite={ouvrirHistoriqueActivite}
+                    peutResoudreConflitsPrestataires={peutGererActivitesComplet}
+                    onResoudreConflitPrestataire={resoudreConflitPrestataireCalendrier}
+                    conflitResolutionEnCours={conflitResolutionEnCours}
+                    onRetirerSortieCalendrier={
+                        peutGererActivitesComplet ? requestRetirerSortieCalendrier : undefined
+                    }
+                    retirerSortieCalendrierEnCours={
+                        peutGererActivitesComplet ? retirerSortieCalendrierEnCours : null
+                    }
                 />
             ) : (
                 <ListeActivitesListeResultat
@@ -921,8 +1322,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                 />
             )}
 
-            <Modal isOpen={modalOpen} toggle={() => !submitting && setModalOpen(false)} size="lg">
-                <ModalHeader toggle={() => !submitting && setModalOpen(false)}>
+            <Modal isOpen={modalOpen} toggle={fermerModalActivite} size="lg">
+                <ModalHeader toggle={fermerModalActivite}>
                     {editingActiviteId == null ? "Nouvelle activité" : "Modifier l'activité"}
                 </ModalHeader>
                 <ModalBody>
@@ -1189,19 +1590,140 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     messageErreur={errorMessage ?? undefined}
                     actions={
                         <>
-                            <Button color="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>
+                            <Button color="secondary" onClick={fermerModalActivite} disabled={submitting}>
                                 Annuler
                             </Button>
                             <Button
                                 color={editingActiviteId == null ? "success" : "primary"}
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                            >
-                                {submitting ? "Enregistrement…" : editingActiviteId == null ? "Créer" : "Enregistrer"}
+                            onClick={handleSubmit}
+                            disabled={submitting || conflitActiviteModalOpen}
+                        >
+                            {submitting ? "Enregistrement…" : editingActiviteId == null ? "Créer" : "Enregistrer"}
                             </Button>
                         </>
                     }
                 />
+            </Modal>
+
+            <Modal isOpen={conflitActiviteModalOpen} toggle={fermerModalConflitActivite} size="lg">
+                <ModalHeader toggle={fermerModalConflitActivite}>
+                    Conflit activité / sortie
+                </ModalHeader>
+                <ModalBody>
+                    <p className={styles.conflitIntro}>
+                        Pour chaque animateur concerné, une sortie est déjà planifiée sur le même créneau.
+                        Choisissez ce qui doit apparaître sur le calendrier.
+                    </p>
+                    <ul className={styles.conflitListe}>
+                        {conflitsActiviteEnCours.map((c) => {
+                            const cle = cleNonParticipation(c.tokenId, c.momentId);
+                            const choix = choixConflitsActivite.get(cle);
+                            const animateur =
+                                `${c.animateurPrenom} ${c.animateurNom}`.trim() || "Animateur";
+                            const libelleActivite =
+                                editingActiviteId == null ? "Créer l'activité" : "Garder l'activité";
+                            return (
+                                <li key={cle} className={styles.conflitItem}>
+                                    <p className={styles.conflitItemTitre}>
+                                        {animateur} — {c.momentNom}
+                                    </p>
+                                    <p className={styles.conflitItemDetail}>
+                                        Sortie : <strong>{c.sortieNom}</strong>
+                                    </p>
+                                    <div className={styles.conflitItemActions}>
+                                        <Button
+                                            color={choix === "sortie" ? "primary" : "outline-primary"}
+                                            size="sm"
+                                            disabled={submitting}
+                                            onClick={() =>
+                                                appliquerChoixConflitActivite(cle, "sortie")
+                                            }
+                                        >
+                                            Afficher la sortie
+                                        </Button>{" "}
+                                        <Button
+                                            color={choix === "activite" ? "secondary" : "outline-secondary"}
+                                            size="sm"
+                                            disabled={submitting}
+                                            onClick={() =>
+                                                appliquerChoixConflitActivite(cle, "activite")
+                                            }
+                                        >
+                                            {libelleActivite}
+                                        </Button>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </ModalBody>
+                <ModalFooter className={styles.modalFooterConflit}>
+                    {errorMessage ? <p className={styles.modalFooterConflitMessage}>{errorMessage}</p> : <span />}
+                    <div>
+                        <Button color="secondary" onClick={fermerModalConflitActivite} disabled={submitting}>
+                            Annuler
+                        </Button>{" "}
+                        <Button
+                            color="primary"
+                            onClick={confirmerResolutionConflitsActivite}
+                            disabled={submitting || !tousChoixConflitsActiviteFaits}
+                        >
+                            {submitting ? "Enregistrement…" : "Enregistrer"}
+                        </Button>
+                    </div>
+                </ModalFooter>
+            </Modal>
+
+            <Modal
+                isOpen={retirerSortieModalOpen}
+                toggle={() => !retirerSortieCalendrierEnCours && setRetirerSortieModalOpen(false)}
+            >
+                <ModalHeader
+                    toggle={() => !retirerSortieCalendrierEnCours && setRetirerSortieModalOpen(false)}
+                >
+                    Retirer du calendrier
+                </ModalHeader>
+                <ModalBody>
+                    {pendingRetraitSortie ? (
+                        <p>
+                            {tokenSelf &&
+                            pendingRetraitSortie.tokenId.trim() === tokenSelf ? (
+                                <>
+                                    Vous ne participerez plus à la sortie{" "}
+                                    <strong>« {pendingRetraitSortie.sortie.nom} »</strong> pour le créneau{" "}
+                                    <strong>{pendingRetraitSortie.moment.nom}</strong>. Elle n&apos;apparaîtra
+                                    plus sur votre calendrier.
+                                </>
+                            ) : (
+                                <>
+                                    Retirer <strong>{pendingRetraitSortie.animateurLabel}</strong> de la sortie{" "}
+                                    <strong>« {pendingRetraitSortie.sortie.nom} »</strong> pour le créneau{" "}
+                                    <strong>{pendingRetraitSortie.moment.nom}</strong> ? La sortie restera
+                                    planifiée ; l&apos;animateur ne la verra plus sur son calendrier.
+                                </>
+                            )}
+                        </p>
+                    ) : null}
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        color="secondary"
+                        onClick={() => {
+                            setRetirerSortieModalOpen(false);
+                            setPendingRetraitSortie(null);
+                        }}
+                        disabled={retirerSortieCalendrierEnCours != null}
+                    >
+                        Annuler
+                    </Button>
+                    <Button
+                        color="danger"
+                        onClick={confirmerRetirerSortieCalendrier}
+                        disabled={retirerSortieCalendrierEnCours != null}
+                    >
+                        {retirerSortieCalendrierEnCours != null ? "Enregistrement…" : "Confirmer"}
+                    </Button>
+                </ModalFooter>
             </Modal>
 
             <Modal isOpen={deleteModalOpen} toggle={() => !deletingActiviteId && setDeleteModalOpen(false)}>

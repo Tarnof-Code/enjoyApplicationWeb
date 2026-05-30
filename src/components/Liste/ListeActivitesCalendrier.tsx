@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Input } from "reactstrap";
-import type { ActiviteDto, GroupeDto, MomentDto } from "../../types/api";
+import type { ActiviteDto, ActivitePrestataireDto, GroupeDto, MomentDto } from "../../types/api";
+import type { CalendrierCelluleItem } from "./listeActivitesPrestatairesCalendrier";
+import {
+    cleRetraitSortieCalendrier,
+    libellePlageHorairePrestataire,
+} from "./listeActivitesPrestatairesCalendrier";
+import type { ChoixResolutionConflitPrestataire } from "./listeActivitesTypes";
 import { CalendrierCarteEditionAvecSuppression } from "../PlanningCalendrier/CalendrierCarteEditionAvecSuppression";
 import { CalendrierCelluleAjoutHint } from "../PlanningCalendrier/CalendrierCelluleAjoutHint";
 import { proprietesTdAjoutPlanning } from "../PlanningCalendrier/calendrierCelluleClavier";
@@ -10,7 +16,6 @@ import {
     CALENDRIER_NOMBRES_JOURS_VUE,
     type CalendrierNombreJoursVue,
     couleurFondCalendrierPourTypeActivite,
-    trierActivitesPourCelluleCalendrier,
 } from "./listeActivitesUtils";
 import styles from "./ListeActivites.module.scss";
 
@@ -392,12 +397,21 @@ export function CalendrierFiltresPlanning({
     );
 }
 
+function itemPasseFiltreGroupeCalendrier(item: CalendrierCelluleItem, filtreCalendrierGroupeIds: Set<number>): boolean {
+    if (filtreCalendrierGroupeIds.size === 0) return true;
+    if (item.kind === "activite") {
+        return (item.activite.groupeIds ?? []).some((id) => filtreCalendrierGroupeIds.has(id));
+    }
+    const ids = item.sortie.groupeIds ?? [];
+    return ids.some((id) => filtreCalendrierGroupeIds.has(id));
+}
+
 export type CalendrierPlanningProps = {
     /** Nombre de colonnes jour (pour la grille CSS) ; doit correspondre à la longueur de `joursFenetreCalendrier`. */
     nombreJoursFenetre: number;
     joursFenetreCalendrier: { ymd: string; label: string; dansSejour: boolean }[];
     equipePourCalendrier: MembreEquipeSejour[];
-    activitesParAnimateurEtDate: Map<string, Map<string, ActiviteDto[]>>;
+    cellulesParAnimateurEtDate: Map<string, Map<string, CalendrierCelluleItem[]>>;
     libellesGroupesReferentParToken: Map<string, string>;
     filtreCalendrierGroupeIds: Set<number>;
     /** Vrai si le filtre groupes exclut tout (aucune activité ne peut correspondre) — pas de grille ni d’ajout en case. */
@@ -416,17 +430,31 @@ export type CalendrierPlanningProps = {
      */
     tokenEditionCalendrierReserve?: string | null;
     onOpenHistoriqueActivite?: (a: ActiviteDto) => void;
+    peutResoudreConflitsPrestataires?: boolean;
+    onResoudreConflitPrestataire?: (
+        item: Extract<CalendrierCelluleItem, { kind: "conflit" }>,
+        tokenId: string,
+        choix: ChoixResolutionConflitPrestataire,
+    ) => void;
+    conflitResolutionEnCours?: string | null;
+    onRetirerSortieCalendrier?: (
+        sortie: ActivitePrestataireDto,
+        moment: MomentDto,
+        tokenId: string,
+        animateurLabel: string,
+    ) => void;
+    retirerSortieCalendrierEnCours?: string | null;
 };
 
 export function CalendrierPlanning({
     nombreJoursFenetre,
     joursFenetreCalendrier,
     equipePourCalendrier,
-    activitesParAnimateurEtDate,
+    cellulesParAnimateurEtDate,
     libellesGroupesReferentParToken,
     filtreCalendrierGroupeIds,
     calendrierFiltreExclutTousLesGroupes,
-    momentsTriés,
+    momentsTriés: _momentsTriés,
     groupes,
     peutAjouterActivite,
     activitesCount,
@@ -436,6 +464,11 @@ export function CalendrierPlanning({
     deletingActiviteId,
     tokenEditionCalendrierReserve = null,
     onOpenHistoriqueActivite,
+    peutResoudreConflitsPrestataires = false,
+    onResoudreConflitPrestataire,
+    conflitResolutionEnCours = null,
+    onRetirerSortieCalendrier,
+    retirerSortieCalendrierEnCours = null,
 }: CalendrierPlanningProps) {
     return (
         <div className={styles.calendrierWrap}>
@@ -510,18 +543,13 @@ export function CalendrierPlanning({
                                             </th>
                                             {joursFenetreCalendrier.map(({ ymd, dansSejour }) => {
                                                 const brutes =
-                                                    activitesParAnimateurEtDate.get(membre.tokenId)?.get(ymd) ?? [];
-                                                const brutesFiltreesGroupe =
-                                                    filtreCalendrierGroupeIds.size === 0
-                                                        ? brutes
-                                                        : brutes.filter((a) =>
-                                                              (a.groupeIds ?? []).some((id) =>
-                                                                  filtreCalendrierGroupeIds.has(id)
-                                                              )
-                                                          );
-                                                const dansCellule = trierActivitesPourCelluleCalendrier(
-                                                    brutesFiltreesGroupe,
-                                                    momentsTriés
+                                                    cellulesParAnimateurEtDate.get(membre.tokenId)?.get(ymd) ??
+                                                    [];
+                                                const dansCellule = brutes.filter((item) =>
+                                                    itemPasseFiltreGroupeCalendrier(
+                                                        item,
+                                                        filtreCalendrierGroupeIds,
+                                                    ),
                                                 );
                                                 const classeTone =
                                                     dansCellule.length > 0
@@ -550,85 +578,250 @@ export function CalendrierPlanning({
                                                         )}
                                                     >
                                                         {celluleAjoutClic ? <CalendrierCelluleAjoutHint /> : null}
-                                                        {dansCellule.map((a) => (
-                                                            <CalendrierCarteEditionAvecSuppression
-                                                                key={a.id}
-                                                                lectureSeule={!ligneEditableCalendrier}
-                                                                onEdit={() => onOpenEdit(a)}
-                                                                editDisabled={
-                                                                    deletingActiviteId === a.id ||
-                                                                    !ligneEditableCalendrier
-                                                                }
-                                                                editAriaLabel={`Éditer l’activité « ${a.nom} »`}
-                                                                mainButtonStyle={
-                                                                    {
-                                                                        "--plan-cal-carte-bg":
-                                                                            couleurFondCalendrierPourTypeActivite(
-                                                                                a.typeActivite?.id,
-                                                                            ),
-                                                                    } as React.CSSProperties
-                                                                }
-                                                                onDeleteClick={() => onDelete(a.id)}
-                                                                deleteAriaLabel={`Supprimer l’activité « ${a.nom} »`}
-                                                                deleteDisabled={
-                                                                    deletingActiviteId === a.id ||
-                                                                    !ligneEditableCalendrier
-                                                                }
-                                                                onHistoriqueClick={
-                                                                    onOpenHistoriqueActivite
-                                                                        ? () => onOpenHistoriqueActivite(a)
-                                                                        : undefined
-                                                                }
-                                                                historiqueAriaLabel={`Historique de « ${a.nom} »`}
-                                                            >
-                                                                {a.moment ? (
-                                                                    <span className={styles.calendrierActiviteMoment}>
-                                                                        {a.moment.nom}
-                                                                    </span>
-                                                                ) : null}
-                                                                <span className={styles.calendrierActiviteNom}>
-                                                                    {a.nom}
-                                                                </span>
-                                                                {a.lieu ? (
-                                                                    <span className={styles.calendrierActiviteLieu}>
-                                                                        Lieu : {a.lieu.nom}
-                                                                    </span>
-                                                                ) : null}
-                                                                {(() => {
-                                                                    const autresAnimateurs = (a.membres ?? []).filter(
-                                                                        (m) => m.tokenId !== membre.tokenId,
-                                                                    );
-                                                                    if (autresAnimateurs.length === 0) return null;
-                                                                    return (
-                                                                        <span
-                                                                            className={styles.calendrierActiviteAvec}
-                                                                        >
-                                                                            Avec :{" "}
-                                                                            {autresAnimateurs
-                                                                                .map((m) =>
-                                                                                    `${m.prenom} ${m.nom}`.trim(),
-                                                                                )
-                                                                                .join(", ")}
-                                                                        </span>
-                                                                    );
-                                                                })()}
-                                                                {a.groupeIds?.length ? (
-                                                                    <span
-                                                                        className={styles.calendrierActiviteGroupes}
+                                                        {dansCellule.map((item) => {
+                                                            if (item.kind === "activite") {
+                                                                const a = item.activite;
+                                                                return (
+                                                                    <CalendrierCarteEditionAvecSuppression
+                                                                        key={`act-${a.id}`}
+                                                                        lectureSeule={!ligneEditableCalendrier}
+                                                                        onEdit={() => onOpenEdit(a)}
+                                                                        editDisabled={
+                                                                            deletingActiviteId === a.id ||
+                                                                            !ligneEditableCalendrier
+                                                                        }
+                                                                        editAriaLabel={`Éditer l’activité « ${a.nom} »`}
+                                                                        mainButtonStyle={
+                                                                            {
+                                                                                "--plan-cal-carte-bg":
+                                                                                    couleurFondCalendrierPourTypeActivite(
+                                                                                        a.typeActivite?.id,
+                                                                                    ),
+                                                                            } as React.CSSProperties
+                                                                        }
+                                                                        onDeleteClick={() => onDelete(a.id)}
+                                                                        deleteAriaLabel={`Supprimer l’activité « ${a.nom} »`}
+                                                                        deleteDisabled={
+                                                                            deletingActiviteId === a.id ||
+                                                                            !ligneEditableCalendrier
+                                                                        }
+                                                                        onHistoriqueClick={
+                                                                            onOpenHistoriqueActivite
+                                                                                ? () =>
+                                                                                      onOpenHistoriqueActivite(a)
+                                                                                : undefined
+                                                                        }
+                                                                        historiqueAriaLabel={`Historique de « ${a.nom} »`}
                                                                     >
-                                                                        Groupes :{" "}
-                                                                        {a.groupeIds
-                                                                            .map(
-                                                                                (id) =>
-                                                                                    groupes.find((g) => g.id === id)
-                                                                                        ?.nom,
-                                                                            )
-                                                                            .filter(Boolean)
-                                                                            .join(", ") || "—"}
-                                                                    </span>
-                                                                ) : null}
-                                                            </CalendrierCarteEditionAvecSuppression>
-                                                        ))}
+                                                                        {a.moment ? (
+                                                                            <span
+                                                                                className={
+                                                                                    styles.calendrierActiviteMoment
+                                                                                }
+                                                                            >
+                                                                                {a.moment.nom}
+                                                                            </span>
+                                                                        ) : null}
+                                                                        <span className={styles.calendrierActiviteNom}>
+                                                                            {a.nom}
+                                                                        </span>
+                                                                        {a.lieu ? (
+                                                                            <span
+                                                                                className={styles.calendrierActiviteLieu}
+                                                                            >
+                                                                                Lieu : {a.lieu.nom}
+                                                                            </span>
+                                                                        ) : null}
+                                                                        {(() => {
+                                                                            const autresAnimateurs = (
+                                                                                a.membres ?? []
+                                                                            ).filter(
+                                                                                (m) =>
+                                                                                    m.tokenId !== membre.tokenId,
+                                                                            );
+                                                                            if (autresAnimateurs.length === 0)
+                                                                                return null;
+                                                                            return (
+                                                                                <span
+                                                                                    className={
+                                                                                        styles.calendrierActiviteAvec
+                                                                                    }
+                                                                                >
+                                                                                    Avec :{" "}
+                                                                                    {autresAnimateurs
+                                                                                        .map((m) =>
+                                                                                            `${m.prenom} ${m.nom}`.trim(),
+                                                                                        )
+                                                                                        .join(", ")}
+                                                                                </span>
+                                                                            );
+                                                                        })()}
+                                                                        {a.groupeIds?.length ? (
+                                                                            <span
+                                                                                className={
+                                                                                    styles.calendrierActiviteGroupes
+                                                                                }
+                                                                            >
+                                                                                Groupes :{" "}
+                                                                                {a.groupeIds
+                                                                                    .map(
+                                                                                        (id) =>
+                                                                                            groupes.find(
+                                                                                                (g) => g.id === id,
+                                                                                            )?.nom,
+                                                                                    )
+                                                                                    .filter(Boolean)
+                                                                                    .join(", ") || "—"}
+                                                                            </span>
+                                                                        ) : null}
+                                                                    </CalendrierCarteEditionAvecSuppression>
+                                                                );
+                                                            }
+                                                            if (item.kind === "prestataire") {
+                                                                const plage = libellePlageHorairePrestataire(
+                                                                    item.sortie.heureDepart,
+                                                                    item.sortie.heureRetour,
+                                                                );
+                                                                const cleRetrait = cleRetraitSortieCalendrier(
+                                                                    item.sortie.id,
+                                                                    item.moment.id,
+                                                                    membre.tokenId,
+                                                                );
+                                                                const animateurLabel =
+                                                                    `${membre.prenom} ${membre.nom}`.trim();
+                                                                return (
+                                                                    <div
+                                                                        key={`presta-${item.sortie.id}-${item.moment.id}`}
+                                                                        className={styles.calendrierCartePrestataire}
+                                                                    >
+                                                                        <CalendrierCarteEditionAvecSuppression
+                                                                            carteNonCliquable
+                                                                            lectureSeule={
+                                                                                !ligneEditableCalendrier ||
+                                                                                !onRetirerSortieCalendrier
+                                                                            }
+                                                                            onEdit={() => {}}
+                                                                            editAriaLabel={`Sortie « ${item.sortie.nom} » — ${item.moment.nom}`}
+                                                                            onDeleteClick={() =>
+                                                                                onRetirerSortieCalendrier?.(
+                                                                                    item.sortie,
+                                                                                    item.moment,
+                                                                                    membre.tokenId,
+                                                                                    animateurLabel,
+                                                                                )
+                                                                            }
+                                                                            deleteAriaLabel={`Retirer « ${item.sortie.nom} » du calendrier de ${animateurLabel} (${item.moment.nom})`}
+                                                                            deleteTitle="Ne plus participer à ce créneau"
+                                                                            deleteDisabled={
+                                                                                retirerSortieCalendrierEnCours ===
+                                                                                    cleRetrait ||
+                                                                                !ligneEditableCalendrier ||
+                                                                                !onRetirerSortieCalendrier
+                                                                            }
+                                                                            mainButtonStyle={
+                                                                                {
+                                                                                    "--plan-cal-carte-bg":
+                                                                                        "rgba(13, 110, 92, 0.14)",
+                                                                                } as React.CSSProperties
+                                                                            }
+                                                                        >
+                                                                            <span
+                                                                                className={
+                                                                                    styles.calendrierActiviteMoment
+                                                                                }
+                                                                            >
+                                                                                {item.moment.nom}
+                                                                            </span>
+                                                                            <span
+                                                                                className={
+                                                                                    styles.calendrierActiviteNom
+                                                                                }
+                                                                            >
+                                                                                {item.sortie.nom}
+                                                                            </span>
+                                                                            {plage ? (
+                                                                                <span
+                                                                                    className={
+                                                                                        styles.calendrierActiviteLieu
+                                                                                    }
+                                                                                >
+                                                                                    {plage}
+                                                                                </span>
+                                                                            ) : null}
+                                                                        </CalendrierCarteEditionAvecSuppression>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            const cleConflit = `conflit-${item.sortie.id}-${item.moment.id}-${membre.tokenId}`;
+                                                            const enCours =
+                                                                conflitResolutionEnCours === cleConflit;
+                                                            const plage = libellePlageHorairePrestataire(
+                                                                item.sortie.heureDepart,
+                                                                item.sortie.heureRetour,
+                                                            );
+                                                            return (
+                                                                <div
+                                                                    key={cleConflit}
+                                                                    className={styles.calendrierCarteConflit}
+                                                                >
+                                                                    <p className={styles.calendrierConflitTitre}>
+                                                                        Conflit — {item.moment.nom}
+                                                                    </p>
+                                                                    <p className={styles.calendrierConflitDetail}>
+                                                                        Sortie : <strong>{item.sortie.nom}</strong>
+                                                                        {plage ? ` (${plage})` : ""}
+                                                                        <br />
+                                                                        Activité :{" "}
+                                                                        <strong>{item.activite.nom}</strong>
+                                                                    </p>
+                                                                    {peutResoudreConflitsPrestataires &&
+                                                                    onResoudreConflitPrestataire ? (
+                                                                        <div
+                                                                            className={
+                                                                                styles.calendrierConflitActions
+                                                                            }
+                                                                        >
+                                                                            <Button
+                                                                                color="primary"
+                                                                                size="sm"
+                                                                                disabled={enCours}
+                                                                                onClick={() =>
+                                                                                    onResoudreConflitPrestataire(
+                                                                                        item,
+                                                                                        membre.tokenId,
+                                                                                        "sortie",
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                Afficher la sortie
+                                                                            </Button>
+                                                                            <Button
+                                                                                color="secondary"
+                                                                                size="sm"
+                                                                                disabled={enCours}
+                                                                                onClick={() =>
+                                                                                    onResoudreConflitPrestataire(
+                                                                                        item,
+                                                                                        membre.tokenId,
+                                                                                        "activite",
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                Garder l&apos;activité
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p
+                                                                            className={
+                                                                                styles.calendrierConflitHint
+                                                                            }
+                                                                        >
+                                                                            La direction doit trancher ce conflit.
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
                                                         {dansSejour &&
                                                         peutAjouterActivite &&
                                                         ligneEditableCalendrier &&

@@ -17,6 +17,8 @@ export type CalendrierCarteEditionAvecSuppressionProps = {
     deleteDisabled?: boolean;
     /** Affichage seul : pas d’édition ni suppression */
     lectureSeule?: boolean;
+    /** Contenu non cliquable ; le bouton supprimer reste actif si la ligne est éditable */
+    carteNonCliquable?: boolean;
     /** Consulter l’historique des modifications (toujours hors du clic principal). */
     onHistoriqueClick?: () => void;
     historiqueAriaLabel?: string;
@@ -34,17 +36,48 @@ export function CalendrierCarteEditionAvecSuppression({
     deleteTitle = "Supprimer",
     deleteDisabled,
     lectureSeule,
+    carteNonCliquable = false,
     onHistoriqueClick,
     historiqueAriaLabel = "Voir l'historique des modifications",
 }: CalendrierCarteEditionAvecSuppressionProps) {
     const boutonPrincipalClass = [
         styles.carteBtn,
-        lectureSeule ? styles.carteBtnLectureSeule : "",
-        lectureSeule && onHistoriqueClick ? styles.carteBtnIcons : "",
-        !lectureSeule && onHistoriqueClick ? styles.carteBtnAvecHistorique : "",
+        lectureSeule || carteNonCliquable ? styles.carteBtnLectureSeule : "",
+        (lectureSeule || carteNonCliquable) && onHistoriqueClick ? styles.carteBtnIcons : "",
+        !lectureSeule && !carteNonCliquable && onHistoriqueClick ? styles.carteBtnAvecHistorique : "",
     ]
         .filter(Boolean)
         .join(" ");
+
+    if (carteNonCliquable && !lectureSeule) {
+        return (
+            <div className={styles.carteBloc}>
+                <div className={styles.carteSideActions}>
+                    <button
+                        className={`${styles.carteIconBtn} ${styles.carteIconBtnDanger}`}
+                        type="button"
+                        aria-label={deleteAriaLabel}
+                        title={deleteTitle}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteClick(e);
+                        }}
+                        disabled={deleteDisabled}
+                    >
+                        <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                </div>
+                <div
+                    className={boutonPrincipalClass}
+                    style={mainButtonStyle}
+                    role="group"
+                    aria-label={editAriaLabel}
+                >
+                    {children}
+                </div>
+            </div>
+        );
+    }
 
     if (lectureSeule) {
         return (

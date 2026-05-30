@@ -9,6 +9,7 @@ import {
     EnfantDto,
     GroupeDto,
     ActiviteDto,
+    ActivitePrestataireDto,
     HoraireDto,
     LieuDto,
     MomentDto,
@@ -23,6 +24,7 @@ type SejourDetailLoaderSuccess = {
     moments: MomentDto[];
     horaires: HoraireDto[];
     activites: ActiviteDto[];
+    activitesPrestataires: ActivitePrestataireDto[];
     typesActivite: TypeActiviteDto[];
 };
 
@@ -81,7 +83,8 @@ const DetailsSejourActivites: React.FC = () => {
         );
     }
 
-    const { sejour, groupes, lieux, moments, activites, typesActivite } = loaderData;
+    const { sejour, groupes, lieux, moments, activites, activitesPrestataires, typesActivite } =
+        loaderData;
 
     if (!sejour) {
         return (
@@ -98,6 +101,7 @@ const DetailsSejourActivites: React.FC = () => {
         <div className={styles.pageContainer}>
             <ListeActivites
                 activites={activites}
+                activitesPrestataires={activitesPrestataires ?? []}
                 sejour={sejour}
                 groupes={groupes || []}
                 equipe={membresEquipePourActivites}
