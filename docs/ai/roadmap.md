@@ -23,5 +23,7 @@
 - [x] Vue **calendrier** des activités dans l’onglet Activités (`ListeActivitesCalendrier` + bascule depuis `ListeActivites`)
 - [x] **Sorties / prestataires** : loader **`activitesPrestataires`**, route **`/activites/sorties-prestas`**, **`ListeActivitesPrestataires`**, intégration calendrier (**`listeActivitesPrestatairesCalendrier`**, conflits, **`nonParticipations`**, anti-doublon date/moment/groupe)
 - [x] **Plannings organisation (direction)** : grilles par séjour, CRUD, tableau planning (`ListePlanningsOrganisation`, `sejour-planning-grille.service.ts`, panneau accordéon `10`, `detailsSejourLoader.planningGrilles`)
+- [x] **Chambres (hébergement)** : route **`/mes-sejours/:id/chambres`**, **`chambresLoader`**, **`ListeChambres`** (CRUD, référents type **ENFANT**, filtres, **`sejour-chambre.service.ts`**, types **`ChambreDto`** / **`SaveChambreRequest`**)
+- [ ] **Chambres — affectation occupants** (enfants / équipe aux chambres — attend endpoints API)
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)
 - [ ] Optimiser les performances des listes si nécessaire (virtualisation si beaucoup d'éléments)

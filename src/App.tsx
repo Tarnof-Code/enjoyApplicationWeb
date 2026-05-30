@@ -23,6 +23,8 @@ import DetailsSejourMenus from "./Pages/_Sejours/DetailsSejour/DetailsSejourMenu
 import { menusLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejourMenusLoader";
 import DetailsSejourSanitaire from "./Pages/_Sejours/DetailsSejour/DetailsSejourSanitaire";
 import { sanitaireLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejourSanitaireLoader";
+import DetailsSejourChambres from "./Pages/_Sejours/DetailsSejour/DetailsSejourChambres";
+import { chambresLoader } from "./Pages/_Sejours/DetailsSejour/detailsSejourChambresLoader";
 import DossierEnfant, { dossierEnfantLoader } from "./Pages/_Sejours/DossierEnfant/DossierEnfant.tsx";
 import { RoleSysteme } from "./enums/RoleSysteme";
 import { chargerProfilEtCheminAccueil } from "./helpers/redirectApresAuthentification";
@@ -107,6 +109,11 @@ const router = createBrowserRouter([
               path: "sanitaire",
               loader: sanitaireLoader,
               element: <DetailsSejourSanitaire />,
+            },
+            {
+              path: "chambres",
+              loader: chambresLoader,
+              element: <DetailsSejourChambres />,
             },
             {
               path: "organisation",

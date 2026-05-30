@@ -1,0 +1,89 @@
+import { useMemo } from "react";
+import { useLoaderData, useNavigate, useRouteLoaderData } from "react-router-dom";
+import styles from "./DetailsSejour.module.scss";
+import ListeChambres from "../../../components/Liste/ListeChambres";
+import { accountService } from "../../../services/account.service";
+import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
+import type { SejourDTO } from "../../../types/api";
+import type { ChambresLoaderData } from "./detailsSejourChambresLoader";
+
+type SejourDetailLoaderSuccess = {
+    sejour: SejourDTO;
+};
+
+const DetailsSejourChambres = () => {
+    const { chambres } = useLoaderData() as ChambresLoaderData;
+    const navigate = useNavigate();
+    const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
+
+    const membresEquipe = useMemo(() => {
+        if (!loaderData?.sejour) return [];
+        const { sejour } = loaderData;
+        const seen = new Set<string>();
+        const result: { tokenId: string; nom: string; prenom: string }[] = [];
+        if (sejour.directeur && !seen.has(sejour.directeur.tokenId)) {
+            seen.add(sejour.directeur.tokenId);
+            result.push({
+                tokenId: sejour.directeur.tokenId,
+                nom: sejour.directeur.nom,
+                prenom: sejour.directeur.prenom,
+            });
+        }
+        for (const m of sejour.equipe || []) {
+            if (!seen.has(m.tokenId)) {
+                seen.add(m.tokenId);
+                result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
+            }
+        }
+        return result.sort((a, b) => {
+            const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
+            return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
+        });
+    }, [loaderData]);
+
+    const peutGererChambres = useMemo(() => {
+        if (!loaderData?.sejour) return false;
+        const sub = accountService.getTokenInfo()?.payload?.sub;
+        return peutGererMembresEquipeSejour(
+            typeof sub === "string" ? sub : undefined,
+            loaderData.sejour.directeur,
+            loaderData.sejour.equipe
+        );
+    }, [loaderData]);
+
+    if (loaderData === undefined) {
+        return (
+            <div className={styles.pageContainer}>
+                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
+                    ← Retour à la liste
+                </button>
+                <p className={styles.error}>Chargement du séjour…</p>
+            </div>
+        );
+    }
+
+    const sejour = loaderData.sejour;
+    if (!sejour) {
+        return (
+            <div className={styles.pageContainer}>
+                <button type="button" onClick={() => navigate("/mes-sejours")} className={styles.backButton}>
+                    ← Retour à la liste
+                </button>
+                <p className={styles.error}>Séjour introuvable</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.pageContainer}>
+            <ListeChambres
+                chambres={chambres}
+                sejourId={sejour.id}
+                peutGererChambres={peutGererChambres}
+                equipe={membresEquipe}
+            />
+        </div>
+    );
+};
+
+export default DetailsSejourChambres;

@@ -1,0 +1,186 @@
+@use "../../_variables" as *;
+
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.filtersBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    background: #f4f6f8;
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+}
+
+.filterField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 10rem;
+}
+
+.filterLabel {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.filterInput {
+    font-size: 0.95rem;
+}
+
+.filterReset {
+    align-self: flex-end;
+}
+
+.filterMeta {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.errorMessage {
+    color: #dc3545;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 13rem;
+    height: 100%;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    background: #fafbfc;
+    box-sizing: border-box;
+}
+
+.cardHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.typeBadge {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $bleu_principal;
+    background: rgba($bleu_principal, 0.1);
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+}
+
+.identifiant {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #1a1a1a;
+}
+
+.meta {
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 0.35rem;
+}
+
+.referentsRow {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.referentsLabel {
+    font-weight: 600;
+}
+
+.cardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.8rem;
+}
+
+.empty {
+    color: #666;
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+
+.occupantsPlaceholder {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    border: 1px dashed #c5ccd3;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.occupantsPlaceholderTitle {
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 0.35rem;
+}
+
+.modalField {
+    margin-bottom: 1rem;
+}
+
+.modalFooter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.modalFooterMessage {
+    flex: 1 1 auto;
+    min-width: 12rem;
+    margin-right: auto;
+}
+
+.modalFooterError {
+    display: block;
+    color: #dc3545;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.modalFooterActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}

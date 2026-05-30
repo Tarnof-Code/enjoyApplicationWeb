@@ -27,6 +27,7 @@ import {
   FaTable,
   FaUtensils,
   FaNotesMedical,
+  FaBed,
 } from "react-icons/fa";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
@@ -226,6 +227,15 @@ const Admin_header: React.FC = () => {
                       >
                         <FaNotesMedical size={14} aria-hidden />
                         Sanitaire
+                      </NavLink>
+                      <NavLink
+                        to={`/mes-sejours/${effectiveNavId}/chambres`}
+                        className={({ isActive }) =>
+                          `${styles.directorSegment} ${isActive ? styles.directorSegmentActive : ""}`
+                        }
+                      >
+                        <FaBed size={14} aria-hidden />
+                        Chambres
                       </NavLink>
                       {peutAfficherNavParametrage ? (
                         <NavLink

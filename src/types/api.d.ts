@@ -498,6 +498,66 @@ export interface SaveLieuRequest {
 }
 
 // ============================================================================
+// Chambres (hébergement d'un séjour)
+// ============================================================================
+
+/** Correspond à TypeChambre.java */
+export type TypeChambre = 'ENFANT' | 'EQUIPE';
+
+/** Correspond à GenreChambre.java */
+export type GenreChambre = 'MASCULIN' | 'FEMININ' | 'MIXTE';
+
+/**
+ * Correspond à ChambreReferentInfos (classe interne ou DTO)
+ * Informations sur un référent d'une chambre enfants
+ */
+export interface ChambreReferentInfos {
+  tokenId: string;
+  nom: string;
+  prenom: string;
+}
+
+/**
+ * Correspond à ChambreDto.java
+ */
+export interface ChambreDto {
+  id: number;
+  sejourId: number;
+  typeChambre: TypeChambre;
+  identifiant: string;
+  nom: string | null;
+  capaciteMax: number;
+  genreAutorise: GenreChambre;
+  description: string | null;
+  batiment: string | null;
+  couloir: string | null;
+  etage: number | null;
+  /** Toujours [] pour type EQUIPE */
+  referents: ChambreReferentInfos[];
+}
+
+/**
+ * Correspond à SaveChambreRequest.java (création et mise à jour)
+ */
+export interface SaveChambreRequest {
+  typeChambre: TypeChambre;
+  /** max 50 car. — unique par séjour (casse ignorée) */
+  identifiant: string;
+  /** max 150 car. */
+  nom?: string | null;
+  /** > 0 */
+  capaciteMax: number;
+  genreAutorise: GenreChambre;
+  /** max 2000 car. */
+  description?: string | null;
+  /** max 100 car. */
+  batiment?: string | null;
+  /** max 100 car. */
+  couloir?: string | null;
+  etage?: number | null;
+}
+
+// ============================================================================
 // Moments (créneaux : matin, après-midi, etc. — un séjour)
 // ============================================================================
 
