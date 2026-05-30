@@ -8,3 +8,10 @@ export const GenreChambreLabels: Record<GenreChambreType, string> = {
   FEMININ: 'Féminin',
   MIXTE: 'Mixte',
 };
+
+/** Libellés courts pour pastilles sur les cartes chambre. */
+export const GenreChambreBadgeLabels: Record<GenreChambreType, string> = {
+  MASCULIN: 'Garçons',
+  FEMININ: 'Filles',
+  MIXTE: 'Mixte',
+};

@@ -87,6 +87,22 @@
   margin-left: 10rem; // Aligne avec la première case (9rem label + 1rem gap)
 }
 
+.referents_stacked {
+  margin-bottom: 0 !important;
+
+  .label_stacked {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .referents_checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+}
+
 .checkbox_row_ref_alimentaire {
   display: flex;
   align-items: flex-start;

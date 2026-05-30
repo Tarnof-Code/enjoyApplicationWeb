@@ -21,3 +21,9 @@ export function resumeLocalisation(chambre: ChambreDto): string {
   if (chambre.couloir?.trim()) parts.push(`Couloir ${chambre.couloir.trim()}`);
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
+
+export function chambreALocalisationRenseignee(
+  chambre: Pick<ChambreDto, "batiment" | "etage" | "couloir">
+): boolean {
+  return !!(chambre.batiment?.trim() || chambre.etage != null || chambre.couloir?.trim());
+}

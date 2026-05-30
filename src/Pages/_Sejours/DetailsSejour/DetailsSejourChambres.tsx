@@ -2,13 +2,15 @@ import { useMemo } from "react";
 import { useLoaderData, useNavigate, useRouteLoaderData } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import ListeChambres from "../../../components/Liste/ListeChambres";
-import { accountService } from "../../../services/account.service";
-import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
-import type { SejourDTO } from "../../../types/api";
+import type { EnfantDto, GroupeDto, SejourDTO } from "../../../types/api";
+import type { MembreEquipePourChambre } from "../../../helpers/chambreOccupantsUtils";
+import { trierParPrenomPuisNom } from "../../../helpers/trierUtilisateurs";
 import type { ChambresLoaderData } from "./detailsSejourChambresLoader";
 
 type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
+    enfants: EnfantDto[];
+    groupes: GroupeDto[];
 };
 
 const DetailsSejourChambres = () => {
@@ -16,39 +18,35 @@ const DetailsSejourChambres = () => {
     const navigate = useNavigate();
     const loaderData = useRouteLoaderData("sejour-detail") as SejourDetailLoaderSuccess | undefined;
 
-    const membresEquipe = useMemo(() => {
+    const membresEquipe = useMemo((): MembreEquipePourChambre[] => {
         if (!loaderData?.sejour) return [];
         const { sejour } = loaderData;
         const seen = new Set<string>();
-        const result: { tokenId: string; nom: string; prenom: string }[] = [];
+        const result: MembreEquipePourChambre[] = [];
+        const genreParToken = new Map(
+            (sejour.equipe ?? []).map((m) => [m.tokenId, m.genre ?? ""])
+        );
         if (sejour.directeur && !seen.has(sejour.directeur.tokenId)) {
             seen.add(sejour.directeur.tokenId);
             result.push({
                 tokenId: sejour.directeur.tokenId,
                 nom: sejour.directeur.nom,
                 prenom: sejour.directeur.prenom,
+                genre: genreParToken.get(sejour.directeur.tokenId) ?? "",
             });
         }
         for (const m of sejour.equipe || []) {
             if (!seen.has(m.tokenId)) {
                 seen.add(m.tokenId);
-                result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
+                result.push({
+                    tokenId: m.tokenId,
+                    nom: m.nom,
+                    prenom: m.prenom,
+                    genre: m.genre ?? "",
+                });
             }
         }
-        return result.sort((a, b) => {
-            const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-            return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
-        });
-    }, [loaderData]);
-
-    const peutGererChambres = useMemo(() => {
-        if (!loaderData?.sejour) return false;
-        const sub = accountService.getTokenInfo()?.payload?.sub;
-        return peutGererMembresEquipeSejour(
-            typeof sub === "string" ? sub : undefined,
-            loaderData.sejour.directeur,
-            loaderData.sejour.equipe
-        );
+        return trierParPrenomPuisNom(result);
     }, [loaderData]);
 
     if (loaderData === undefined) {
@@ -63,6 +61,9 @@ const DetailsSejourChambres = () => {
     }
 
     const sejour = loaderData.sejour;
+    const enfantsSejour = loaderData.enfants ?? [];
+    const groupesSejour = loaderData.groupes ?? [];
+
     if (!sejour) {
         return (
             <div className={styles.pageContainer}>
@@ -79,7 +80,8 @@ const DetailsSejourChambres = () => {
             <ListeChambres
                 chambres={chambres}
                 sejourId={sejour.id}
-                peutGererChambres={peutGererChambres}
+                enfants={enfantsSejour}
+                groupes={groupesSejour}
                 equipe={membresEquipe}
             />
         </div>

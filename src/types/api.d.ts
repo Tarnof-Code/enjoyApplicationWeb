@@ -518,6 +518,19 @@ export interface ChambreReferentInfos {
 }
 
 /**
+ * Correspond à ChambreOccupantDto.java
+ */
+export interface ChambreOccupantDto {
+  id: number;
+  typeOccupant: TypeChambre;
+  enfantId: number | null;
+  membreTokenId: string | null;
+  nom: string;
+  prenom: string;
+  numeroLit: number | null;
+}
+
+/**
  * Correspond à ChambreDto.java
  */
 export interface ChambreDto {
@@ -532,8 +545,12 @@ export interface ChambreDto {
   batiment: string | null;
   couloir: string | null;
   etage: number | null;
+  /** ENFANT uniquement ; null = pas de restriction par groupe — GroupeResumeDto embarqué */
+  groupe: GroupeResumeDto | null;
   /** Toujours [] pour type EQUIPE */
   referents: ChambreReferentInfos[];
+  /** Tri API : numeroLit croissant, null en dernier */
+  occupants: ChambreOccupantDto[];
 }
 
 /**
@@ -555,6 +572,46 @@ export interface SaveChambreRequest {
   /** max 100 car. */
   couloir?: string | null;
   etage?: number | null;
+  /** ENFANT uniquement ; null = retirer le groupe / pas de restriction */
+  groupeId?: number | null;
+}
+
+/**
+ * Correspond à AffecterOccupantChambreRequest.java
+ * Body optionnel pour POST affectation unitaire occupant
+ */
+export interface AffecterOccupantChambreRequest {
+  numeroLit?: number | null;
+}
+
+/**
+ * Correspond à AffecterOccupantEnfantItemRequest.java
+ */
+export interface AffecterOccupantEnfantItemRequest {
+  enfantId: number;
+  numeroLit?: number | null;
+}
+
+/**
+ * Correspond à AffecterOccupantsEnfantsRequest.java
+ */
+export interface AffecterOccupantsEnfantsRequest {
+  occupants: AffecterOccupantEnfantItemRequest[];
+}
+
+/**
+ * Correspond à AffecterOccupantEquipeItemRequest.java
+ */
+export interface AffecterOccupantEquipeItemRequest {
+  membreTokenId: string;
+  numeroLit?: number | null;
+}
+
+/**
+ * Correspond à AffecterOccupantsEquipeRequest.java
+ */
+export interface AffecterOccupantsEquipeRequest {
+  occupants: AffecterOccupantEquipeItemRequest[];
 }
 
 // ============================================================================

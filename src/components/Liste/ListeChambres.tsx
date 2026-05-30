@@ -1,28 +1,86 @@
-import { useMemo, useState } from "react";
-import { useRevalidator } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import ReferentsSelector, { EquipePerson } from "../Forms/ReferentsSelector";
+import ReferentsSelector from "../Forms/ReferentsSelector";
+import type { MembreEquipePourChambre } from "../../helpers/chambreOccupantsUtils";
 import {
     ChambreDto,
+    ChambreOccupantDto,
+    EnfantDto,
+    GroupeDto,
     SaveChambreRequest,
     TypeChambre,
     GenreChambre,
 } from "../../types/api";
 import { sejourChambreService } from "../../services/sejour-chambre.service";
 import { TypeChambreLabels, TypeChambreValues } from "../../enums/TypeChambre";
-import { GenreChambreLabels, GenreChambreValues } from "../../enums/GenreChambre";
-import { libelleChambre, resumeLocalisation } from "../../helpers/libelleChambre";
+import { GenreChambreBadgeLabels, GenreChambreLabels, GenreChambreValues } from "../../enums/GenreChambre";
+import { libelleChambre, resumeLocalisation, chambreALocalisationRenseignee, libelleEtage } from "../../helpers/libelleChambre";
+import {
+    analyserModificationChambreIncompatible,
+    enfantsEligiblesPourChambre,
+    fusionnerChambreRetourneeDansListe,
+    indexerAffectationsOccupants,
+    libelleChambreAffectation,
+    libelleOccupant,
+    libelleRechercheOccupantsChambre,
+    membresEligiblesPourChambre,
+    modificationChambreBloquee,
+    partiesLibelleRechercheOccupantsChambre,
+} from "../../helpers/chambreOccupantsUtils";
+import { trierEnfantsParNom } from "../../helpers/trierUtilisateurs";
 import styles from "./ListeChambres.module.scss";
 
 export interface ListeChambresProps {
     chambres: ChambreDto[];
     sejourId: number;
-    /** Directeur ou adjoint : CRUD + référents ; sinon consultation seule */
-    peutGererChambres: boolean;
-    equipe?: EquipePerson[];
+    enfants?: EnfantDto[];
+    groupes?: GroupeDto[];
+    equipe?: MembreEquipePourChambre[];
 }
 
 const FILTRE_TOUS = "" as const;
+
+type FiltreGroupesSelection = {
+    sansGroupe: boolean;
+    groupeIds: Set<number>;
+};
+
+function filtresGroupesActifs(selection: FiltreGroupesSelection): boolean {
+    return selection.sansGroupe || selection.groupeIds.size > 0;
+}
+
+function chambreCorrespondFiltreGroupes(chambre: ChambreDto, selection: FiltreGroupesSelection): boolean {
+    if (!filtresGroupesActifs(selection)) return true;
+    if (chambre.typeChambre !== "ENFANT") return false;
+
+    if (selection.sansGroupe && chambre.groupe?.id == null) return true;
+    const gid = chambre.groupe?.id;
+    if (gid != null && selection.groupeIds.has(gid)) return true;
+    return false;
+}
+
+function LabelRechercheOccupantsChambre({ chambre }: { chambre: ChambreDto }) {
+    const parties = partiesLibelleRechercheOccupantsChambre(chambre);
+    if (parties.kind === "equipe") {
+        return (
+            <>
+                Rechercher <strong>{parties.cible}</strong>
+            </>
+        );
+    }
+    if (parties.groupe) {
+        return (
+            <>
+                Rechercher <strong>{parties.cible}</strong> du groupe <strong>{parties.groupe}</strong>
+            </>
+        );
+    }
+    return (
+        <>
+            Rechercher <strong>{parties.cible}</strong>
+        </>
+    );
+}
 
 function parseSelectedReferents(value: string): string[] {
     if (!value.trim()) return [];
@@ -34,19 +92,49 @@ function parseSelectedReferents(value: string): string[] {
     }
 }
 
+function chambreCorrespondRechercheTexte(chambre: ChambreDto, search: string): boolean {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+
+    if (chambre.identifiant.trim().toLowerCase().includes(q)) return true;
+    if (chambre.nom?.trim().toLowerCase().includes(q)) return true;
+    if (libelleChambre(chambre).toLowerCase().includes(q)) return true;
+
+    if (chambre.batiment?.trim().toLowerCase().includes(q)) return true;
+    if (chambre.couloir?.trim().toLowerCase().includes(q)) return true;
+
+    if (chambre.etage != null) {
+        if (String(chambre.etage).includes(q)) return true;
+        if (libelleEtage(chambre.etage).toLowerCase().includes(q)) return true;
+    }
+
+    for (const occupant of chambre.occupants ?? []) {
+        const hay = `${occupant.nom} ${occupant.prenom}`.toLowerCase();
+        if (hay.includes(q)) return true;
+    }
+
+    return false;
+}
+
 function filtrerChambres(
     chambres: ChambreDto[],
     typeFiltre: typeof FILTRE_TOUS | TypeChambre,
     genreFiltre: typeof FILTRE_TOUS | GenreChambre,
-    batimentFiltre: typeof FILTRE_TOUS | string
+    rechercheTexte: string,
+    groupesFiltre: FiltreGroupesSelection
 ): { résultat: ChambreDto[]; filtresActifs: boolean } {
+    const recherche = rechercheTexte.trim();
     const filtresActifs =
-        typeFiltre !== FILTRE_TOUS || genreFiltre !== FILTRE_TOUS || batimentFiltre !== FILTRE_TOUS;
+        typeFiltre !== FILTRE_TOUS ||
+        genreFiltre !== FILTRE_TOUS ||
+        recherche !== "" ||
+        filtresGroupesActifs(groupesFiltre);
 
     const résultat = chambres.filter((c) => {
         if (typeFiltre !== FILTRE_TOUS && c.typeChambre !== typeFiltre) return false;
         if (genreFiltre !== FILTRE_TOUS && c.genreAutorise !== genreFiltre) return false;
-        if (batimentFiltre !== FILTRE_TOUS && (c.batiment?.trim() ?? "") !== batimentFiltre) return false;
+        if (!chambreCorrespondRechercheTexte(c, recherche)) return false;
+        if (!chambreCorrespondFiltreGroupes(c, groupesFiltre)) return false;
         return true;
     });
 
@@ -73,8 +161,27 @@ async function synchroniserReferents(
     }
 }
 
-function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: ListeChambresProps) {
-    const revalidator = useRevalidator();
+function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], groupes = [], equipe = [] }: ListeChambresProps) {
+    const [chambres, setChambres] = useState(chambresLoader);
+
+    useEffect(() => {
+        setChambres(chambresLoader);
+    }, [chambresLoader]);
+
+    const appliquerChambreRetournee = useCallback((chambreMiseAJour: ChambreDto) => {
+        setChambres((prev) => fusionnerChambreRetourneeDansListe(prev, chambreMiseAJour));
+    }, []);
+
+    const retirerOccupantLocal = useCallback((chambreId: number, occupantId: number) => {
+        setChambres((prev) =>
+            prev.map((c) =>
+                c.id !== chambreId
+                    ? c
+                    : { ...c, occupants: (c.occupants ?? []).filter((o) => o.id !== occupantId) }
+            )
+        );
+    }, []);
+
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -86,6 +193,17 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
     const [editingChambre, setEditingChambre] = useState<ChambreDto | null>(null);
     const [deletingChambreId, setDeletingChambreId] = useState<number | null>(null);
 
+    const [addOccupantModal, setAddOccupantModal] = useState<ChambreDto | null>(null);
+    const [retirerOccupantModal, setRetirerOccupantModal] = useState<{
+        chambreId: number;
+        occupant: ChambreOccupantDto;
+    } | null>(null);
+    const [occupantModalError, setOccupantModalError] = useState<string | null>(null);
+    const [occupantSubmitting, setOccupantSubmitting] = useState(false);
+    const [pickerSearch, setPickerSearch] = useState("");
+    const [pickerSelectedEnfantIds, setPickerSelectedEnfantIds] = useState<Set<number>>(() => new Set());
+    const [pickerSelectedMembreIds, setPickerSelectedMembreIds] = useState<Set<string>>(() => new Set());
+
     const [formTypeChambre, setFormTypeChambre] = useState<TypeChambre>("ENFANT");
     const [formIdentifiant, setFormIdentifiant] = useState("");
     const [formNom, setFormNom] = useState("");
@@ -95,20 +213,219 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
     const [formBatiment, setFormBatiment] = useState("");
     const [formCouloir, setFormCouloir] = useState("");
     const [formEtage, setFormEtage] = useState("");
+    const [formGroupeId, setFormGroupeId] = useState("");
     const [formReferents, setFormReferents] = useState("[]");
 
     const [filterType, setFilterType] = useState<typeof FILTRE_TOUS | TypeChambre>(FILTRE_TOUS);
     const [filterGenre, setFilterGenre] = useState<typeof FILTRE_TOUS | GenreChambre>(FILTRE_TOUS);
-    const [filterBatiment, setFilterBatiment] = useState<typeof FILTRE_TOUS | string>(FILTRE_TOUS);
+    const [filterRecherche, setFilterRecherche] = useState("");
+    const [filterSansGroupe, setFilterSansGroupe] = useState(false);
+    const [filterGroupeIds, setFilterGroupeIds] = useState<Set<number>>(() => new Set());
 
-    const batimentsDistincts = useMemo(() => {
-        const set = new Set<string>();
-        for (const c of chambres) {
-            const b = c.batiment?.trim();
-            if (b) set.add(b);
+    const afficherFiltreGroupe = filterType === FILTRE_TOUS || filterType === "ENFANT";
+
+    const selectionFiltreGroupes = useMemo(
+        (): FiltreGroupesSelection => ({
+            sansGroupe: afficherFiltreGroupe && filterSansGroupe,
+            groupeIds: afficherFiltreGroupe ? filterGroupeIds : new Set(),
+        }),
+        [afficherFiltreGroupe, filterSansGroupe, filterGroupeIds]
+    );
+
+    const toggleFilterGroupe = (groupeId: number) => {
+        setFilterGroupeIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(groupeId)) next.delete(groupeId);
+            else next.add(groupeId);
+            return next;
+        });
+    };
+
+    const reinitialiserFiltreGroupes = () => {
+        setFilterSansGroupe(false);
+        setFilterGroupeIds(new Set());
+    };
+
+    const groupesPourFiltre = useMemo(
+        () => [...groupes].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" })),
+        [groupes]
+    );
+
+    const [filtreGroupePanelOuvert, setFiltreGroupePanelOuvert] = useState(false);
+    const filtreGroupeDropdownRef = useRef<HTMLDivElement>(null);
+
+    const libelleResumeFiltreGroupes = useMemo(() => {
+        if (!filterSansGroupe && filterGroupeIds.size === 0) return "Tous les groupes";
+        const labels: string[] = [];
+        if (filterSansGroupe) labels.push("Sans groupe");
+        for (const g of groupesPourFiltre) {
+            if (filterGroupeIds.has(g.id)) labels.push(g.nom);
         }
-        return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-    }, [chambres]);
+        if (labels.length <= 2) return labels.join(", ");
+        return `${labels.length} groupes`;
+    }, [filterSansGroupe, filterGroupeIds, groupesPourFiltre]);
+
+    useEffect(() => {
+        if (!filtreGroupePanelOuvert) return;
+        const fermerSiExterieur = (e: MouseEvent) => {
+            const cible = e.target as Node;
+            if (
+                filtreGroupeDropdownRef.current &&
+                !filtreGroupeDropdownRef.current.contains(cible)
+            ) {
+                setFiltreGroupePanelOuvert(false);
+            }
+        };
+        document.addEventListener("mousedown", fermerSiExterieur);
+        return () => document.removeEventListener("mousedown", fermerSiExterieur);
+    }, [filtreGroupePanelOuvert]);
+
+    const affectationIndex = useMemo(() => indexerAffectationsOccupants(chambres), [chambres]);
+
+    const openAddOccupantModal = (chambre: ChambreDto) => {
+        setOccupantModalError(null);
+        setPickerSearch("");
+        setPickerSelectedEnfantIds(new Set());
+        setPickerSelectedMembreIds(new Set());
+        setAddOccupantModal(chambre);
+    };
+
+    const dismissAddOccupantModal = () => {
+        if (occupantSubmitting) return;
+        setAddOccupantModal(null);
+        setOccupantModalError(null);
+        setPickerSearch("");
+        setPickerSelectedEnfantIds(new Set());
+        setPickerSelectedMembreIds(new Set());
+    };
+
+    const placesRestantesChambre = (chambre: ChambreDto) =>
+        Math.max(0, chambre.capaciteMax - (chambre.occupants?.length ?? 0));
+
+    const togglePickerEnfant = (chambre: ChambreDto, enfantId: number) => {
+        const max = placesRestantesChambre(chambre);
+        setPickerSelectedEnfantIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(enfantId)) {
+                next.delete(enfantId);
+                setOccupantModalError(null);
+                return next;
+            }
+            if (next.size >= max) return prev;
+            next.add(enfantId);
+            setOccupantModalError(null);
+            return next;
+        });
+    };
+
+    const togglePickerMembre = (chambre: ChambreDto, membreTokenId: string) => {
+        const tid = membreTokenId.trim();
+        const max = placesRestantesChambre(chambre);
+        setPickerSelectedMembreIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(tid)) {
+                next.delete(tid);
+                setOccupantModalError(null);
+                return next;
+            }
+            if (next.size >= max) return prev;
+            next.add(tid);
+            setOccupantModalError(null);
+            return next;
+        });
+    };
+
+    const handleAffecterSelection = async () => {
+        if (!addOccupantModal) return;
+        const chambre = addOccupantModal;
+        const placesRestantes = placesRestantesChambre(chambre);
+        setOccupantModalError(null);
+
+        if (chambre.typeChambre === "ENFANT") {
+            const ids = Array.from(pickerSelectedEnfantIds);
+            if (ids.length === 0) {
+                setOccupantModalError("Sélectionnez au moins un enfant.");
+                return;
+            }
+            if (ids.length > placesRestantes) {
+                setOccupantModalError(
+                    `Impossible d'affecter ${ids.length} enfant(s) : il reste ${placesRestantes} place(s) dans cette chambre.`
+                );
+                return;
+            }
+            setOccupantSubmitting(true);
+            try {
+                let chambreMiseAJour: ChambreDto;
+                if (ids.length === 1) {
+                    chambreMiseAJour = await sejourChambreService.affecterEnfant(sejourId, chambre.id, ids[0]);
+                } else {
+                    chambreMiseAJour = await sejourChambreService.affecterEnfants(sejourId, chambre.id, {
+                        occupants: ids.map((enfantId) => ({ enfantId })),
+                    });
+                }
+                dismissAddOccupantModal();
+                appliquerChambreRetournee(chambreMiseAJour);
+            } catch (e: unknown) {
+                setOccupantModalError(
+                    e instanceof Error ? e.message : "Impossible d'affecter les enfants sélectionnés"
+                );
+            } finally {
+                setOccupantSubmitting(false);
+            }
+            return;
+        }
+
+        const tokenIds = Array.from(pickerSelectedMembreIds);
+        if (tokenIds.length === 0) {
+            setOccupantModalError("Sélectionnez au moins un membre d'équipe.");
+            return;
+        }
+        if (tokenIds.length > placesRestantes) {
+            setOccupantModalError(
+                `Impossible d'affecter ${tokenIds.length} membre(s) : il reste ${placesRestantes} place(s) dans cette chambre.`
+            );
+            return;
+        }
+        setOccupantSubmitting(true);
+        try {
+            let chambreMiseAJour: ChambreDto;
+            if (tokenIds.length === 1) {
+                chambreMiseAJour = await sejourChambreService.affecterMembreEquipe(sejourId, chambre.id, tokenIds[0]);
+            } else {
+                chambreMiseAJour = await sejourChambreService.affecterMembresEquipe(sejourId, chambre.id, {
+                    occupants: tokenIds.map((membreTokenId) => ({ membreTokenId })),
+                });
+            }
+            dismissAddOccupantModal();
+            appliquerChambreRetournee(chambreMiseAJour);
+        } catch (e: unknown) {
+            setOccupantModalError(
+                e instanceof Error ? e.message : "Impossible d'affecter les membres sélectionnés"
+            );
+        } finally {
+            setOccupantSubmitting(false);
+        }
+    };
+
+    const confirmRetirerOccupant = async () => {
+        if (!retirerOccupantModal) return;
+        const { chambreId, occupant } = retirerOccupantModal;
+        setOccupantSubmitting(true);
+        setErrorMessage(null);
+        try {
+            if (occupant.enfantId != null) {
+                await sejourChambreService.retirerEnfant(sejourId, chambreId, occupant.enfantId);
+            } else if (occupant.membreTokenId?.trim()) {
+                await sejourChambreService.retirerMembreEquipe(sejourId, chambreId, occupant.membreTokenId.trim());
+            }
+            setRetirerOccupantModal(null);
+            retirerOccupantLocal(chambreId, occupant.id);
+        } catch (e: unknown) {
+            setErrorMessage(e instanceof Error ? e.message : "Impossible de retirer l'occupant");
+        } finally {
+            setOccupantSubmitting(false);
+        }
+    };
 
     const resetForm = () => {
         setFormTypeChambre("ENFANT");
@@ -120,6 +437,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
         setFormBatiment("");
         setFormCouloir("");
         setFormEtage("");
+        setFormGroupeId("");
         setFormReferents("[]");
     };
 
@@ -147,6 +465,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
         setFormBatiment(chambre.batiment ?? "");
         setFormCouloir(chambre.couloir ?? "");
         setFormEtage(chambre.etage != null ? String(chambre.etage) : "");
+        setFormGroupeId(chambre.groupe?.id != null ? String(chambre.groupe.id) : "");
         setFormReferents(JSON.stringify((chambre.referents ?? []).map((r) => r.tokenId)));
         setModalOpen(true);
     };
@@ -197,7 +516,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
             }
             etage = e;
         }
-        return {
+        const payload: SaveChambreRequest = {
             typeChambre: formTypeChambre,
             identifiant,
             nom: nomTrim || null,
@@ -208,6 +527,20 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
             couloir: couloirTrim || null,
             etage,
         };
+        if (formTypeChambre === "ENFANT") {
+            const rawGroupe = formGroupeId.trim();
+            if (rawGroupe === "") {
+                payload.groupeId = null;
+            } else {
+                const gid = Number.parseInt(rawGroupe, 10);
+                if (Number.isNaN(gid)) {
+                    setErrorMessage("Le groupe sélectionné est invalide.");
+                    return null;
+                }
+                payload.groupeId = gid;
+            }
+        }
+        return payload;
     };
 
     const doitConfirmerChangementType = (): boolean => {
@@ -228,9 +561,14 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
             if (formTypeChambre === "ENFANT" && selectedReferentIds.length > 0) {
                 await synchroniserReferents(sejourId, created.id, [], selectedReferentIds);
             }
+            const fresh =
+                formTypeChambre === "ENFANT" && selectedReferentIds.length > 0
+                    ? await sejourChambreService.getChambreById(sejourId, created.id)
+                    : created;
+            appliquerChambreRetournee(fresh);
             showSuccessModal("Chambre créée avec succès.");
         } else {
-            await sejourChambreService.modifierChambre(sejourId, editingChambre.id, payload);
+            const updated = await sejourChambreService.modifierChambre(sejourId, editingChambre.id, payload);
             if (formTypeChambre === "ENFANT") {
                 await synchroniserReferents(
                     sejourId,
@@ -239,12 +577,16 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                     selectedReferentIds
                 );
             }
+            const fresh =
+                formTypeChambre === "ENFANT"
+                    ? await sejourChambreService.getChambreById(sejourId, editingChambre.id)
+                    : updated;
+            appliquerChambreRetournee(fresh);
             showSuccessModal("Chambre modifiée avec succès.");
         }
         setModalOpen(false);
         setEditingChambre(null);
         setTypeChangeConfirmOpen(false);
-        revalidator.revalidate();
     };
 
     const handleSubmit = async () => {
@@ -255,6 +597,19 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
         if (doitConfirmerChangementType()) {
             setTypeChangeConfirmOpen(true);
             return;
+        }
+
+        if (editingChambre) {
+            const erreursOccupants = analyserModificationChambreIncompatible(
+                editingChambre,
+                payload,
+                groupes,
+                enfants,
+                equipe
+            );
+            if (modificationChambreBloquee(erreursOccupants)) {
+                return;
+            }
         }
 
         setSubmitting(true);
@@ -298,14 +653,15 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
 
     const handleSupprimer = async () => {
         if (pendingDeleteChambreId == null) return;
+        const chambreId = pendingDeleteChambreId;
         setErrorMessage(null);
-        setDeletingChambreId(pendingDeleteChambreId);
+        setDeletingChambreId(chambreId);
         try {
-            await sejourChambreService.supprimerChambre(sejourId, pendingDeleteChambreId);
+            await sejourChambreService.supprimerChambre(sejourId, chambreId);
             setDeleteModalOpen(false);
             setPendingDeleteChambreId(null);
             showSuccessModal("Chambre supprimée avec succès.");
-            revalidator.revalidate();
+            setChambres((prev) => prev.filter((c) => c.id !== chambreId));
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Impossible de supprimer la chambre";
             setErrorMessage(msg);
@@ -318,24 +674,65 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
         chambres,
         filterType,
         filterGenre,
-        filterBatiment
+        filterRecherche,
+        selectionFiltreGroupes
     );
 
     const réinitialiserFiltres = () => {
         setFilterType(FILTRE_TOUS);
         setFilterGenre(FILTRE_TOUS);
-        setFilterBatiment(FILTRE_TOUS);
+        setFilterRecherche("");
+        reinitialiserFiltreGroupes();
     };
+
+    const erreursModificationChambre = useMemo(() => {
+        if (!editingChambre || !modalOpen) return {};
+        const rawCap = formCapaciteMax.trim();
+        const capaciteMax = Number.parseInt(rawCap, 10);
+        if (!rawCap || Number.isNaN(capaciteMax) || capaciteMax < 1) return {};
+
+        let groupeId: number | null = null;
+        if (formTypeChambre === "ENFANT") {
+            const rawGroupe = formGroupeId.trim();
+            if (rawGroupe !== "") {
+                const gid = Number.parseInt(rawGroupe, 10);
+                if (!Number.isNaN(gid)) groupeId = gid;
+            }
+        }
+
+        return analyserModificationChambreIncompatible(
+            editingChambre,
+            {
+                typeChambre: formTypeChambre,
+                capaciteMax,
+                genreAutorise: formGenreAutorise,
+                groupeId: formTypeChambre === "ENFANT" ? groupeId : undefined,
+            },
+            groupes,
+            enfants,
+            equipe
+        );
+    }, [
+        editingChambre,
+        modalOpen,
+        formCapaciteMax,
+        formGenreAutorise,
+        formGroupeId,
+        formTypeChambre,
+        groupes,
+        enfants,
+        equipe,
+    ]);
+
+    const modificationChambreInvalide = modificationChambreBloquee(erreursModificationChambre);
 
     return (
         <div>
-            {peutGererChambres ? (
-                <div className={styles.actionsContainer}>
-                    <Button color="success" onClick={openModal}>
-                        Ajouter une chambre
-                    </Button>
-                </div>
-            ) : null}
+            <div className={styles.actionsContainer}>
+                <Button color="success" onClick={openModal}>
+                    Ajouter une chambre
+                </Button>
+            </div>
 
             {chambres.length > 0 ? (
                 <div className={styles.filtersBar}>
@@ -349,7 +746,14 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                             bsSize="sm"
                             className={styles.filterInput}
                             value={filterType}
-                            onChange={(e) => setFilterType(e.target.value as typeof FILTRE_TOUS | TypeChambre)}
+                            onChange={(e) => {
+                                const next = e.target.value as typeof FILTRE_TOUS | TypeChambre;
+                                setFilterType(next);
+                                if (next === "EQUIPE") {
+                                    reinitialiserFiltreGroupes();
+                                    setFiltreGroupePanelOuvert(false);
+                                }
+                            }}
                         >
                             <option value={FILTRE_TOUS}>Tous les types</option>
                             {TypeChambreValues.map((v) => (
@@ -361,7 +765,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                     </div>
                     <div className={styles.filterField}>
                         <Label for="filtre-genre-chambre" className={styles.filterLabel}>
-                            Genre autorisé
+                            Genre
                         </Label>
                         <Input
                             id="filtre-genre-chambre"
@@ -379,27 +783,90 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                             ))}
                         </Input>
                     </div>
-                    {batimentsDistincts.length > 0 ? (
+                    {afficherFiltreGroupe ? (
                         <div className={styles.filterField}>
-                            <Label for="filtre-batiment-chambre" className={styles.filterLabel}>
-                                Bâtiment
+                            <Label for="filtre-groupe-chambre-btn" className={styles.filterLabel}>
+                                Groupe
                             </Label>
-                            <Input
-                                id="filtre-batiment-chambre"
-                                type="select"
-                                bsSize="sm"
-                                className={styles.filterInput}
-                                value={filterBatiment}
-                                onChange={(e) => setFilterBatiment(e.target.value)}
-                            >
-                                <option value={FILTRE_TOUS}>Tous les bâtiments</option>
-                                {batimentsDistincts.map((b) => (
-                                    <option key={b} value={b}>
-                                        {b}
-                                    </option>
-                                ))}
-                            </Input>
+                            <div ref={filtreGroupeDropdownRef} className={styles.filterDropdown}>
+                                <button
+                                    type="button"
+                                    id="filtre-groupe-chambre-btn"
+                                    className={styles.filterDropdownBtn}
+                                    aria-haspopup="listbox"
+                                    aria-expanded={filtreGroupePanelOuvert}
+                                    aria-label={`Groupes : ${libelleResumeFiltreGroupes}`}
+                                    onClick={() => setFiltreGroupePanelOuvert((v) => !v)}
+                                >
+                                    <span className={styles.filterDropdownBtnText}>
+                                        {libelleResumeFiltreGroupes}
+                                    </span>
+                                    <span className={styles.filterDropdownChevron} aria-hidden>
+                                        &#9660;
+                                    </span>
+                                </button>
+                                {filtreGroupePanelOuvert ? (
+                                    <div
+                                        className={styles.filterDropdownPanel}
+                                        role="listbox"
+                                        aria-multiselectable="true"
+                                        aria-label="Filtrer par groupes"
+                                    >
+                                        <div className={styles.filterDropdownBulk}>
+                                            <Button
+                                                type="button"
+                                                color="link"
+                                                size="sm"
+                                                className={styles.filterDropdownBulkBtn}
+                                                onClick={reinitialiserFiltreGroupes}
+                                            >
+                                                Tout désélectionner
+                                            </Button>
+                                        </div>
+                                        <label className={styles.filterDropdownItem}>
+                                            <Input
+                                                type="checkbox"
+                                                className={styles.filterDropdownCheckbox}
+                                                checked={filterSansGroupe}
+                                                onChange={() => setFilterSansGroupe((v) => !v)}
+                                            />
+                                            <span className={styles.filterDropdownItemLabel}>Sans groupe</span>
+                                        </label>
+                                        {groupesPourFiltre.map((g) => (
+                                            <label key={g.id} className={styles.filterDropdownItem}>
+                                                <Input
+                                                    type="checkbox"
+                                                    className={styles.filterDropdownCheckbox}
+                                                    checked={filterGroupeIds.has(g.id)}
+                                                    onChange={() => toggleFilterGroupe(g.id)}
+                                                />
+                                                <span className={styles.filterDropdownItemLabel}>{g.nom}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
+                    ) : null}
+                    <div className={`${styles.filterField} ${styles.filterFieldWide}`}>
+                        <Label for="filtre-recherche-chambre" className={styles.filterLabel}>
+                            Rechercher
+                        </Label>
+                        <Input
+                            id="filtre-recherche-chambre"
+                            type="search"
+                            bsSize="sm"
+                            className={styles.filterInput}
+                            value={filterRecherche}
+                            onChange={(e) => setFilterRecherche(e.target.value)}
+                            placeholder="Chambre, bâtiment, étage, couloir, occupant…"
+                        />
+                    </div>
+                    {filtresActifs ? (
+                        <p className={styles.filterMeta}>
+                            {chambresFiltrées.length} chambre{chambresFiltrées.length !== 1 ? "s" : ""} sur{" "}
+                            {chambres.length}
+                        </p>
                     ) : null}
                     {filtresActifs ? (
                         <Button
@@ -412,12 +879,6 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                             Réinitialiser les filtres
                         </Button>
                     ) : null}
-                    {filtresActifs ? (
-                        <p className={styles.filterMeta}>
-                            {chambresFiltrées.length} chambre{chambresFiltrées.length !== 1 ? "s" : ""} sur{" "}
-                            {chambres.length}
-                        </p>
-                    ) : null}
                 </div>
             ) : null}
 
@@ -427,77 +888,129 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
 
             {chambres.length === 0 ? (
                 <p className={styles.empty}>
-                    Aucune chambre enregistrée pour ce séjour.
-                    {peutGererChambres ? " Cliquez sur « Ajouter une chambre » pour commencer." : null}
+                    Aucune chambre enregistrée pour ce séjour. Cliquez sur « Ajouter une chambre » pour commencer.
                 </p>
             ) : chambresFiltrées.length === 0 ? (
                 <p className={styles.empty}>Aucune chambre ne correspond aux filtres sélectionnés.</p>
             ) : (
                 <div className={styles.list}>
-                    {chambresFiltrées.map((chambre) => (
+                    {chambresFiltrées.map((chambre) => {
+                        const nbOccupants = chambre.occupants?.length ?? 0;
+                        const chambrePleine = nbOccupants >= chambre.capaciteMax;
+                        const ratioOccupation =
+                            chambre.capaciteMax > 0
+                                ? Math.min(100, (nbOccupants / chambre.capaciteMax) * 100)
+                                : 0;
+
+                        return (
                         <article key={chambre.id} className={styles.card}>
                             <div className={styles.cardHeader}>
-                                <span className={styles.typeBadge}>{TypeChambreLabels[chambre.typeChambre]}</span>
                                 <span className={styles.identifiant}>{libelleChambre(chambre)}</span>
+                                <span className={styles.typeBadge}>{TypeChambreLabels[chambre.typeChambre]}</span>
+                                {chambre.typeChambre === "ENFANT" && chambre.groupe?.libelle?.trim() ? (
+                                    <span className={styles.groupeBadge}>{chambre.groupe.libelle.trim()}</span>
+                                ) : null}
+                                <span className={styles.genreBadge}>
+                                    {GenreChambreBadgeLabels[chambre.genreAutorise]}
+                                </span>
                             </div>
-                            <div className={styles.meta}>
-                                <strong>Capacité :</strong> {chambre.capaciteMax} place
-                                {chambre.capaciteMax > 1 ? "s" : ""}
+                            <div
+                                className={styles.capacityGauge}
+                                role="meter"
+                                aria-valuenow={nbOccupants}
+                                aria-valuemin={0}
+                                aria-valuemax={chambre.capaciteMax}
+                                aria-label={`${nbOccupants} occupant(s) sur ${chambre.capaciteMax}`}
+                            >
+                                <div className={styles.capacityGaugeTrack}>
+                                    <div
+                                        className={`${styles.capacityGaugeFill} ${chambrePleine ? styles.capacityGaugeFillFull : ""}`}
+                                        style={{ width: `${ratioOccupation}%` }}
+                                    />
+                                </div>
+                                <span className={styles.capacityGaugeLabel}>
+                                    {nbOccupants} / {chambre.capaciteMax}
+                                </span>
                             </div>
-                            <div className={styles.meta}>
-                                <strong>Genre autorisé :</strong> {GenreChambreLabels[chambre.genreAutorise]}
-                            </div>
-                            <div className={styles.meta}>
-                                <strong>Localisation :</strong> {resumeLocalisation(chambre)}
-                            </div>
+                            {chambreALocalisationRenseignee(chambre) ? (
+                                <div className={styles.meta}>
+                                    <strong>Localisation :</strong> {resumeLocalisation(chambre)}
+                                </div>
+                            ) : null}
                             {chambre.description?.trim() ? (
                                 <div className={styles.meta}>
                                     <strong>Description :</strong> {chambre.description.trim()}
                                 </div>
                             ) : null}
-                            {chambre.typeChambre === "ENFANT" ? (
+                            {chambre.typeChambre === "ENFANT" && (chambre.referents?.length ?? 0) > 0 ? (
                                 <div className={styles.referentsRow}>
                                     <span className={styles.referentsLabel}>Référents : </span>
-                                    {(chambre.referents?.length ?? 0) > 0
-                                        ? chambre.referents!.map((r) => `${r.prenom} ${r.nom}`).join(", ")
-                                        : "Pas de référent pour cette chambre"}
+                                    {chambre.referents!.map((r) => `${r.prenom} ${r.nom}`).join(", ")}
                                 </div>
                             ) : null}
-                            {peutGererChambres ? (
-                                <div className={styles.cardActions}>
-                                    <Button
-                                        color="primary"
-                                        size="sm"
-                                        onClick={() => openEditModal(chambre)}
-                                        disabled={deletingChambreId === chambre.id}
-                                    >
-                                        Modifier
-                                    </Button>
-                                    <Button
-                                        color="danger"
-                                        size="sm"
-                                        onClick={() => requestDeleteChambre(chambre.id)}
-                                        disabled={deletingChambreId === chambre.id}
-                                    >
-                                        {deletingChambreId === chambre.id ? "Suppression…" : "Supprimer"}
-                                    </Button>
+                            <div className={styles.occupantsSection}>
+                                <div className={styles.occupantsHeader}>
+                                    <span className={styles.occupantsTitle}>Occupants</span>
+                                    {!chambrePleine ? (
+                                        <Button
+                                            color="success"
+                                            size="sm"
+                                            onClick={() => openAddOccupantModal(chambre)}
+                                            disabled={deletingChambreId === chambre.id}
+                                        >
+                                            Affecter
+                                        </Button>
+                                    ) : null}
                                 </div>
-                            ) : null}
+                                {(chambre.occupants?.length ?? 0) === 0 ? null : (
+                                    <ul className={styles.occupantsList}>
+                                        {(chambre.occupants ?? []).map((occupant) => (
+                                            <li key={occupant.id} className={styles.occupantItem}>
+                                                <span>{libelleOccupant(occupant)}</span>
+                                                <Button
+                                                    color="danger"
+                                                    size="sm"
+                                                    outline
+                                                    onClick={() =>
+                                                        setRetirerOccupantModal({
+                                                            chambreId: chambre.id,
+                                                            occupant,
+                                                        })
+                                                    }
+                                                    disabled={occupantSubmitting}
+                                                >
+                                                    Retirer
+                                                </Button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                            <div className={styles.cardActions}>
+                                <Button
+                                    color="primary"
+                                    size="sm"
+                                    onClick={() => openEditModal(chambre)}
+                                    disabled={deletingChambreId === chambre.id}
+                                >
+                                    Modifier
+                                </Button>
+                                <Button
+                                    color="danger"
+                                    size="sm"
+                                    onClick={() => requestDeleteChambre(chambre.id)}
+                                    disabled={deletingChambreId === chambre.id}
+                                >
+                                    {deletingChambreId === chambre.id ? "Suppression…" : "Supprimer"}
+                                </Button>
+                            </div>
                         </article>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
-            <div className={styles.occupantsPlaceholder} aria-hidden="false">
-                <p className={styles.occupantsPlaceholderTitle}>Affectation des occupants</p>
-                <p>
-                    L&apos;affectation des enfants et des membres d&apos;équipe aux chambres sera disponible prochainement.
-                </p>
-            </div>
-
-            {peutGererChambres ? (
-                <>
-                    <Modal isOpen={modalOpen} toggle={() => !submitting && setModalOpen(false)} size="lg">
+            <Modal isOpen={modalOpen} toggle={() => !submitting && setModalOpen(false)} size="lg">
                         <ModalHeader toggle={() => !submitting && setModalOpen(false)}>
                             {editingChambre == null ? "Nouvelle chambre" : "Modifier la chambre"}
                         </ModalHeader>
@@ -511,7 +1024,10 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                                     onChange={(e) => {
                                         const next = e.target.value as TypeChambre;
                                         setFormTypeChambre(next);
-                                        if (next === "EQUIPE") setFormReferents("[]");
+                                        if (next === "EQUIPE") {
+                                            setFormReferents("[]");
+                                            setFormGroupeId("");
+                                        }
                                     }}
                                     disabled={submitting}
                                 >
@@ -565,7 +1081,13 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                                     onChange={(e) => setFormCapaciteMax(e.target.value)}
                                     disabled={submitting}
                                     required
+                                    invalid={!!erreursModificationChambre.capaciteMax}
                                 />
+                                {erreursModificationChambre.capaciteMax ? (
+                                    <p className={styles.fieldError} role="alert">
+                                        {erreursModificationChambre.capaciteMax}
+                                    </p>
+                                ) : null}
                             </FormGroup>
                             <FormGroup className={styles.modalField}>
                                 <Label for="chambre-genre">Genre autorisé</Label>
@@ -575,6 +1097,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                                     value={formGenreAutorise}
                                     onChange={(e) => setFormGenreAutorise(e.target.value as GenreChambre)}
                                     disabled={submitting}
+                                    invalid={!!erreursModificationChambre.genreAutorise}
                                 >
                                     {GenreChambreValues.map((v) => (
                                         <option key={v} value={v}>
@@ -582,7 +1105,43 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                                         </option>
                                     ))}
                                 </Input>
+                                {erreursModificationChambre.genreAutorise ? (
+                                    <p className={styles.fieldError} role="alert">
+                                        {erreursModificationChambre.genreAutorise}
+                                    </p>
+                                ) : null}
                             </FormGroup>
+                            {formTypeChambre === "ENFANT" ? (
+                                <FormGroup className={styles.modalField}>
+                                    <Label for="chambre-groupe">Groupe (optionnel)</Label>
+                                    <Input
+                                        id="chambre-groupe"
+                                        type="select"
+                                        value={formGroupeId}
+                                        onChange={(e) => setFormGroupeId(e.target.value)}
+                                        disabled={submitting || groupes.length === 0}
+                                        invalid={!!erreursModificationChambre.groupeId}
+                                    >
+                                        <option value="">Aucun — tous les enfants du séjour</option>
+                                        {groupes.map((g) => (
+                                            <option key={g.id} value={String(g.id)}>
+                                                {g.nom}
+                                            </option>
+                                        ))}
+                                    </Input>
+                                    {erreursModificationChambre.groupeId ? (
+                                        <p className={styles.fieldError} role="alert">
+                                            {erreursModificationChambre.groupeId}
+                                        </p>
+                                    ) : (
+                                        <p className={styles.hint}>
+                                            {groupes.length === 0
+                                                ? "Créez d'abord un groupe dans l'onglet Groupes pour restreindre cette chambre."
+                                                : "Si un groupe est choisi, seuls ses membres pourront y être affectés."}
+                                        </p>
+                                    )}
+                                </FormGroup>
+                            ) : null}
                             <FormGroup className={styles.modalField}>
                                 <Label for="chambre-batiment">Bâtiment (optionnel)</Label>
                                 <Input
@@ -635,9 +1194,11 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                                 <ReferentsSelector
                                     value={formReferents}
                                     onChange={setFormReferents}
-                                    equipe={equipe}
+                                    equipe={equipe.map(({ tokenId, nom, prenom }) => ({ tokenId, nom, prenom }))}
                                     disabled={submitting}
                                     label="Référents animateurs"
+                                    layout="stacked"
+                                    hint="Sélectionnez les animateurs référents de cette chambre."
                                 />
                             ) : null}
                         </ModalBody>
@@ -652,7 +1213,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                                 <Button
                                     color={editingChambre == null ? "success" : "primary"}
                                     onClick={handleSubmit}
-                                    disabled={submitting}
+                                    disabled={submitting || modificationChambreInvalide}
                                 >
                                     {submitting ? "Enregistrement…" : editingChambre == null ? "Créer" : "Enregistrer"}
                                 </Button>
@@ -670,7 +1231,7 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                         <ModalBody>
                             <p>
                                 Vous passez cette chambre au type <strong>Équipe</strong>. Les référents animateurs
-                                actuellement associés seront supprimés définitivement.
+                                et l&apos;association éventuelle à un groupe seront supprimés.
                             </p>
                             <p className="mb-0">Souhaitez-vous continuer ?</p>
                             {errorMessage ? (
@@ -714,7 +1275,226 @@ function ListeChambres({ chambres, sejourId, peutGererChambres, equipe = [] }: L
                             </Button>
                         </ModalFooter>
                     </Modal>
-                </>
+
+            {addOccupantModal ? (
+                <Modal isOpen toggle={() => !occupantSubmitting && dismissAddOccupantModal()} size="lg">
+                    <ModalHeader toggle={() => !occupantSubmitting && dismissAddOccupantModal()}>
+                        Affecter à {libelleChambre(addOccupantModal)}
+                    </ModalHeader>
+                    <ModalBody>
+                        <p className={styles.pickerMeta}>
+                            {placesRestantesChambre(addOccupantModal)} place
+                            {placesRestantesChambre(addOccupantModal) !== 1 ? "s" : ""} restante
+                            {placesRestantesChambre(addOccupantModal) !== 1 ? "s" : ""}
+                            {" — "}
+                            {addOccupantModal.typeChambre === "ENFANT"
+                                ? `${pickerSelectedEnfantIds.size} enfant(s) sélectionné(s)`
+                                : `${pickerSelectedMembreIds.size} membre(s) sélectionné(s)`}
+                        </p>
+                        <FormGroup className={styles.modalField}>
+                            <Label for="occupant-picker-search">
+                                <LabelRechercheOccupantsChambre chambre={addOccupantModal} />
+                            </Label>
+                            <Input
+                                id="occupant-picker-search"
+                                type="search"
+                                value={pickerSearch}
+                                onChange={(e) => setPickerSearch(e.target.value)}
+                                disabled={occupantSubmitting}
+                                placeholder="Nom ou prénom…"
+                                aria-label={libelleRechercheOccupantsChambre(addOccupantModal)}
+                            />
+                        </FormGroup>
+                        {(() => {
+                            const chambre = addOccupantModal;
+                            const search = pickerSearch.trim().toLowerCase();
+                            const placesRestantes = placesRestantesChambre(chambre);
+                            const idsEnfantsDansChambre = new Set(
+                                (chambre.occupants ?? [])
+                                    .filter((o) => o.enfantId != null)
+                                    .map((o) => o.enfantId as number)
+                            );
+                            const idsMembresDansChambre = new Set(
+                                (chambre.occupants ?? [])
+                                    .filter((o) => o.membreTokenId?.trim())
+                                    .map((o) => o.membreTokenId!.trim())
+                            );
+
+                            if (chambre.typeChambre === "ENFANT") {
+                                const candidats = trierEnfantsParNom(
+                                    enfantsEligiblesPourChambre(chambre, enfants, idsEnfantsDansChambre, groupes)
+                                ).filter((e) => {
+                                    if (!search) return true;
+                                    const hay = `${e.nom} ${e.prenom}`.toLowerCase();
+                                    return hay.includes(search);
+                                });
+                                if (candidats.length === 0) {
+                                    return (
+                                        <p className={styles.occupantsEmpty}>
+                                            {chambre.groupe
+                                                ? `Aucun enfant éligible du groupe « ${chambre.groupe.libelle} » (genre compatible, non déjà dans cette chambre).`
+                                                : "Aucun enfant éligible (genre compatible, non déjà dans cette chambre)."}
+                                        </p>
+                                    );
+                                }
+                                return (
+                                    <ul className={styles.pickerList}>
+                                        {candidats.map((enfant) => {
+                                            const autreChambre =
+                                                affectationIndex.enfantIdVersChambre.get(enfant.id);
+                                            const deplace =
+                                                autreChambre != null && autreChambre.id !== chambre.id;
+                                            const selected = pickerSelectedEnfantIds.has(enfant.id);
+                                            const selectionPleine =
+                                                !selected &&
+                                                pickerSelectedEnfantIds.size >= placesRestantes;
+                                            return (
+                                                <li key={enfant.id} className={styles.pickerItem}>
+                                                    <label
+                                                        className={`${styles.pickerCheckbox} ${selectionPleine ? styles.pickerCheckboxDisabled : ""}`}
+                                                    >
+                                                        <Input
+                                                            type="checkbox"
+                                                            checked={selected}
+                                                            disabled={occupantSubmitting || selectionPleine}
+                                                            onChange={() => togglePickerEnfant(chambre, enfant.id)}
+                                                        />
+                                                        <span className={styles.pickerItemMain}>
+                                                            <span>
+                                                                {enfant.nom} {enfant.prenom}
+                                                            </span>
+                                                            {deplace ? (
+                                                                <span className={styles.pickerHint}>
+                                                                    Actuellement :{" "}
+                                                                    {libelleChambreAffectation(autreChambre)} —
+                                                                    sera déplacé
+                                                                </span>
+                                                            ) : null}
+                                                        </span>
+                                                    </label>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                );
+                            }
+
+                            const candidats = membresEligiblesPourChambre(chambre, equipe, idsMembresDansChambre).filter(
+                                (m) => {
+                                    if (!search) return true;
+                                    const hay = `${m.nom} ${m.prenom}`.toLowerCase();
+                                    return hay.includes(search);
+                                }
+                            );
+                            if (candidats.length === 0) {
+                                return (
+                                    <p className={styles.occupantsEmpty}>
+                                        {chambre.genreAutorise === "MIXTE"
+                                            ? "Aucun membre d'équipe disponible (non déjà dans cette chambre)."
+                                            : "Aucun membre d'équipe compatible avec le genre autorisé (non déjà dans cette chambre)."}
+                                    </p>
+                                );
+                            }
+                            return (
+                                <ul className={styles.pickerList}>
+                                    {candidats.map((membre) => {
+                                        const tid = membre.tokenId.trim();
+                                        const autreChambre =
+                                            affectationIndex.membreTokenIdVersChambre.get(tid);
+                                        const deplace =
+                                            autreChambre != null && autreChambre.id !== chambre.id;
+                                        const selected = pickerSelectedMembreIds.has(tid);
+                                        const selectionPleine =
+                                            !selected && pickerSelectedMembreIds.size >= placesRestantes;
+                                        return (
+                                            <li key={membre.tokenId} className={styles.pickerItem}>
+                                                <label
+                                                    className={`${styles.pickerCheckbox} ${selectionPleine ? styles.pickerCheckboxDisabled : ""}`}
+                                                >
+                                                    <Input
+                                                        type="checkbox"
+                                                        checked={selected}
+                                                        disabled={occupantSubmitting || selectionPleine}
+                                                        onChange={() => togglePickerMembre(chambre, tid)}
+                                                    />
+                                                    <span className={styles.pickerItemMain}>
+                                                        <span>
+                                                            {membre.prenom} {membre.nom}
+                                                        </span>
+                                                        {deplace ? (
+                                                            <span className={styles.pickerHint}>
+                                                                Actuellement :{" "}
+                                                                {libelleChambreAffectation(autreChambre)} — sera
+                                                                déplacé
+                                                            </span>
+                                                        ) : null}
+                                                    </span>
+                                                </label>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            );
+                        })()}
+                        {occupantModalError ? (
+                            <div className={`${styles.errorMessage} mt-3 mb-0`}>{occupantModalError}</div>
+                        ) : null}
+                    </ModalBody>
+                    <ModalFooter className={styles.modalFooter}>
+                        <div className={styles.modalFooterMessage} aria-live="polite" />
+                        <div className={styles.modalFooterActions}>
+                            <Button
+                                color="secondary"
+                                onClick={dismissAddOccupantModal}
+                                disabled={occupantSubmitting}
+                            >
+                                Annuler
+                            </Button>
+                            <Button
+                                color="primary"
+                                onClick={handleAffecterSelection}
+                                disabled={
+                                    occupantSubmitting ||
+                                    (addOccupantModal.typeChambre === "ENFANT"
+                                        ? pickerSelectedEnfantIds.size === 0
+                                        : pickerSelectedMembreIds.size === 0)
+                                }
+                            >
+                                {occupantSubmitting
+                                    ? "Affectation…"
+                                    : addOccupantModal.typeChambre === "ENFANT"
+                                      ? `Affecter (${pickerSelectedEnfantIds.size})`
+                                      : `Affecter (${pickerSelectedMembreIds.size})`}
+                            </Button>
+                        </div>
+                    </ModalFooter>
+                </Modal>
+            ) : null}
+
+            {retirerOccupantModal ? (
+                <Modal isOpen toggle={() => !occupantSubmitting && setRetirerOccupantModal(null)}>
+                    <ModalHeader toggle={() => !occupantSubmitting && setRetirerOccupantModal(null)}>
+                        Retirer un occupant
+                    </ModalHeader>
+                    <ModalBody>
+                        <p>
+                            Retirer{" "}
+                            <strong>{libelleOccupant(retirerOccupantModal.occupant)}</strong> de cette chambre ?
+                        </p>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            color="secondary"
+                            onClick={() => setRetirerOccupantModal(null)}
+                            disabled={occupantSubmitting}
+                        >
+                            Annuler
+                        </Button>
+                        <Button color="danger" onClick={confirmRetirerOccupant} disabled={occupantSubmitting}>
+                            {occupantSubmitting ? "Retrait…" : "Confirmer"}
+                        </Button>
+                    </ModalFooter>
+                </Modal>
             ) : null}
 
             <Modal isOpen={successModalOpen} toggle={() => setSuccessModalOpen(false)}>

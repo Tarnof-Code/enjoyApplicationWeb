@@ -12,6 +12,24 @@ export const trierUtilisateursParNom = (users: ProfilUtilisateurDTO[]): ProfilUt
     });
 };
 
+/** Objet minimal nom + prénom (équipe, référents, etc.) */
+export type PersonneNomPrenom = { nom?: string | null; prenom?: string | null };
+
+/**
+ * Tri alphabétique par prénom, puis par nom si égalité.
+ */
+export const trierParPrenomPuisNom = <T extends PersonneNomPrenom>(personnes: T[]): T[] => {
+    return [...personnes].sort((a, b) => {
+        const prenomA = a.prenom?.toLocaleLowerCase() ?? "";
+        const prenomB = b.prenom?.toLocaleLowerCase() ?? "";
+        const comparaisonPrenom = prenomA.localeCompare(prenomB, undefined, { sensitivity: "base" });
+        if (comparaisonPrenom !== 0) return comparaisonPrenom;
+        const nomA = a.nom?.toLocaleLowerCase() ?? "";
+        const nomB = b.nom?.toLocaleLowerCase() ?? "";
+        return nomA.localeCompare(nomB, undefined, { sensitivity: "base" });
+    });
+};
+
 /**
  * Trie les enfants par nom puis par prénom
  * Retourne un nouveau tableau trié par ordre alphabétique (nom, puis prénom)

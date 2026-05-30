@@ -1,4 +1,5 @@
 import { FormGroup, Input, Label } from "reactstrap";
+import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import styles from "./Form.module.scss";
 
 export interface EquipePerson {
@@ -15,6 +16,9 @@ interface ReferentsSelectorProps {
     label?: string;
     required?: boolean;
     error?: string;
+    /** `form` : label à gauche (Form générique) ; `stacked` : label au-dessus, cases alignées (modales) */
+    layout?: "form" | "stacked";
+    hint?: string;
 }
 
 function parseTokenIds(value: string): Set<string> {
@@ -35,8 +39,11 @@ export default function ReferentsSelector({
     label = "Référents",
     required = false,
     error,
+    layout = "form",
+    hint = "Sélectionnez les référents du groupe.",
 }: ReferentsSelectorProps) {
     const selected = parseTokenIds(value);
+    const equipeTriee = trierParPrenomPuisNom(equipe);
 
     const handleToggle = (tokenId: string) => {
         const next = new Set(selected);
@@ -48,15 +55,50 @@ export default function ReferentsSelector({
         onChange(JSON.stringify([...next]));
     };
 
-    if (equipe.length === 0) {
+    if (equipeTriee.length === 0) {
+        const stackedClass = layout === "stacked" ? ` ${styles.referents_stacked}` : "";
         return (
-            <FormGroup className={styles.referents_form_group}>
+            <FormGroup className={`${styles.referents_form_group}${stackedClass}`}>
                 <div className={styles.referents_content}>
-                    <Label className={styles.label}>
+                    <Label className={layout === "stacked" ? styles.label_stacked : styles.label}>
                         {label}
                         {required && <span className={styles.required}> *</span>}
                     </Label>
                     <p className="text-muted small mb-0">Aucun membre dans l'équipe. Ajoutez des membres à l'équipe du séjour pour pouvoir les désigner comme référents.</p>
+                </div>
+            </FormGroup>
+        );
+    }
+
+    if (layout === "stacked") {
+        return (
+            <FormGroup className={`${styles.referents_form_group} ${styles.referents_stacked}`}>
+                <div className={styles.referents_content}>
+                    <Label className={styles.label_stacked}>
+                        {label}
+                        {required && <span className={styles.required}> *</span>}
+                    </Label>
+                    <div className={styles.referents_checkboxes}>
+                        {equipeTriee.map((person) => (
+                            <label
+                                key={person.tokenId}
+                                className={styles.checkbox_row_ref_alimentaire}
+                                style={{ cursor: disabled ? "not-allowed" : "pointer" }}
+                            >
+                                <Input
+                                    type="checkbox"
+                                    checked={selected.has(person.tokenId)}
+                                    onChange={() => handleToggle(person.tokenId)}
+                                    disabled={disabled}
+                                />
+                                <span>
+                                    {person.prenom} {person.nom}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                    {hint ? <p className="text-muted small mt-2 mb-0">{hint}</p> : null}
+                    {error ? <div className={styles.errorMessage}>{error}</div> : null}
                 </div>
             </FormGroup>
         );
@@ -73,14 +115,14 @@ export default function ReferentsSelector({
                     <label className={styles.checkbox_label_inline} style={{ cursor: disabled ? "not-allowed" : "pointer" }}>
                         <Input
                             type="checkbox"
-                            checked={selected.has(equipe[0].tokenId)}
-                            onChange={() => handleToggle(equipe[0].tokenId)}
+                            checked={selected.has(equipeTriee[0].tokenId)}
+                            onChange={() => handleToggle(equipeTriee[0].tokenId)}
                             disabled={disabled}
                         />
-                        <span>{equipe[0].prenom} {equipe[0].nom}</span>
+                        <span>{equipeTriee[0].prenom} {equipeTriee[0].nom}</span>
                     </label>
                 </div>
-                {equipe.slice(1).map((person) => (
+                {equipeTriee.slice(1).map((person) => (
                     <label key={person.tokenId} className={styles.checkbox_label_indent} style={{ cursor: disabled ? "not-allowed" : "pointer" }}>
                         <Input
                             type="checkbox"
@@ -91,9 +133,7 @@ export default function ReferentsSelector({
                         <span>{person.prenom} {person.nom}</span>
                     </label>
                 ))}
-                <p className="text-muted small mt-2 mb-0">
-                    Sélectionnez les référents du groupe.
-                </p>
+                {hint ? <p className="text-muted small mt-2 mb-0">{hint}</p> : null}
                 {error && (
                     <div className={styles.errorMessage}>{error}</div>
                 )}
