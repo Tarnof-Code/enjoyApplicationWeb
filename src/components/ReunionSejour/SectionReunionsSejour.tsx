@@ -19,7 +19,6 @@ import type { RootState } from "../../redux/store";
 import { useSelector } from "react-redux";
 import { accountService } from "../../services/account.service";
 import { sejourReunionService } from "../../services/sejour-reunion.service";
-import type { SejourPrintContext } from "../../print";
 import { ReunionCompteRenduAccordionItem } from "./ReunionCompteRenduAccordionItem";
 import { ReunionFormulaireModal } from "./ReunionFormulaireModal";
 import styles from "./SectionReunionsSejour.module.scss";
@@ -49,8 +48,6 @@ export type SectionReunionsSejourProps = {
     sejourId: number;
     sejourDirecteur?: DirecteurInfos | null;
     equipe?: ProfilUtilisateurDTO[];
-    /** Contexte séjour réutilisé pour l'en-tête d'impression */
-    sejourPrintContext?: SejourPrintContext;
     /** Données préchargées par le loader séjour (évite le skeleton au montage). */
     initialReunions?: ReunionDto[];
 };
@@ -63,7 +60,6 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
     sejourId,
     sejourDirecteur,
     equipe,
-    sejourPrintContext,
     initialReunions,
 }) => {
     const roleGlobal = useSelector((state: RootState) => state.auth.role);
@@ -325,7 +321,6 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
                             reunion={r}
                             ouvert={reunionDeployeeId === r.id}
                             dateFormatee={formaterDateReunionCourte(r.date)}
-                            sejourPrintContext={sejourPrintContext}
                             peutGererEcritures={peutGererEcritures}
                             onToggle={() => basculerPanneau(r.id)}
                             onModifier={() => ouvrirEdition(r)}

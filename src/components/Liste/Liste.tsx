@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Row,
@@ -21,6 +21,16 @@ import { useRevalidator } from "react-router-dom";
 import styles from "./Liste.module.scss";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
+import {
+  libelleFiltresListeActifs,
+  PRINT_GLOBAL_CLASS,
+  PrintContentRoot,
+  PrintDocumentHeader,
+  PrintTrigger,
+  PRINT_STYLE_PRESETS,
+  usePrintContent,
+  type PrintDocumentContext,
+} from "../../print";
 
 export interface ColumnConfig {
   key: string;
@@ -33,6 +43,8 @@ export interface ColumnConfig {
   colSpan?: number;
   className?: string;
   filterPlaceholder?: string;
+  /** Valeur texte pour l'impression (sans icônes ni composants interactifs) */
+  printValue?: (item: any) => string;
 }
 
 export interface FilterState {
@@ -60,6 +72,11 @@ export interface ListeProps<T = any> {
    * Clé unique pour persister les filtres du tableau dans sessionStorage (ex. liste sanitaire après navigation dossier puis retour).
    */
   persistFiltersStorageKey?: string;
+  /** Active le bouton d'impression (contenu filtré, sans colonne actions ni filtres) */
+  canPrint?: boolean;
+  printDocumentTitle?: string;
+  /** En-tête séjour / titre document (complété par effectifs et filtres actifs) */
+  printHeaderContext?: PrintDocumentContext;
 }
 
 const checkValidityFilter = (itemValue: string | number | undefined, filterValue: string): boolean => {
@@ -170,9 +187,18 @@ const Liste = <T extends Record<string, any>>({
   onDossier,
   deleteConfirmationMessage,
   persistFiltersStorageKey,
+  canPrint = false,
+  printDocumentTitle,
+  printHeaderContext,
 }: ListeProps<T>) => {
 
   const revalidator = useRevalidator();
+
+  const { contentRef, print } = usePrintContent({
+    documentTitle: printDocumentTitle ?? title,
+    extraPageStyle: canPrint ? PRINT_STYLE_PRESETS.listeTable : undefined,
+    runningHeaderLabel: canPrint ? (printHeaderContext?.documentLabel ?? title) : undefined,
+  });
 
   // Gestion de l'état modal directement dans Liste
   const [modalState, setModalState] = useState<{
@@ -344,6 +370,28 @@ const Liste = <T extends Record<string, any>>({
     });
   })();
 
+  const filtresActifsLibelle = libelleFiltresListeActifs(filters, columns);
+
+  const printHeaderComplet = useMemo((): PrintDocumentContext => {
+    const meta: { label: string; value: string }[] = [
+      {
+        label: "Résultats affichés",
+        value: `${filteredData.length} sur ${data?.length ?? 0}`,
+      },
+    ];
+    if (filtresActifsLibelle) {
+      meta.push({ label: "Filtres", value: filtresActifsLibelle });
+    }
+    if (printHeaderContext?.meta) {
+      meta.push(...printHeaderContext.meta);
+    }
+    return {
+      ...printHeaderContext,
+      documentLabel: printHeaderContext?.documentLabel ?? title,
+      meta,
+    };
+  }, [filteredData.length, data?.length, filtresActifsLibelle, printHeaderContext, title]);
+
   // Rendu des cellules
   const renderCell = (column: ColumnConfig, item: T, index: number) => {
     const value = item[column.key];
@@ -355,6 +403,15 @@ const Liste = <T extends Record<string, any>>({
     return value;
   };
 
+  const renderPrintCell = (column: ColumnConfig, item: T): string => {
+    if (column.printValue) {
+      return column.printValue(item);
+    }
+    const value = item[column.key];
+    if (value == null) return "";
+    return String(value);
+  };
+
   // Rendu des lignes de données
   const dataRows = filteredData.map((item, filteredIndex) => {
     // Trouver l'index réel dans data pour onDelete
@@ -362,7 +419,7 @@ const Liste = <T extends Record<string, any>>({
     const indexToUse = realIndex >= 0 ? realIndex : filteredIndex;
     return (
       <tr key={filteredIndex}>
-        <td className={styles.actions_cell}>
+        <td className={`${styles.actions_cell} ${PRINT_GLOBAL_CLASS.noPrint}`}>
           <div className={styles.icones_box}>
             {canView && (
               <FontAwesomeIcon
@@ -418,7 +475,7 @@ const Liste = <T extends Record<string, any>>({
     <div className="page-main">
       {errorMessage && <p className="errorMessage">{errorMessage}</p>}
       
-      <Row className={styles.page_head}>
+      <Row className={`${styles.page_head} ${PRINT_GLOBAL_CLASS.noPrint} align-items-center`}>
         <Col xs={6} lg={3}>
           <h1 className="page-title">{title}</h1>
         </Col>
@@ -439,13 +496,63 @@ const Liste = <T extends Record<string, any>>({
             </Button>
           </Col>
         )}
+        {canPrint ? (
+          <Col xs="auto" className="ms-auto d-flex align-items-center">
+            <PrintTrigger
+              variant="button"
+              onPrint={print}
+              label="Imprimer la liste filtrée"
+              buttonText="Imprimer"
+            />
+          </Col>
+        ) : null}
       </Row>
 
-      <div className={styles.table_container}>
+      <PrintContentRoot contentRef={contentRef}>
+        {canPrint ? (
+          <PrintDocumentHeader context={{ meta: printHeaderComplet.meta }} />
+        ) : null}
+
+        {canPrint ? (
+          <table className={`table align-middle ${PRINT_GLOBAL_CLASS.listePrintTable} ${PRINT_GLOBAL_CLASS.only}`}>
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th key={column.key} colSpan={column.colSpan || 1}>
+                    {column.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="text-center">
+                    {!data || data.length === 0
+                      ? "Aucune donnée disponible"
+                      : "Aucun résultat trouvé pour les filtres appliqués"}
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((item, index) => (
+                  <tr key={item.id ?? `print-row-${index}`}>
+                    {columns.map((column) => (
+                      <td key={column.key} colSpan={column.colSpan || 1}>
+                        {renderPrintCell(column, item)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        ) : null}
+
+      <div className={`${styles.table_container}${canPrint ? ` ${PRINT_GLOBAL_CLASS.noPrint}` : ""}`}>
         <table className="table align-middle">
           <thead className={styles.enTete}>
             <tr>
-              <th></th>
+              <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
               {columns.map(column => (
                 <th key={column.key} colSpan={column.colSpan || 1} className={column.className}>
                   {column.label}
@@ -454,8 +561,8 @@ const Liste = <T extends Record<string, any>>({
             </tr>
             
             {/* Ligne des filtres */}
-            <tr>
-              <th></th>
+            <tr className="enjoy-liste-filter-row">
+              <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
               {columns.map(column => (
                 <th key={`filter-${column.key}`} colSpan={column.colSpan || 1} className={column.className}>
                   {column.filterable && (
@@ -537,6 +644,7 @@ const Liste = <T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
+      </PrintContentRoot>
 
       {/* Modal unifié pour ajout et modification */}
       {FormComponent && (

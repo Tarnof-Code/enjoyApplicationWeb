@@ -20,8 +20,13 @@ import formaterDate from "../../helpers/formaterDate";
 import AddEnfantForm from "../Forms/AddEnfantForm";
 import ImportExcelEnfants from "./ImportExcelEnfants";
 import { NiveauScolaireLabels } from "../../enums/NiveauScolaire";
-import styles from "./ListeEnfants.module.scss";
+import {
+    buildPrintDocumentContext,
+    PRINT_GLOBAL_CLASS,
+} from "../../print";
 import listeStyles from "./Liste.module.scss";
+
+import styles from "./ListeEnfants.module.scss";
 
 export interface ListeEnfantsProps {
     enfants: EnfantDto[];
@@ -214,16 +219,22 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
             render: (value) => {
                 const niveau = value as keyof typeof NiveauScolaireLabels;
                 return NiveauScolaireLabels[niveau] || value;
-            }
+            },
+            printValue: (item) => {
+                const niveau = item.niveauScolaire as keyof typeof NiveauScolaireLabels;
+                return NiveauScolaireLabels[niveau] || String(item.niveauScolaire ?? "");
+            },
         }),
         createColumn('dateNaissance', 'Date de naissance', 'date', {
-            render: (value) => formaterDate(new Date(value))
+            render: (value) => formaterDate(new Date(value)),
+            printValue: (item) => formaterDate(new Date(item.dateNaissance)),
         }),
         createColumn('age', 'Âge', 'custom', {
             filterType: 'number',
             filterPlaceholder: 'Min.',
             className: listeStyles.colAge,
-            render: (_, item) => `${calculerAge(item.dateNaissance)} ans`
+            render: (_, item) => `${calculerAge(item.dateNaissance)} ans`,
+            printValue: (item) => `${calculerAge(item.dateNaissance)} ans`,
         }),
         ...(groupes.length > 0
             ? [
@@ -240,7 +251,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                             <span className={styles.groupeCell}>
                                 <span className={styles.groupeCellContent}>{contenu}</span>
                                 <FontAwesomeIcon
-                                    className={`icone_crayon_edit ${styles.groupeEditIcon}`}
+                                    className={`icone_crayon_edit ${styles.groupeEditIcon} ${PRINT_GLOBAL_CLASS.noPrint}`}
                                     icon={faPencilAlt}
                                     onClick={() => openGroupeModal(item)}
                                     title="Gérer les groupes"
@@ -264,7 +275,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                             <span className={styles.groupeCell}>
                                 <span>{label}</span>
                                 <FontAwesomeIcon
-                                    className={`icone_crayon_edit ${styles.groupeEditIcon}`}
+                                    className={`icone_crayon_edit ${styles.groupeEditIcon} ${PRINT_GLOBAL_CLASS.noPrint}`}
                                     icon={faPencilAlt}
                                     onClick={() => openChambreModal(item)}
                                     title="Gérer la chambre"
@@ -355,6 +366,9 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 addButtonText="Ajouter un enfant"
                 deleteConfirmationMessage={(enfant) => `Voulez-vous retirer ${enfant.prenom} ${enfant.nom} de ce séjour ?`}
                 errorMessage={errorMessage}
+                canPrint
+                printDocumentTitle="Liste des enfants"
+                printHeaderContext={buildPrintDocumentContext("Liste des enfants")}
             />
 
             {peutGererEnfants && chambreModalEnfant && (

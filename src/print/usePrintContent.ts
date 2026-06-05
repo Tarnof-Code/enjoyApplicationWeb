@@ -21,6 +21,7 @@ import type { UsePrintContentOptions } from "./types";
 export function usePrintContent({
     documentTitle,
     format,
+    runningHeaderLabel,
     extraPageStyle,
     onBeforePrint,
     onAfterPrint,
@@ -30,7 +31,7 @@ export function usePrintContent({
     const print = useReactToPrint({
         contentRef,
         documentTitle,
-        pageStyle: buildPrintPageStyle({ format, extra: extraPageStyle }),
+        pageStyle: buildPrintPageStyle({ format, extra: extraPageStyle, runningHeaderLabel }),
         onBeforePrint: onBeforePrint ? () => Promise.resolve(onBeforePrint()) : undefined,
         onAfterPrint,
     });

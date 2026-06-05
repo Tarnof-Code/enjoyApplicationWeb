@@ -1,29 +1,19 @@
 /** Format de page pour les documents imprimés */
 export type PrintPageFormat = "portrait-a4" | "landscape-a4";
 
-/** En-tête contextuel affiché uniquement à l'impression (séjour, titre de liste, etc.) */
+/** En-tête contextuel affiché uniquement à l'impression */
 export type PrintDocumentContext = {
-    /** Titre principal — ex. nom / description du séjour */
-    titre?: string;
-    /** Sous-titre — ex. lieu, période */
-    sousTitre?: string;
-    /** Intitulé du document — ex. « Compte rendu — 12/06/2026 » */
+    /** Intitulé du document — ex. « Liste des enfants », « Compte rendu — 12/06/2026 » */
     documentLabel?: string;
-    /** Paires label / valeur optionnelles (dates, effectifs, etc.) */
+    /** Paires label / valeur optionnelles (effectifs, filtres, etc.) */
     meta?: ReadonlyArray<{ label: string; value: string }>;
-};
-
-/** Contexte séjour réutilisable pour les impressions liées à un séjour */
-export type SejourPrintContext = {
-    description?: string | null;
-    lieu?: string | null;
-    dateDebut?: string | number | null;
-    dateFin?: string | number | null;
 };
 
 export type UsePrintContentOptions = {
     documentTitle: string;
     format?: PrintPageFormat;
+    /** Titre répété en marge haute à l'impression — ex. « Liste des enfants — 1/3 » */
+    runningHeaderLabel?: string;
     /** Règles CSS additionnelles injectées dans la fenêtre d'impression */
     extraPageStyle?: string;
     onBeforePrint?: () => void | Promise<void>;

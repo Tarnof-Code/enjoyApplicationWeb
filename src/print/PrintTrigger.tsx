@@ -14,6 +14,7 @@ export type PrintTriggerProps = {
     /** Variante icône seule (toolbar) ou bouton texte */
     variant?: "icon" | "button";
     buttonText?: string;
+    size?: "sm" | "md" | "lg";
 };
 
 /** Déclencheur d'impression standard — toujours marqué `enjoy-no-print` */
@@ -24,8 +25,15 @@ export const PrintTrigger: FC<PrintTriggerProps> = ({
     className,
     variant = "icon",
     buttonText = "Imprimer",
+    size,
 }) => {
-    const classes = [PRINT_GLOBAL_CLASS.noPrint, variant === "icon" ? styles.triggerIcon : undefined, className]
+    const resolvedSize = size ?? (variant === "button" ? "md" : "sm");
+
+    const classes = [
+        PRINT_GLOBAL_CLASS.noPrint,
+        variant === "icon" ? styles.triggerIcon : styles.triggerButton,
+        className,
+    ]
         .filter(Boolean)
         .join(" ");
 
@@ -33,7 +41,7 @@ export const PrintTrigger: FC<PrintTriggerProps> = ({
         return (
             <Button
                 color="secondary"
-                size="sm"
+                size={resolvedSize}
                 outline
                 type="button"
                 onClick={onPrint}
@@ -50,7 +58,7 @@ export const PrintTrigger: FC<PrintTriggerProps> = ({
     return (
         <Button
             color="secondary"
-            size="sm"
+            size={resolvedSize}
             outline
             type="button"
             onClick={onPrint}

@@ -357,12 +357,6 @@ const DetailsSejourOverview: React.FC = () => {
                         sejourId={sejour.id}
                         sejourDirecteur={sejour.directeur}
                         equipe={sejour.equipe}
-                        sejourPrintContext={{
-                            description: sejour.description,
-                            lieu: sejour.lieuDuSejour,
-                            dateDebut: sejour.dateDebut,
-                            dateFin: sejour.dateFin,
-                        }}
                         initialReunions={reunions}
                     />
                 );

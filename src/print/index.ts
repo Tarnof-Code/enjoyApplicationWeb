@@ -16,7 +16,8 @@
 
 export { PRINT_GLOBAL_CLASS } from "./printGlobalClasses";
 export { buildPrintPageStyle, PRINT_CONTENT_PADDING, PRINT_STYLE_PRESETS } from "./printPageStyles";
-export { buildSejourPrintDocumentContext } from "./sejourPrintContext";
+export { buildPrintDocumentContext } from "./printDocumentContext";
+export { libelleFiltresListeActifs } from "./libelleFiltresListeActifs";
 export { usePrintContent, imprimerPageCourante } from "./usePrintContent";
 export { PrintDocumentHeader } from "./PrintDocumentHeader";
 export { PrintContentRoot } from "./PrintContentRoot";
@@ -24,6 +25,5 @@ export { PrintTrigger } from "./PrintTrigger";
 export type {
     PrintDocumentContext,
     PrintPageFormat,
-    SejourPrintContext,
     UsePrintContentOptions,
 } from "./types";

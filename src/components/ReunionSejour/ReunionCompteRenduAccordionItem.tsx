@@ -2,12 +2,9 @@ import type { FC } from "react";
 import { Button } from "reactstrap";
 import type { ReunionDto } from "../../types/api";
 import {
-    buildSejourPrintDocumentContext,
     PrintContentRoot,
-    PrintDocumentHeader,
     PrintTrigger,
     usePrintContent,
-    type SejourPrintContext,
 } from "../../print";
 import { ReunionContenuRichText } from "./ReunionContenuRichText";
 import styles from "./SectionReunionsSejour.module.scss";
@@ -16,7 +13,6 @@ export type ReunionCompteRenduAccordionItemProps = {
     reunion: ReunionDto;
     ouvert: boolean;
     dateFormatee: string;
-    sejourPrintContext?: SejourPrintContext;
     peutGererEcritures: boolean;
     onToggle: () => void;
     onModifier: () => void;
@@ -27,7 +23,6 @@ export const ReunionCompteRenduAccordionItem: FC<ReunionCompteRenduAccordionItem
     reunion,
     ouvert,
     dateFormatee,
-    sejourPrintContext,
     peutGererEcritures,
     onToggle,
     onModifier,
@@ -35,6 +30,7 @@ export const ReunionCompteRenduAccordionItem: FC<ReunionCompteRenduAccordionItem
 }) => {
     const { contentRef, print } = usePrintContent({
         documentTitle: `Compte rendu réunion — ${dateFormatee}`,
+        runningHeaderLabel: `Compte rendu — ${dateFormatee}`,
     });
 
     const odj = reunion.ordreDuJour?.trim() ?? "";
@@ -62,12 +58,6 @@ export const ReunionCompteRenduAccordionItem: FC<ReunionCompteRenduAccordionItem
             {ouvert ? (
                 <div className={styles.reunionBody}>
                     <PrintContentRoot contentRef={contentRef}>
-                        <PrintDocumentHeader
-                            context={buildSejourPrintDocumentContext(
-                                sejourPrintContext ?? {},
-                                `Compte rendu — ${dateFormatee}`,
-                            )}
-                        />
                         {odj ? (
                             <div className={styles.reunionOdJDetail}>
                                 <strong>Ordre du jour</strong>
@@ -82,7 +72,11 @@ export const ReunionCompteRenduAccordionItem: FC<ReunionCompteRenduAccordionItem
                     </PrintContentRoot>
                     {peutGererEcritures ? (
                         <div className={styles.detailActionsRow}>
-                            <PrintTrigger onPrint={() => print()} label="Imprimer ce compte rendu" />
+                            <PrintTrigger
+                                variant="button"
+                                onPrint={() => print()}
+                                label="Imprimer ce compte rendu"
+                            />
                             <Button
                                 color="secondary"
                                 size="sm"

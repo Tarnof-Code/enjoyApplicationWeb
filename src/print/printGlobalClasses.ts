@@ -10,9 +10,9 @@ export const PRINT_GLOBAL_CLASS = {
     /** Conteneur racine cloné par react-to-print */
     contentRoot: "enjoy-print-content-root",
     documentHeader: "enjoy-print-document-header",
-    documentTitle: "enjoy-print-document-title",
-    documentSubtitle: "enjoy-print-document-subtitle",
     documentLabel: "enjoy-print-document-label",
     documentMeta: "enjoy-print-document-meta",
     documentMetaRow: "enjoy-print-document-meta-row",
+    /** Tableau liste dédié à l'impression (pagination multi-pages) */
+    listePrintTable: "enjoy-liste-print-table",
 } as const;

@@ -8,10 +8,6 @@
 }
 
 @media print {
-    @page {
-        margin: 0;
-    }
-
     .enjoy-no-print {
         display: none !important;
     }

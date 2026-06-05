@@ -1,14 +1,41 @@
+import { escapeCssContent } from "./escapeCssContent";
 import { PRINT_GLOBAL_CLASS as c } from "./printGlobalClasses";
 import type { PrintPageFormat } from "./types";
 
-/** Marge interne du contenu (remplace @page margin pour éviter URL / numéro de page du navigateur) */
+/** Marge interne du contenu lorsque @page margin vaut 0 (évite URL / numéro navigateur) */
 export const PRINT_CONTENT_PADDING = "12mm";
 
-const PAGE_RULES: Record<PrintPageFormat, string> = {
-    /** margin: 0 — requis pour supprimer en-têtes/pieds de page Chrome (URL, 1/1, etc.) */
-    "portrait-a4": "@page { size: A4; margin: 0; }",
-    "landscape-a4": "@page { size: A4 landscape; margin: 0; }",
-};
+function buildPageRules(format: PrintPageFormat, runningHeaderLabel?: string): string {
+    const size = format === "landscape-a4" ? "size: A4 landscape;" : "size: A4;";
+
+    if (runningHeaderLabel == null || runningHeaderLabel === "") {
+        return `@page { ${size} margin: 0; }`;
+    }
+
+    const title = escapeCssContent(runningHeaderLabel);
+    return `
+        @page {
+            ${size}
+            /* marge basse à 0 : pas de bandeau ni pied de page navigateur (URL, date…) */
+            margin: 14mm 12mm 0 12mm;
+            @top-left {
+                content: "${title} — " counter(page) " / " counter(pages);
+                font-family: system-ui, -apple-system, sans-serif;
+                font-size: 9pt;
+                font-weight: 600;
+                color: #333;
+                vertical-align: bottom;
+                padding-bottom: 2mm;
+                border-bottom: 0.5pt solid #ccc;
+            }
+            @bottom-left-corner { content: none; }
+            @bottom-left { content: none; }
+            @bottom-center { content: none; }
+            @bottom-right { content: none; }
+            @bottom-right-corner { content: none; }
+        }
+    `;
+}
 
 /**
  * Construit la feuille de styles injectée dans la fenêtre d'impression react-to-print.
@@ -17,10 +44,15 @@ const PAGE_RULES: Record<PrintPageFormat, string> = {
 export function buildPrintPageStyle(options?: {
     format?: PrintPageFormat;
     extra?: string;
+    /** Titre répété en marge haute avec numérotation (Chrome 131+, Safari 18.2+) */
+    runningHeaderLabel?: string;
 }): string {
     const format = options?.format ?? "portrait-a4";
+    const hasRunningHeader =
+        options?.runningHeaderLabel != null && options.runningHeaderLabel !== "";
+
     return `
-        ${PAGE_RULES[format]}
+        ${buildPageRules(format, options?.runningHeaderLabel)}
         html, body {
             margin: 0 !important;
             padding: 0 !important;
@@ -35,24 +67,14 @@ export function buildPrintPageStyle(options?: {
         }
         .${c.contentRoot} {
             box-sizing: border-box;
-            padding: ${PRINT_CONTENT_PADDING};
+            padding: ${hasRunningHeader ? "0" : PRINT_CONTENT_PADDING};
         }
         .${c.only} { display: block !important; }
         .${c.noPrint} { display: none !important; }
         .${c.documentHeader} {
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #ccc;
-        }
-        .${c.documentTitle} {
-            margin: 0 0 0.25rem;
-            font-size: 1.15rem;
-            font-weight: 600;
-        }
-        .${c.documentSubtitle} {
-            margin: 0 0 0.35rem;
-            font-size: 0.95rem;
-            color: #444;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: none;
         }
         .${c.documentLabel} {
             margin: 0 0 0.5rem;
@@ -78,6 +100,25 @@ export function buildPrintPageStyle(options?: {
         }
         tr {
             break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        thead {
+            display: table-header-group;
+        }
+        tbody {
+            display: table-row-group;
+        }
+        .${c.listePrintTable} {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: auto;
+        }
+        .${c.listePrintTable} thead {
+            display: table-header-group;
+        }
+        .${c.listePrintTable} tbody tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         ${options?.extra ?? ""}
     `;
@@ -93,5 +134,9 @@ export const PRINT_STYLE_PRESETS = {
     /** Grilles type planning — orientation paysage recommandée */
     planningGrid: `
         .planning-print-grid { width: 100%; }
+    `,
+    /** Tableau Liste : masque le tableau écran ; styles du tableau print dédié */
+    listeTable: `
+        .enjoy-no-print { display: none !important; }
     `,
 } as const;
