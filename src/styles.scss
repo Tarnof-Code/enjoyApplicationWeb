@@ -1,14 +1,17 @@
 @use "./variables" as *;
 
 html {
-  scrollbar-gutter: stable;
+  --site-header-height: 4.5rem;
+  overflow-x: clip;
 }
 
 a {
   text-decoration: inherit;
 }
 body {
-  padding-top: 4.5rem;
+  padding-top: var(--site-header-height);
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 body.no-padding-top {

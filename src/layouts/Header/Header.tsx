@@ -1,6 +1,7 @@
 import styles from "./Header.module.scss";
 import "@fontsource/dancing-script";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { observeSiteHeaderHeight } from "../../helpers/siteHeaderHeight";
 import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from "react-router-dom";
 import { effacerCheminApresConnexion } from "../../helpers/cheminApresConnexion";
 import { accountService } from "../../services/account.service";
@@ -55,6 +56,7 @@ type SejourDetailLoaderData = {
 
 const Admin_header: React.FC = () => {
   const navigate = useNavigate();
+  const headerRef = useRef<HTMLElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const toggle = () => setIsOpen(!isOpen);
 
@@ -131,9 +133,15 @@ const Admin_header: React.FC = () => {
     pathname.startsWith(`/mes-sejours/${effectiveNavId}/enfants/`) &&
     pathname.endsWith("/dossier");
 
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    return observeSiteHeaderHeight(el);
+  }, [isOpen, showSejourSegments, peutAfficherNavParametrage, role, resolvedForHeader?.id]);
+
   return (
-    <header className={styles.main}>
-      <Navbar expand="xl" dark className={styles.navbar}>
+    <header ref={headerRef} className={styles.main}>
+      <Navbar expand="xxl" dark className={styles.navbar}>
         <NavLink to={"/"} className={`${styles.brand} ${styles.link}`}>
           {import.meta.env.VITE_APP_NAME || "Enjoy"}
         </NavLink>

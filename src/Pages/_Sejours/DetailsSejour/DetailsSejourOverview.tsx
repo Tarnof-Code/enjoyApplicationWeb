@@ -28,7 +28,6 @@ const OVERVIEW_ACCORDION_DEFAULT_ORDER_WITH_INFOS = ["1", "5", "2", "3", "4"] as
  * (Informations générales affichées en en-tête ; réglages → Paramétrage ; plannings → Organisation.)
  */
 const OVERVIEW_ACCORDION_IDS = ["5", "2", "3", "4"] as const;
-const OVERVIEW_ACCORDION_DEFAULT_OPEN = "5";
 const OVERVIEW_ACCORDION_ID_LIST = [...OVERVIEW_ACCORDION_IDS];
 const OVERVIEW_ACCORDION_ID_SET = new Set<string>(OVERVIEW_ACCORDION_ID_LIST);
 
@@ -119,7 +118,7 @@ const DetailsSejourOverview: React.FC = () => {
         if (accordionFromState && OVERVIEW_ACCORDION_ID_SET.has(accordionFromState)) {
             return [accordionFromState];
         }
-        return [OVERVIEW_ACCORDION_DEFAULT_OPEN];
+        return [];
     });
     const expandedGroupeIdFromState = (location.state as { expandedGroupeId?: number } | null)?.expandedGroupeId;
     const navigate = useNavigate();

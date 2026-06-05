@@ -1,10 +1,17 @@
 @use "../../variables" as *;
 
+/** Burger menu en dessous de ce seuil (Bootstrap `xxl` = 1400px). */
+$header-nav-burger-max: 1399.98px;
+
 .main {
-  // overflow: hidden;
   position: fixed;
   top: 0;
-  width: 100%;
+  left: 0;
+  right: 0;
+  width: auto;
+  max-width: 100%;
+  overflow-x: clip;
+  background-color: $bleu_principal;
   z-index: 1000;
 }
 
@@ -14,8 +21,13 @@
   color: white;
   padding: 0.1em 2em;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   //box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -50,13 +62,13 @@
   text-align: center;
   margin: 1rem 0 1rem 0;
 
-  @media (max-width: 1199.98px) {
+  @media (max-width: $header-nav-burger-max) {
     flex-direction: row;
     margin-bottom: 0.5em;
   }
 
   svg {
-    @media (max-width: 1199.98px) {
+    @media (max-width: $header-nav-burger-max) {
       margin-right: 1em;
     }
   }
@@ -74,6 +86,8 @@
   align-items: center;
   gap: 0.35rem 0.75rem;
   row-gap: 0.65rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .directorNavItem {
@@ -119,6 +133,7 @@
   align-items: center;
   gap: 0.5rem 0.65rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .directorBreadcrumbChevron {
@@ -149,6 +164,8 @@
   align-items: stretch;
   padding: 3px;
   gap: 2px;
+  max-width: 100%;
+  min-width: 0;
   background: rgba(0, 0, 0, 0.22);
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -190,7 +207,7 @@
   }
 }
 
-@media (max-width: 1199.98px) {
+@media (max-width: $header-nav-burger-max) {
   .directorContextRow {
     width: 100%;
     flex-direction: column;

@@ -31,6 +31,8 @@
 - [x] **Chambres — UX recherche / formulaire** (`textesRechercheChambre`, étage numérique, icône retrait occupant)
 - [x] **Vue générale — colonnes groupes / chambres** : **`ListeEnfants`** (affectation groupe + chambre enfant depuis la liste) ; **`Equipe`** / **`TableauUtilisateurs`** (référent groupe + chambre équipe, rôle abrégé) ; **`chambres`** dans **`detailsSejourLoader`**
 - [x] **Affichage groupes en pastilles** : **`AffichageGroupesListe`** partagé enfants + équipe ; **`couleurGroupe.ts`** (couleur stable par id) ; une ligne par type
+- [x] **Vue générale — UX layout** : bandeau infos séjour centré ; accordéons fermés par défaut ; infos hors accordéon **`1`**
+- [x] **Header responsive** : burger **&lt; 1400px** (`expand="xxl"`) ; **`--site-header-height`** dynamique ; correction bande blanche droite (`overflow-x: clip`, retrait `scrollbar-gutter: stable`)
 - [x] **Liste générique** : **`ColumnConfig.className`** / **`filterPlaceholder`** ; **`colAge`** ; placeholders filtres compacts
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)
 - [ ] Optimiser les performances des listes si nécessaire (virtualisation si beaucoup d'éléments)

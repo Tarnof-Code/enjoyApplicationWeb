@@ -53,7 +53,12 @@
     flex-wrap: wrap;
     gap: 1rem 2rem;
     align-items: flex-start;
+    justify-content: center;
     margin-bottom: 1.25rem;
+
+    .infoGroup {
+        flex: 0 1 auto;
+    }
 }
 
 .sejourNameBadge {
