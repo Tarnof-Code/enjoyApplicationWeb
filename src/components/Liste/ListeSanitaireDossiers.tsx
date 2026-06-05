@@ -11,7 +11,8 @@ export type SanitaireColonnesOptionnelles = {
   contactsParents: boolean;
   medical: boolean;
   alimentation: boolean;
-  complements: boolean;
+  autresInformations: boolean;
+  aPrendreEnSortie: boolean;
 };
 
 export interface ListeSanitaireDossiersProps {
@@ -56,7 +57,7 @@ function texteNonVide(value: string | null | undefined): boolean {
   return Boolean(value?.trim());
 }
 
-/** Si un groupe de colonnes optionnel est coché : ne garder que les lignes avec au moins un champ renseigné dans ce groupe. Si plusieurs groupes cochés, toutes les exigences (ET). Sans groupe coché : toutes les lignes. */
+/** Si un groupe de colonnes optionnel est coché : ne garder que les lignes avec au moins un champ renseigné dans ce groupe. Si plusieurs groupes cochés, au moins un groupe doit correspondre (OU). Sans groupe coché : toutes les lignes. */
 function ligneGardeePourGroupesColonnes(
   ligne: EnfantDossierSanitaireLigneDto,
   o: SanitaireColonnesOptionnelles,
@@ -95,12 +96,16 @@ function ligneGardeePourGroupesColonnes(
     exigences.push((d?.regimesEtPreferences?.length ?? 0) > 0 || texteNonVide(d?.informationsAlimentaires));
   }
 
-  if (o.complements) {
-    exigences.push(texteNonVide(d?.autresInformations) || texteNonVide(d?.aPrendreEnSortie));
+  if (o.autresInformations) {
+    exigences.push(texteNonVide(d?.autresInformations));
+  }
+
+  if (o.aPrendreEnSortie) {
+    exigences.push(texteNonVide(d?.aPrendreEnSortie));
   }
 
   if (exigences.length === 0) return true;
-  return exigences.every(Boolean);
+  return exigences.some(Boolean);
 }
 
 function lignesVersDonneesListe(lignes: EnfantDossierSanitaireLigneDto[]): SanitaireListeRow[] {
@@ -214,11 +219,12 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
       );
     }
 
-    if (o.complements) {
-      cols.push(
-        texteCol("autresInformations", "Autres informations"),
-        texteCol("aPrendreEnSortie", "À prendre en sortie"),
-      );
+    if (o.autresInformations) {
+      cols.push(texteCol("autresInformations", "Autres informations"));
+    }
+
+    if (o.aPrendreEnSortie) {
+      cols.push(texteCol("aPrendreEnSortie", "À prendre en sortie"));
     }
 
     return cols;

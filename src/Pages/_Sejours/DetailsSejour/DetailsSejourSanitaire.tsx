@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLoaderData, useParams, useRouteLoaderData, useNavigate } from "react-router-dom";
 import { Button, Input } from "reactstrap";
 import styles from "./DetailsSejour.module.scss";
@@ -26,7 +26,8 @@ const CLES_OPTS = [
   "contactsParents",
   "medical",
   "alimentation",
-  "complements",
+  "autresInformations",
+  "aPrendreEnSortie",
 ] as const satisfies readonly (keyof SanitaireColonnesOptionnelles)[];
 
 const OPTS_DEFAUT: SanitaireColonnesOptionnelles = {
@@ -35,7 +36,8 @@ const OPTS_DEFAUT: SanitaireColonnesOptionnelles = {
   contactsParents: false,
   medical: false,
   alimentation: false,
-  complements: false,
+  autresInformations: false,
+  aPrendreEnSortie: false,
 };
 
 function lireOptsColonnes(sejourId: number): SanitaireColonnesOptionnelles {
@@ -46,6 +48,10 @@ function lireOptsColonnes(sejourId: number): SanitaireColonnesOptionnelles {
     const next = { ...OPTS_DEFAUT };
     for (const k of CLES_OPTS) {
       if (typeof parsed[k] === "boolean") next[k] = parsed[k];
+    }
+    if (typeof parsed.complements === "boolean") {
+      next.autresInformations = parsed.complements;
+      next.aPrendreEnSortie = parsed.complements;
     }
     return next;
   } catch {
@@ -139,6 +145,22 @@ const DetailsSejourSanitaire = () => {
     [sejourId],
   );
 
+  const refToutCocher = useRef<HTMLInputElement>(null);
+  const toutesColonnesCochees = CLES_OPTS.every((k) => optsColonnes[k]);
+  const auMoinsUneColonneCochee = CLES_OPTS.some((k) => optsColonnes[k]);
+
+  useEffect(() => {
+    const input = refToutCocher.current;
+    if (input) {
+      input.indeterminate = auMoinsUneColonneCochee && !toutesColonnesCochees;
+    }
+  }, [auMoinsUneColonneCochee, toutesColonnesCochees]);
+
+  const basculerToutesColonnes = useCallback(() => {
+    const cocherTout = !toutesColonnesCochees;
+    changerOpts(Object.fromEntries(CLES_OPTS.map((k) => [k, cocherTout])) as SanitaireColonnesOptionnelles);
+  }, [changerOpts, toutesColonnesCochees]);
+
   const chargerCahier = useCallback(async () => {
     if (!Number.isFinite(sejourId)) return;
     setChargementCahier(true);
@@ -203,6 +225,16 @@ const DetailsSejourSanitaire = () => {
         </div>
         {vue === "dossiers" ? (
           <section className={sanStyles.optionsBar} aria-label="Colonnes affichées">
+            <label className={`${sanStyles.optionToggle} ${sanStyles.optionToggleTout}`}>
+              <Input
+                type="checkbox"
+                innerRef={refToutCocher}
+                checked={toutesColonnesCochees}
+                onChange={basculerToutesColonnes}
+                aria-label="Tout sélectionner ou tout désélectionner"
+              />
+              Tout
+            </label>
             <label className={sanStyles.optionToggle}>
               <Input
                 type="checkbox"
@@ -246,10 +278,18 @@ const DetailsSejourSanitaire = () => {
             <label className={sanStyles.optionToggle}>
               <Input
                 type="checkbox"
-                checked={optsColonnes.complements}
-                onChange={(e) => changerOpts({ complements: e.target.checked })}
+                checked={optsColonnes.autresInformations}
+                onChange={(e) => changerOpts({ autresInformations: e.target.checked })}
               />
               Autres infos
+            </label>
+            <label className={sanStyles.optionToggle}>
+              <Input
+                type="checkbox"
+                checked={optsColonnes.aPrendreEnSortie}
+                onChange={(e) => changerOpts({ aPrendreEnSortie: e.target.checked })}
+              />
+              À prendre en sortie
             </label>
           </section>
         ) : null}
