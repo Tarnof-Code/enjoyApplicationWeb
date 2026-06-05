@@ -6,6 +6,7 @@ import {
   AffecterOccupantsEnfantsRequest,
   AffecterOccupantsEquipeRequest,
   ChambreDto,
+  HistoriqueModificationChambreDto,
   SaveChambreRequest,
 } from "../types/api";
 
@@ -210,6 +211,24 @@ let retirerMembreEquipe = async (
   }
 };
 
+let getHistoriqueChambre = async (
+  sejourId: number,
+  chambreId: number
+): Promise<HistoriqueModificationChambreDto[]> => {
+  try {
+    const response = await Axios.get(`/sejours/${sejourId}/chambres/${chambreId}/historique`);
+    if (response.data && Array.isArray(response.data)) {
+      return response.data as HistoriqueModificationChambreDto[];
+    }
+    return [];
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Impossible de charger l'historique de la chambre",
+      logContext: "getHistoriqueChambre",
+    });
+  }
+};
+
 export const sejourChambreService = {
   getChambresDuSejour,
   getChambreById,
@@ -224,4 +243,5 @@ export const sejourChambreService = {
   affecterMembreEquipe,
   affecterMembresEquipe,
   retirerMembreEquipe,
+  getHistoriqueChambre,
 };

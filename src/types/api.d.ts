@@ -823,7 +823,11 @@ export interface SaveActivitePrestataireRequest {
 
 /** Champs issus de `HistoriqueModificationBaseDto` (déballé `@JsonUnwrapped` dans les DTO fils). */
 export type HistoriqueModificationAction = "CREATION" | "MODIFICATION" | "SUPPRESSION";
-export type HistoriqueModificationType = "ACTIVITE" | "PLANNING_CELLULE" | "CAHIER_INFIRMERIE";
+export type HistoriqueModificationType =
+  | "ACTIVITE"
+  | "PLANNING_CELLULE"
+  | "CAHIER_INFIRMERIE"
+  | "CHAMBRE";
 
 /** Cahier d'infirmerie — enums alignés sur enjoyApi. */
 export type TypeSoinInfirmerie =
@@ -936,6 +940,22 @@ export interface HistoriqueModificationPlanningCelluleDto {
   /** LocalDate ISO */
   planningJour: string;
   planningCelluleId: number;
+}
+
+/**
+ * Snapshots : `Type: … | Identifiant: … | Nom: … | …` (séparateur ` | `, champs vides = « - »).
+ */
+export interface HistoriqueModificationChambreDto {
+  id: number;
+  type: HistoriqueModificationType;
+  dateModification: string;
+  modificateurTokenId: string;
+  modificateurNom: string | null;
+  modificateurPrenom: string | null;
+  action: HistoriqueModificationAction;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  chambreId: number;
 }
 
 // ============================================================================

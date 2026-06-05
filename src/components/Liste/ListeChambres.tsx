@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUserMinus } from "@fortawesome/free-solid-svg-icons";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import ReferentsSelector from "../Forms/ReferentsSelector";
 import type { MembreEquipePourChambre } from "../../helpers/chambreOccupantsUtils";
@@ -12,9 +14,19 @@ import {
     GenreChambre,
 } from "../../types/api";
 import { sejourChambreService } from "../../services/sejour-chambre.service";
+import { getUserFacingErrorMessage } from "../../helpers/axiosError";
+import {
+    formatDateHeureHistorique,
+    formatNomModificateurHistorique,
+    libelleActionHistorique,
+} from "../../helpers/libelleHistoriqueModification";
+import {
+    HistoriqueModificationListeModal,
+    type HistoriqueModificationListeModalLigne,
+} from "../common/HistoriqueModificationListeModal";
 import { TypeChambreLabels, TypeChambreValues } from "../../enums/TypeChambre";
 import { GenreChambreBadgeLabels, GenreChambreLabels, GenreChambreValues } from "../../enums/GenreChambre";
-import { libelleChambre, resumeLocalisation, chambreALocalisationRenseignee, libelleEtage } from "../../helpers/libelleChambre";
+import { libelleChambre, resumeLocalisation, chambreALocalisationRenseignee, chambreCorrespondRechercheTexte } from "../../helpers/libelleChambre";
 import {
     analyserModificationChambreIncompatible,
     enfantsEligiblesPourChambre,
@@ -90,30 +102,6 @@ function parseSelectedReferents(value: string): string[] {
     } catch {
         return [];
     }
-}
-
-function chambreCorrespondRechercheTexte(chambre: ChambreDto, search: string): boolean {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-
-    if (chambre.identifiant.trim().toLowerCase().includes(q)) return true;
-    if (chambre.nom?.trim().toLowerCase().includes(q)) return true;
-    if (libelleChambre(chambre).toLowerCase().includes(q)) return true;
-
-    if (chambre.batiment?.trim().toLowerCase().includes(q)) return true;
-    if (chambre.couloir?.trim().toLowerCase().includes(q)) return true;
-
-    if (chambre.etage != null) {
-        if (String(chambre.etage).includes(q)) return true;
-        if (libelleEtage(chambre.etage).toLowerCase().includes(q)) return true;
-    }
-
-    for (const occupant of chambre.occupants ?? []) {
-        const hay = `${occupant.nom} ${occupant.prenom}`.toLowerCase();
-        if (hay.includes(q)) return true;
-    }
-
-    return false;
 }
 
 function filtrerChambres(
@@ -192,6 +180,15 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
     const [submitting, setSubmitting] = useState(false);
     const [editingChambre, setEditingChambre] = useState<ChambreDto | null>(null);
     const [deletingChambreId, setDeletingChambreId] = useState<number | null>(null);
+
+    const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
+    const [historiqueChambreId, setHistoriqueChambreId] = useState<number | null>(null);
+    const [historiqueChambreLibelle, setHistoriqueChambreLibelle] = useState("");
+    const [historiqueChargement, setHistoriqueChargement] = useState(false);
+    const [historiqueErreur, setHistoriqueErreur] = useState<string | null>(null);
+    const [historiqueLignes, setHistoriqueLignes] = useState<HistoriqueModificationListeModalLigne[] | null>(
+        null
+    );
 
     const [addOccupantModal, setAddOccupantModal] = useState<ChambreDto | null>(null);
     const [retirerOccupantModal, setRetirerOccupantModal] = useState<{
@@ -282,6 +279,61 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
 
     const affectationIndex = useMemo(() => indexerAffectationsOccupants(chambres), [chambres]);
 
+    const chargerHistoriqueChambre = useCallback(
+        async (chambreId: number) => {
+            setHistoriqueChargement(true);
+            setHistoriqueErreur(null);
+            try {
+                const rows = await sejourChambreService.getHistoriqueChambre(sejourId, chambreId);
+                setHistoriqueLignes(
+                    rows.map((r) => ({
+                        id: r.id,
+                        quand: formatDateHeureHistorique(r.dateModification),
+                        qui: formatNomModificateurHistorique(r.modificateurPrenom, r.modificateurNom),
+                        action: libelleActionHistorique(r.action),
+                        ancienneValeur: r.ancienneValeur,
+                        nouvelleValeur: r.nouvelleValeur,
+                    }))
+                );
+            } catch (err: unknown) {
+                setHistoriqueErreur(getUserFacingErrorMessage(err, "Impossible de charger l'historique."));
+                setHistoriqueLignes([]);
+            } finally {
+                setHistoriqueChargement(false);
+            }
+        },
+        [sejourId]
+    );
+
+    const fermerHistoriqueChambre = useCallback(() => {
+        setHistoriqueOuvert(false);
+        setHistoriqueChambreId(null);
+        setHistoriqueChambreLibelle("");
+        setHistoriqueErreur(null);
+        setHistoriqueLignes(null);
+        setHistoriqueChargement(false);
+    }, []);
+
+    const ouvrirHistoriqueChambre = useCallback(
+        (chambre: ChambreDto) => {
+            setHistoriqueChambreId(chambre.id);
+            setHistoriqueChambreLibelle(libelleChambre(chambre));
+            setHistoriqueOuvert(true);
+            setHistoriqueLignes(null);
+            void chargerHistoriqueChambre(chambre.id);
+        },
+        [chargerHistoriqueChambre]
+    );
+
+    const rafraichirHistoriqueSiOuvert = useCallback(
+        (chambreId: number) => {
+            if (historiqueOuvert && historiqueChambreId === chambreId) {
+                void chargerHistoriqueChambre(chambreId);
+            }
+        },
+        [historiqueOuvert, historiqueChambreId, chargerHistoriqueChambre]
+    );
+
     const openAddOccupantModal = (chambre: ChambreDto) => {
         setOccupantModalError(null);
         setPickerSearch("");
@@ -365,6 +417,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                 }
                 dismissAddOccupantModal();
                 appliquerChambreRetournee(chambreMiseAJour);
+                rafraichirHistoriqueSiOuvert(chambre.id);
             } catch (e: unknown) {
                 setOccupantModalError(
                     e instanceof Error ? e.message : "Impossible d'affecter les enfants sélectionnés"
@@ -398,6 +451,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
             }
             dismissAddOccupantModal();
             appliquerChambreRetournee(chambreMiseAJour);
+            rafraichirHistoriqueSiOuvert(chambre.id);
         } catch (e: unknown) {
             setOccupantModalError(
                 e instanceof Error ? e.message : "Impossible d'affecter les membres sélectionnés"
@@ -420,6 +474,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
             }
             setRetirerOccupantModal(null);
             retirerOccupantLocal(chambreId, occupant.id);
+            rafraichirHistoriqueSiOuvert(chambreId);
         } catch (e: unknown) {
             setErrorMessage(e instanceof Error ? e.message : "Impossible de retirer l'occupant");
         } finally {
@@ -488,7 +543,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
         }
         const nomTrim = formNom.trim();
         if (nomTrim.length > 150) {
-            setErrorMessage("Le surnom ne doit pas dépasser 150 caractères.");
+            setErrorMessage("Le nom ne doit pas dépasser 150 caractères.");
             return null;
         }
         const descTrim = formDescription.trim();
@@ -583,6 +638,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                     : updated;
             appliquerChambreRetournee(fresh);
             showSuccessModal("Chambre modifiée avec succès.");
+            rafraichirHistoriqueSiOuvert(editingChambre.id);
         }
         setModalOpen(false);
         setEditingChambre(null);
@@ -662,6 +718,9 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
             setPendingDeleteChambreId(null);
             showSuccessModal("Chambre supprimée avec succès.");
             setChambres((prev) => prev.filter((c) => c.id !== chambreId));
+            if (historiqueChambreId === chambreId) {
+                fermerHistoriqueChambre();
+            }
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Impossible de supprimer la chambre";
             setErrorMessage(msg);
@@ -971,6 +1030,9 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                                     color="danger"
                                                     size="sm"
                                                     outline
+                                                    className={styles.retirerOccupantBtn}
+                                                    title="Retirer"
+                                                    aria-label={`Retirer ${libelleOccupant(occupant)}`}
                                                     onClick={() =>
                                                         setRetirerOccupantModal({
                                                             chambreId: chambre.id,
@@ -979,7 +1041,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                                     }
                                                     disabled={occupantSubmitting}
                                                 >
-                                                    Retirer
+                                                    <FontAwesomeIcon icon={faUserMinus} aria-hidden />
                                                 </Button>
                                             </li>
                                         ))}
@@ -987,6 +1049,15 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                 )}
                             </div>
                             <div className={styles.cardActions}>
+                                <Button
+                                    color="secondary"
+                                    size="sm"
+                                    outline
+                                    onClick={() => ouvrirHistoriqueChambre(chambre)}
+                                    disabled={deletingChambreId === chambre.id}
+                                >
+                                    Historique
+                                </Button>
                                 <Button
                                     color="primary"
                                     size="sm"
@@ -1057,7 +1128,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                 </p>
                             </FormGroup>
                             <FormGroup className={styles.modalField}>
-                                <Label for="chambre-nom">Surnom (optionnel)</Label>
+                                <Label for="chambre-nom">Nom (optionnel)</Label>
                                 <Input
                                     id="chambre-nom"
                                     type="text"
@@ -1158,10 +1229,11 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                 <Label for="chambre-etage">Étage (optionnel)</Label>
                                 <Input
                                     id="chambre-etage"
-                                    type="number"
-                                    step={1}
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     value={formEtage}
-                                    onChange={(e) => setFormEtage(e.target.value)}
+                                    onChange={(e) => setFormEtage(e.target.value.replace(/\D/g, ""))}
                                     disabled={submitting}
                                     placeholder="0 = RDC"
                                 />
@@ -1496,6 +1568,20 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                     </ModalFooter>
                 </Modal>
             ) : null}
+
+            <HistoriqueModificationListeModal
+                isOpen={historiqueOuvert}
+                onFermer={fermerHistoriqueChambre}
+                titre="Historique de la chambre"
+                sousTitre={
+                    historiqueChambreLibelle.trim() !== "" ? `« ${historiqueChambreLibelle} »` : undefined
+                }
+                chargement={historiqueChargement}
+                erreur={historiqueErreur}
+                lignes={historiqueLignes}
+                messageListeVide="Aucune modification enregistrée"
+                formatSnapshots="chambre"
+            />
 
             <Modal isOpen={successModalOpen} toggle={() => setSuccessModalOpen(false)}>
                 <ModalHeader toggle={() => setSuccessModalOpen(false)}>Confirmation</ModalHeader>

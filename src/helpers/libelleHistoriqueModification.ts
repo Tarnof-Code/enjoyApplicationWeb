@@ -49,7 +49,11 @@ export function formatNomModificateurHistorique(prenom: string | null, nom: stri
 }
 
 /** Domaine pour interpréter le format snapshot documenté dans `documentation-api-rest.md`. */
-export type HistoriqueSnapshotDomaine = "activite" | "planning_cellule" | "cahier_infi";
+export type HistoriqueSnapshotDomaine =
+    | "activite"
+    | "planning_cellule"
+    | "cahier_infi"
+    | "chambre";
 
 const CHAMPS_SNAPSHOT_ACTIVITE = [
     "Date",
@@ -75,7 +79,7 @@ function parseSnapshotPipe(
     valeur: string | null | undefined,
     domaine: HistoriqueSnapshotDomaine
 ): { labels: readonly string[]; parts: string[] } | null {
-    if (domaine === "cahier_infi") return null;
+    if (domaine === "cahier_infi" || domaine === "chambre") return null;
     if (valeur == null) return null;
     const t = valeur.trim();
     if (t === "") return null;
@@ -299,6 +303,198 @@ function differEnregistrementsCahierInfirmerie(
     return lines;
 }
 
+/** Libellés snapshots chambre : `Type: … | Identifiant: … | …` (séparateur ` | `). */
+const CLES_CHAMBRE_HISTORIQUE = [
+    "Type",
+    "Identifiant",
+    "Nom",
+    "Capacité",
+    "Genre",
+    "Description",
+    "Bâtiment",
+    "Couloir",
+    "Étage",
+    "Groupe",
+    "Référents",
+    "Occupants",
+] as const;
+
+/** Parse un snapshot chambre (`clé: valeur | clé: valeur`). */
+export function parseHistoriqueValeurChambre(valeur: string | null | undefined): Record<string, string> {
+    if (!valeur) return {};
+    return Object.fromEntries(
+        valeur.split(" | ").map((segment) => {
+            const idx = segment.indexOf(": ");
+            if (idx === -1) return [segment, ""];
+            return [segment.slice(0, idx), segment.slice(idx + 2)];
+        }),
+    );
+}
+
+function valeurChambreHistoriqueAffichable(v: string): boolean {
+    const t = v.trim();
+    return t !== "" && t !== "-";
+}
+
+function clesChambreHistoriqueOrdonnees(mapA: Record<string, string>, mapN: Record<string, string>): string[] {
+    const allKeys = new Set([...Object.keys(mapA), ...Object.keys(mapN)]);
+    const fixes = CLES_CHAMBRE_HISTORIQUE.filter((k) => allKeys.has(k));
+    const extras = [...allKeys].filter((k) => !(CLES_CHAMBRE_HISTORIQUE as readonly string[]).includes(k));
+    extras.sort((a, b) => a.localeCompare(b, "fr"));
+    return [...fixes, ...extras];
+}
+
+/** Découpe la valeur snapshot « Occupants » (`lit 1: …, lit 2: …` ou `Prénom Nom, …`). */
+function decouperSegmentsOccupantsSnapshot(raw: string): string[] {
+    const t = raw.trim();
+    if (!valeurChambreHistoriqueAffichable(t)) return [];
+    if (/lit\s+\d+\s*:/i.test(t)) {
+        return t
+            .split(/,\s*(?=lit\s+\d+\s*:)/i)
+            .map((s) => s.trim())
+            .filter(Boolean);
+    }
+    return t
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+}
+
+function clePersonneOccupantSnapshot(segment: string): string {
+    const s = segment.trim();
+    const m = /^lit\s+\d+\s*:\s*(.+)$/i.exec(s);
+    return (m ? m[1] : s).trim().toLocaleLowerCase("fr");
+}
+
+function libellePersonneOccupantSnapshot(segment: string): string {
+    const s = segment.trim();
+    const m = /^lit\s+\d+\s*:\s*(.+)$/i.exec(s);
+    return m ? m[1].trim() : s;
+}
+
+/** Accord « Ajouté / Ajoutée / … » selon le genre autorisé de la chambre (snapshot `Genre`). */
+function libelleActionOccupantsHistoriqueChambre(
+    action: "ajoute" | "retire",
+    count: number,
+    genreChambre: string | undefined,
+): string {
+    const g = (genreChambre ?? "")
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const pluriel = count > 1;
+
+    if (g === "FEMININ") {
+        if (action === "ajoute") return pluriel ? "Ajoutées" : "Ajoutée";
+        return pluriel ? "Retirées" : "Retirée";
+    }
+    if (g === "MASCULIN") {
+        if (action === "ajoute") return pluriel ? "Ajoutés" : "Ajouté";
+        return pluriel ? "Retirés" : "Retiré";
+    }
+    if (action === "ajoute") return pluriel ? "Ajouté(s)" : "Ajouté";
+    return pluriel ? "Retiré(s)" : "Retiré";
+}
+
+/** Ajouts / retraits d’occupants uniquement (ignore un simple changement de numéro de lit). */
+function formaterDiffOccupantsChambreHistorique(
+    ancien: string,
+    nouveau: string,
+    genreChambre?: string,
+): string | null {
+    const segmentsA = decouperSegmentsOccupantsSnapshot(ancien);
+    const segmentsN = decouperSegmentsOccupantsSnapshot(nouveau);
+
+    const mapA = new Map(
+        segmentsA.map((s) => [clePersonneOccupantSnapshot(s), s.trim()] as const),
+    );
+    const mapN = new Map(
+        segmentsN.map((s) => [clePersonneOccupantSnapshot(s), s.trim()] as const),
+    );
+
+    const ajoutes = [...mapN.entries()]
+        .filter(([cle]) => !mapA.has(cle))
+        .map(([, lib]) => libellePersonneOccupantSnapshot(lib))
+        .sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+    const retires = [...mapA.entries()]
+        .filter(([cle]) => !mapN.has(cle))
+        .map(([, lib]) => libellePersonneOccupantSnapshot(lib))
+        .sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+
+    if (ajoutes.length === 0 && retires.length === 0) return null;
+
+    const lines: string[] = [];
+    if (ajoutes.length > 0) {
+        lines.push(
+            `${libelleActionOccupantsHistoriqueChambre("ajoute", ajoutes.length, genreChambre)} : ${ajoutes.join(", ")}`,
+        );
+    }
+    if (retires.length > 0) {
+        lines.push(
+            `${libelleActionOccupantsHistoriqueChambre("retire", retires.length, genreChambre)} : ${retires.join(", ")}`,
+        );
+    }
+    return lines.join("\n");
+}
+
+/** Comparaison / affichage création-suppression pour snapshots chambre (`Type: … | …`). */
+function formaterComparaisonHistoriqueChambre(
+    ancienneValeur: string | null | undefined,
+    nouvelleValeur: string | null | undefined,
+): string | null {
+    const aRaw = (ancienneValeur ?? "").trim();
+    const nRaw = (nouvelleValeur ?? "").trim();
+    if (aRaw === "" && nRaw === "") return null;
+
+    const mapA = aRaw ? parseHistoriqueValeurChambre(aRaw) : {};
+    const mapN = nRaw ? parseHistoriqueValeurChambre(nRaw) : {};
+    const hasA = aRaw !== "";
+    const hasN = nRaw !== "";
+
+    if (hasA && hasN) {
+        const lines: string[] = [];
+        for (const cle of clesChambreHistoriqueOrdonnees(mapA, mapN)) {
+            const va = (mapA[cle] ?? "").trim();
+            const vn = (mapN[cle] ?? "").trim();
+            if (va === vn) continue;
+            if (cle === "Occupants") {
+                const genreChambre = (mapN.Genre ?? mapA.Genre ?? "").trim();
+                const diffOcc = formaterDiffOccupantsChambreHistorique(va, vn, genreChambre);
+                if (diffOcc) lines.push(diffOcc);
+                continue;
+            }
+            const affA = valeurChambreHistoriqueAffichable(va) ? va : "Vide";
+            const affN = valeurChambreHistoriqueAffichable(vn) ? vn : "Vide";
+            lines.push(`${cle} : ${affA} → ${affN}`);
+        }
+        if (lines.length === 0) return null;
+        return formaterInstantsIsoDansTexteHistorique(lines.join("\n"));
+    }
+
+    if (!hasA && hasN) {
+        const lines: string[] = [];
+        for (const cle of clesChambreHistoriqueOrdonnees({}, mapN)) {
+            const vn = (mapN[cle] ?? "").trim();
+            if (!valeurChambreHistoriqueAffichable(vn)) continue;
+            lines.push(`${cle} : ${vn}`);
+        }
+        return lines.length > 0 ? formaterInstantsIsoDansTexteHistorique(lines.join("\n")) : null;
+    }
+
+    if (hasA && !hasN) {
+        const lines: string[] = [];
+        for (const cle of clesChambreHistoriqueOrdonnees(mapA, {})) {
+            const va = (mapA[cle] ?? "").trim();
+            if (!valeurChambreHistoriqueAffichable(va)) continue;
+            lines.push(`${cle} : ${va} → Vide`);
+        }
+        return lines.length > 0 ? formaterInstantsIsoDansTexteHistorique(lines.join("\n")) : null;
+    }
+
+    return null;
+}
+
 /**
  * Compare ancienne / nouvelle valeur pour affichage lisible : **`champ : ancien → nouveau`** par ligne
  * (snapshots pipe-separated doc API), ou blocs JSON / texte sinon.
@@ -310,6 +506,9 @@ export function formaterComparaisonHistoriqueSnapshots(
 ): string | null {
     if (domaine === "cahier_infi") {
         return formaterComparaisonHistoriqueCahierInfirmerie(ancienneValeur, nouvelleValeur);
+    }
+    if (domaine === "chambre") {
+        return formaterComparaisonHistoriqueChambre(ancienneValeur, nouvelleValeur);
     }
 
     const aRaw = (ancienneValeur ?? "").trim();
@@ -388,6 +587,18 @@ export function formaterValeurHistoriquePourAffichage(
                 .filter((l): l is string => l != null)
                 .join("\n");
         }
+    }
+
+    if (domaine === "chambre") {
+        const map = parseHistoriqueValeurChambre(t);
+        const lines = clesChambreHistoriqueOrdonnees(map, map)
+            .map((cle) => {
+                const v = (map[cle] ?? "").trim();
+                if (!valeurChambreHistoriqueAffichable(v)) return null;
+                return `${cle} : ${v}`;
+            })
+            .filter((l): l is string => l != null);
+        if (lines.length > 0) return formaterInstantsIsoDansTexteHistorique(lines.join("\n"));
     }
 
     const pipe = parseSnapshotPipe(valeur, domaine);

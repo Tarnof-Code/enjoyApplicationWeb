@@ -26,7 +26,7 @@ export type HistoriqueModificationListeModalProps = {
     erreur?: string | null;
     lignes: HistoriqueModificationListeModalLigne[] | null;
     messageListeVide?: string;
-    /** Activité (`date|nom|…`), cellule planning, ou cahier d’infirmerie (`Enfant: … | …`). */
+    /** Activité (`date|nom|…`), cellule planning, cahier d’infirmerie ou chambre (`Type: … | …`). */
     formatSnapshots?: HistoriqueSnapshotDomaine;
 };
 
