@@ -18,6 +18,7 @@ import {
     couleurFondCalendrierPourTypeActivite,
 } from "./listeActivitesUtils";
 import styles from "./ListeActivites.module.scss";
+import { GroupesFilterDropdownItems } from "./SelectionGroupesParType";
 
 export type CalendrierNavigationPeriodeProps = {
     libellePlage: string;
@@ -358,23 +359,17 @@ export function CalendrierFiltresPlanning({
                                                 </Button>
                                             </div>
                                         ) : null}
-                                        {groupesTriésFiltre.map((g) => (
-                                            <label key={g.id} className={styles.calendrierFiltreDropdownItem}>
-                                                <Input
-                                                    type="checkbox"
-                                                    className={styles.calendrierFiltreDropdownCheckbox}
-                                                    id={`calfilt-grp-${g.id}`}
-                                                    checked={
-                                                        filtreCalendrierGroupeIds.size === 0 ||
-                                                        filtreCalendrierGroupeIds.has(g.id)
-                                                    }
-                                                    onChange={() => onToggleFiltreCalendrierGroupe(g.id)}
-                                                />
-                                                <span className={styles.calendrierFiltreDropdownItemLabel}>
-                                                    {g.nom}
-                                                </span>
-                                            </label>
-                                        ))}
+                                        <GroupesFilterDropdownItems
+                                            groupes={groupesTriésFiltre}
+                                            isSelected={(id) =>
+                                                filtreCalendrierGroupeIds.size === 0 ||
+                                                filtreCalendrierGroupeIds.has(id)
+                                            }
+                                            onToggle={onToggleFiltreCalendrierGroupe}
+                                            itemClassName={styles.calendrierFiltreDropdownItem}
+                                            checkboxClassName={styles.calendrierFiltreDropdownCheckbox}
+                                            labelClassName={styles.calendrierFiltreDropdownItemLabel}
+                                        />
                                     </div>
                                 ) : null}
                             </div>

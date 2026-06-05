@@ -15,6 +15,7 @@ import {
   ORDRE_APPELS,
   ORDRE_SOINS,
 } from "../../constants/cahierInfirmerieLabels";
+import { trierEnfantsParPrenom, trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import styles from "./CahierInfirmerieForm.module.scss";
 
 export type EnfantOptionCahier = { id: number; prenom: string; nom: string };
@@ -141,27 +142,20 @@ const CahierInfirmerieForm: React.FC<CahierInfirmerieFormProps> = ({
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
-  const enfantsTries = useMemo(
-    () =>
-      [...enfants].sort((a, b) => {
-        const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-        return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
-      }),
-    [enfants],
-  );
+  const enfantsTries = useMemo(() => trierEnfantsParPrenom(enfants), [enfants]);
 
   const optionsSoigneur = useMemo(() => {
     const base = [...soigneursEligibles];
     const entree = entreeInitiale;
     const tidOrphelin = entree?.soigneurTokenId?.trim();
     if (tidOrphelin && !base.some((m) => m.tokenId === tidOrphelin)) {
-      base.unshift({
+      base.push({
         tokenId: tidOrphelin,
         prenom: entree?.soigneurPrenom ?? "",
         nom: entree?.soigneurNom ?? "",
       });
     }
-    return base;
+    return trierParPrenomPuisNom(base);
   }, [soigneursEligibles, entreeInitiale]);
 
   useEffect(() => {

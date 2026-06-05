@@ -4,6 +4,7 @@ import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, LieuDto, TypeActiviteDto } from "../../types/api";
 import type { MembreEquipeSejour } from "./listeActivitesTypes";
 import { FILTRE_LISTE_LIEU_SANS, formatActiviteDateForDisplay, resumePartageLieu } from "./listeActivitesUtils";
+import { GroupesSelectOptions } from "./SelectionGroupesParType";
 import styles from "./ListeActivites.module.scss";
 
 export type ListeActivitesListeFiltresProps = {
@@ -139,11 +140,7 @@ export function ListeActivitesListeFiltres({
                                 disabled={groupes.length === 0}
                             >
                                 <option value="">Tous les groupes</option>
-                                {groupesTriésFiltre.map((g) => (
-                                    <option key={g.id} value={String(g.id)}>
-                                        {g.nom}
-                                    </option>
-                                ))}
+                                <GroupesSelectOptions groupes={groupesTriésFiltre} />
                             </Input>
                         </div>
                         <div className={styles.filterField}>

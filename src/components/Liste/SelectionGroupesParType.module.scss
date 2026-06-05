@@ -1,0 +1,104 @@
+.empty {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.sections {
+    max-height: 360px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.section {
+    margin: 0;
+}
+
+.sectionTitle {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+}
+
+.row {
+    border-bottom: 1px solid #eee;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+
+    &:hover {
+        background: #f8f9fa;
+    }
+}
+
+.checkbox {
+    flex-shrink: 0;
+}
+
+.inlineSections {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.inlineSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.inlineRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.planningSections {
+    padding: 0.15rem 0.75rem 0.35rem;
+}
+
+.planningSection:not(:first-child) {
+    margin-top: 0.5rem;
+}
+
+.planningSectionTitle {
+    margin-bottom: 0.35rem;
+}
+
+.planningRow {
+    margin-bottom: 0.15rem;
+    margin-left: 0.5rem;
+}
+
+.filterSectionTitle {
+    padding: 0.35rem 0.75rem 0.15rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}

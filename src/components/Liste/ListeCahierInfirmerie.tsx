@@ -13,6 +13,7 @@ import {
 } from "../../helpers/droitsCahierInfirmerie";
 import { getApiErrorMessage } from "../../helpers/axiosError";
 import { parseDate } from "../../helpers/formaterDate";
+import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import {
   formatDateHeureHistorique,
   formatNomModificateurHistorique,
@@ -114,10 +115,7 @@ function membresEligiblesCommeSoigneur(sejour: SejourDTO): MembreSoigneurOption[
   };
   add(sejour.directeur?.tokenId, sejour.directeur?.nom, sejour.directeur?.prenom);
   for (const m of sejour.equipe ?? []) add(m.tokenId, m.nom, m.prenom);
-  out.sort((a, b) =>
-    `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, "fr", { sensitivity: "base" }),
-  );
-  return out;
+  return trierParPrenomPuisNom(out);
 }
 
 export type ListeCahierInfirmerieProps = {
@@ -147,10 +145,10 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
   const soigneursEligibles = useMemo(() => {
     const base = membresEligiblesCommeSoigneur(sejour);
     if (tokenStr && !base.some((m) => m.tokenId === tokenStr)) {
-      return [
+      return trierParPrenomPuisNom([
         ...base,
         { tokenId: tokenStr, nom: "", prenom: (prenomConnecte ?? "").trim() || "—" },
-      ];
+      ]);
     }
     return base;
   }, [sejour, tokenStr, prenomConnecte]);

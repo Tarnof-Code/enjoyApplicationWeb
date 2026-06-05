@@ -19,6 +19,9 @@ import {
     libelleActionHistorique,
 } from "../../helpers/libelleHistoriqueModification";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
+import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
+import { trierGroupesParNom } from "../../helpers/groupesParType";
+import { SelectionGroupesParType } from "./SelectionGroupesParType";
 import styles from "./ListeActivites.module.scss";
 import { PlanningModalFooterFormulaire } from "../PlanningCalendrier/PlanningModalFooterFormulaire";
 import {
@@ -341,18 +344,8 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         }
     }, [lieuxFiltrésParEmplacement, formLieuId]);
 
-    const groupesTriésFiltre = useMemo(
-        () => [...groupes].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" })),
-        [groupes]
-    );
-    const equipeTriéeFiltre = useMemo(() => {
-        const sorted = [...equipe].sort((a, b) => {
-            const pa = `${a.prenom} ${a.nom}`.trim();
-            const pb = `${b.prenom} ${b.nom}`.trim();
-            return pa.localeCompare(pb, undefined, { sensitivity: "base" });
-        });
-        return equipeAvecTokenEnTete(sorted, tokenSelf);
-    }, [equipe, tokenSelf]);
+    const groupesTriésFiltre = useMemo(() => trierGroupesParNom(groupes), [groupes]);
+    const equipeTriéeFiltre = useMemo(() => trierParPrenomPuisNom(equipe), [equipe]);
 
     const toggleFiltreCalendrierToken = useCallback((tokenId: string) => {
         setFiltreCalendrierTokens((prev) => {
@@ -1539,20 +1532,14 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             {groupes.length === 0 ? (
                                 <p className={styles.noGroupes}>Aucun groupe sur ce séjour.</p>
                             ) : (
-                                groupes.map((g) => (
-                                    <div key={g.id} className={styles.checkboxRow}>
-                                        <Input
-                                            type="checkbox"
-                                            id={`grp-${g.id}`}
-                                            checked={selectedGroupeIds.has(g.id)}
-                                            onChange={() => toggleGroupeId(g.id)}
-                                            disabled={submitting}
-                                        />
-                                        <Label for={`grp-${g.id}`} className="mb-0">
-                                            {g.nom}
-                                        </Label>
-                                    </div>
-                                ))
+                                <SelectionGroupesParType
+                                    groupes={groupes}
+                                    isSelected={(id) => selectedGroupeIds.has(id)}
+                                    onToggle={toggleGroupeId}
+                                    disabled={submitting}
+                                    idPrefix="grp"
+                                    appearance="inline"
+                                />
                             )}
                         </div>
                     </FormGroup>

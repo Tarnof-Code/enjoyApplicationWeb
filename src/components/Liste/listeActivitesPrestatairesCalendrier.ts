@@ -7,6 +7,7 @@ import type {
     SaveActivitePrestataireRequest,
 } from "../../types/api";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
+import { comparerParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import { activiteDateToFilterKey, formatActiviteDateForDisplay } from "./listeActivitesUtils";
 
 export type ConflitCalendrierPrestataire = {
@@ -472,9 +473,7 @@ function idsMomentsDansOrdreParametrage(momentIds: Iterable<number>, moments: Mo
 function comparerPersonnePuisMomentParametrage<
     T extends { prenom: string; nom: string; momentId: number },
 >(a: T, b: T, ordreMoment: Map<number, number>): number {
-    const cmpPersonne = `${a.prenom} ${a.nom}`
-        .trim()
-        .localeCompare(`${b.prenom} ${b.nom}`.trim(), undefined, { sensitivity: "base" });
+    const cmpPersonne = comparerParPrenomPuisNom(a, b);
     if (cmpPersonne !== 0) return cmpPersonne;
     return (ordreMoment.get(a.momentId) ?? 0) - (ordreMoment.get(b.momentId) ?? 0);
 }

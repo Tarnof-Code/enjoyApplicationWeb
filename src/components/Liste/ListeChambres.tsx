@@ -40,6 +40,8 @@ import {
     partiesLibelleRechercheOccupantsChambre,
 } from "../../helpers/chambreOccupantsUtils";
 import { trierEnfantsParNom } from "../../helpers/trierUtilisateurs";
+import { trierGroupesParNom } from "../../helpers/groupesParType";
+import { GroupesFilterDropdownItems, GroupesSelectOptions } from "./SelectionGroupesParType";
 import styles from "./ListeChambres.module.scss";
 
 export interface ListeChambresProps {
@@ -243,10 +245,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
         setFilterGroupeIds(new Set());
     };
 
-    const groupesPourFiltre = useMemo(
-        () => [...groupes].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" })),
-        [groupes]
-    );
+    const groupesPourFiltre = useMemo(() => trierGroupesParNom(groupes), [groupes]);
 
     const [filtreGroupePanelOuvert, setFiltreGroupePanelOuvert] = useState(false);
     const filtreGroupeDropdownRef = useRef<HTMLDivElement>(null);
@@ -891,17 +890,14 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                             />
                                             <span className={styles.filterDropdownItemLabel}>Sans groupe</span>
                                         </label>
-                                        {groupesPourFiltre.map((g) => (
-                                            <label key={g.id} className={styles.filterDropdownItem}>
-                                                <Input
-                                                    type="checkbox"
-                                                    className={styles.filterDropdownCheckbox}
-                                                    checked={filterGroupeIds.has(g.id)}
-                                                    onChange={() => toggleFilterGroupe(g.id)}
-                                                />
-                                                <span className={styles.filterDropdownItemLabel}>{g.nom}</span>
-                                            </label>
-                                        ))}
+                                        <GroupesFilterDropdownItems
+                                            groupes={groupesPourFiltre}
+                                            isSelected={(id) => filterGroupeIds.has(id)}
+                                            onToggle={toggleFilterGroupe}
+                                            itemClassName={styles.filterDropdownItem}
+                                            checkboxClassName={styles.filterDropdownCheckbox}
+                                            labelClassName={styles.filterDropdownItemLabel}
+                                        />
                                     </div>
                                 ) : null}
                             </div>
@@ -1194,11 +1190,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                         invalid={!!erreursModificationChambre.groupeId}
                                     >
                                         <option value="">Aucun — tous les enfants du séjour</option>
-                                        {groupes.map((g) => (
-                                            <option key={g.id} value={String(g.id)}>
-                                                {g.nom}
-                                            </option>
-                                        ))}
+                                        <GroupesSelectOptions groupes={groupes} />
                                     </Input>
                                     {erreursModificationChambre.groupeId ? (
                                         <p className={styles.fieldError} role="alert">

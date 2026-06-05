@@ -6,7 +6,8 @@ import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import Liste, { ColumnConfig } from "./Liste";
 import UserForm from "../Forms/UserForm";
 import { ChambreDto, GroupeDto, ProfilUtilisateurDTO } from "../../types/api";
-import AffichageGroupesListe, { SECTIONS_TYPE_GROUPE, texteFiltreGroupes } from "./AffichageGroupesListe";
+import AffichageGroupesListe, { texteFiltreGroupes } from "./AffichageGroupesListe";
+import { SelectionGroupesParType } from "./SelectionGroupesParType";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 import { utilisateurService } from "../../services/utilisateur.service";
@@ -465,35 +466,12 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
             <p className={styles.groupeModalIntro}>
               Cochez les groupes dont ce membre est référent.
             </p>
-            <div className={styles.groupePickerSections}>
-              {SECTIONS_TYPE_GROUPE.map((section) => {
-                const groupesSection = groupes
-                  .filter((g) => g.typeGroupe === section.type)
-                  .sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" }));
-                if (groupesSection.length === 0) return null;
-                return (
-                  <section key={section.type} className={styles.groupePickerSection}>
-                    <h3 className={styles.groupePickerSectionTitle}>{section.label}</h3>
-                    <ul className={styles.groupePickerList}>
-                      {groupesSection.map((groupe) => (
-                        <li key={groupe.id} className={styles.groupePickerRow}>
-                          <label className={styles.groupePickerLabel}>
-                            <input
-                              type="checkbox"
-                              className={styles.groupePickerCheckbox}
-                              checked={selectedGroupeIds.has(groupe.id)}
-                              onChange={() => toggleGroupeSelection(groupe.id)}
-                              disabled={isSavingGroupes}
-                            />
-                            <span>{groupe.nom}</span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
+            <SelectionGroupesParType
+              groupes={groupes}
+              isSelected={(id) => selectedGroupeIds.has(id)}
+              onToggle={toggleGroupeSelection}
+              disabled={isSavingGroupes}
+            />
             {groupeModalError && (
               <div className={styles.errorMessage}>{groupeModalError}</div>
             )}

@@ -46,6 +46,7 @@ import {
     formatActiviteDateForDisplay,
     sejourDebutToInputDate,
 } from "./listeActivitesUtils";
+import { SelectionGroupesParType } from "./SelectionGroupesParType";
 import styles from "./ListeActivitesPrestataires.module.scss";
 
 const HEURE_HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -174,10 +175,6 @@ function ListeActivitesPrestataires({
     const momentsTriés = useMemo(() => trierMomentsChronologiquement(moments), [moments]);
     const joursDuSejour = useMemo(() => enumererJoursDuSejour(sejour), [sejour.dateDebut, sejour.dateFin]);
     const ymdSet = useMemo(() => new Set(joursDuSejour.map((j) => j.ymd)), [joursDuSejour]);
-    const groupesTriés = useMemo(
-        () => [...groupes].sort((a, b) => a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" })),
-        [groupes],
-    );
 
     useEffect(() => {
         setActivites(activitesPrestatairesProp.map(normaliserPrestataireDto));
@@ -1038,23 +1035,17 @@ function ListeActivitesPrestataires({
                     <FormGroup className={styles.modalField}>
                         <Label>Groupes concernés (optionnel)</Label>
                         <div className={styles.checkboxGroup}>
-                            {groupesTriés.length === 0 ? (
+                            {groupes.length === 0 ? (
                                 <p className={styles.noGroupes}>Aucun groupe sur ce séjour.</p>
                             ) : (
-                                groupesTriés.map((g) => (
-                                    <div key={g.id} className={styles.checkboxRow}>
-                                        <Input
-                                            type="checkbox"
-                                            id={`presta-grp-${g.id}`}
-                                            checked={selectedGroupeIds.has(g.id)}
-                                            onChange={() => toggleGroupeId(g.id)}
-                                            disabled={submitting}
-                                        />
-                                        <Label for={`presta-grp-${g.id}`} className="mb-0">
-                                            {g.nom}
-                                        </Label>
-                                    </div>
-                                ))
+                                <SelectionGroupesParType
+                                    groupes={groupes}
+                                    isSelected={(id) => selectedGroupeIds.has(id)}
+                                    onToggle={toggleGroupeId}
+                                    disabled={submitting}
+                                    idPrefix="presta-grp"
+                                    appearance="inline"
+                                />
                             )}
                         </div>
                     </FormGroup>

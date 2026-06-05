@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { trierParPrenomPuisNom } from "../../../helpers/trierUtilisateurs";
 import { useRouteLoaderData, useNavigate } from "react-router-dom";
 import styles from "./DetailsSejour.module.scss";
 import ListeActivites from "../../../components/Liste/ListeActivites";
@@ -51,10 +52,7 @@ const DetailsSejourActivites: React.FC = () => {
                 result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
             }
         }
-        return result.sort((a, b) => {
-            const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-            return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
-        });
+        return trierParPrenomPuisNom(result);
     }, [loaderData]);
 
     const peutGererActivitesComplet = useMemo(() => {

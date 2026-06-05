@@ -1,5 +1,6 @@
 import type { ChambreDto, ChambreOccupantDto, EnfantDto, GenreChambre, GroupeDto, SaveChambreRequest, TypeChambre } from "../types/api";
 import { libelleChambre } from "./libelleChambre";
+import { trierParPrenomPuisNom } from "./trierUtilisateurs";
 
 /** Compatibilité genre personne (enfant ou membre d'équipe) ↔ chambre (aligné API). */
 export function genrePersonneCompatibleAvecChambre(
@@ -159,10 +160,12 @@ export function membresEligiblesPourChambre(
   equipe: MembreEquipePourChambre[],
   idsDejaDansChambre: Set<string>
 ): MembreEquipePourChambre[] {
-  return equipe.filter(
-    (m) =>
-      !idsDejaDansChambre.has(m.tokenId.trim()) &&
-      genrePersonneCompatibleAvecChambre(m.genre, chambre.genreAutorise)
+  return trierParPrenomPuisNom(
+    equipe.filter(
+      (m) =>
+        !idsDejaDansChambre.has(m.tokenId.trim()) &&
+        genrePersonneCompatibleAvecChambre(m.genre, chambre.genreAutorise)
+    ),
   );
 }
 

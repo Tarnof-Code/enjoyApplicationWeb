@@ -31,6 +31,8 @@
 - [x] **Chambres — UX recherche / formulaire** (`textesRechercheChambre`, étage numérique, icône retrait occupant)
 - [x] **Vue générale — colonnes groupes / chambres** : **`ListeEnfants`** (affectation groupe + chambre enfant depuis la liste) ; **`Equipe`** / **`TableauUtilisateurs`** (référent groupe + chambre équipe, rôle abrégé) ; **`chambres`** dans **`detailsSejourLoader`**
 - [x] **Affichage groupes en pastilles** : **`AffichageGroupesListe`** partagé enfants + équipe ; **`couleurGroupe.ts`** (couleur stable par id) ; une ligne par type
+- [x] **Tri alphabétique personnes (modales)** : **`trierUtilisateurs.ts`** — prénom ou nom selon ordre d’affichage ; modales équipe / enfants / soigneur alignées
+- [x] **Sélection groupes par sections** : **`groupesParType.ts`** + **`SelectionGroupesParType`** (activités, prestataires, planning, chambres, filtres calendrier, listes enfants/équipe)
 - [x] **Vue générale — UX layout** : bandeau infos séjour centré ; accordéons fermés par défaut ; infos hors accordéon **`1`**
 - [x] **Header responsive** : burger **&lt; 1400px** (`expand="xxl"`) ; **`--site-header-height`** dynamique ; correction bande blanche droite (`overflow-x: clip`, retrait `scrollbar-gutter: stable`)
 - [x] **Liste générique** : **`ColumnConfig.className`** / **`filterPlaceholder`** ; **`colAge`** ; placeholders filtres compacts

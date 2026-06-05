@@ -39,6 +39,9 @@ import {
 } from "../../enums/PlanningLigneLibelleSourceLabels";
 import { enumererJoursSejour, normaliserJourPlanningPourCle } from "../../helpers/enumererJoursSejour";
 import formaterDate from "../../helpers/formaterDate";
+import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
+import { trierGroupesParNom } from "../../helpers/groupesParType";
+import { GroupesSelectOptions, SelectionGroupesParType } from "./SelectionGroupesParType";
 import { libelleJourCourtPourBouton, parseYmdVersDateLocale } from "./listeActivitesUtils";
 import { CalendrierNavigationPeriode } from "./ListeActivitesCalendrier";
 import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
@@ -110,10 +113,7 @@ function membresDirecteurEtEquipePourModal(
         seen.add(tid);
         rows.push({ tokenId: tid, nom: m.nom, prenom: m.prenom });
     }
-    return [...rows].sort((a, b) => {
-        const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-        return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
-    });
+    return trierParPrenomPuisNom(rows);
 }
 
 function tailleListe<T>(arr: T[] | null | undefined): number {
@@ -788,7 +788,7 @@ function optionsPourSource(
     if (source == null) return [];
     switch (source) {
         case "GROUPE":
-            return groupes.map((g) => ({ id: String(g.id), label: g.nom }));
+            return trierGroupesParNom(groupes).map((g) => ({ id: String(g.id), label: g.nom }));
         case "LIEU":
             return lieux.map((x) => ({ id: String(x.id), label: x.nom }));
         case "HORAIRE":
@@ -1782,16 +1782,17 @@ function ListePlanningsOrganisation({
         }
         const selfT = tokenSelfPlanning;
         const tokensSelectionTrim = new Set(cellMembresTokensSelection.map((x) => x.trim()));
-        const autresCochés = membresPourCellulesModal.filter(
-            (m) => m.tokenId.trim() !== selfT && tokensSelectionTrim.has(m.tokenId.trim()),
+        const visibles = membresPourCellulesModal.filter(
+            (m) => m.tokenId.trim() === selfT || tokensSelectionTrim.has(m.tokenId.trim()),
         );
-        const ligneSoi =
-            membresPourCellulesModal.find((m) => m.tokenId.trim() === selfT) ?? {
+        if (!visibles.some((m) => m.tokenId.trim() === selfT)) {
+            visibles.push({
                 tokenId: selfT,
                 prenom: "Vous",
                 nom: "",
-            };
-        return [ligneSoi, ...autresCochés];
+            });
+        }
+        return trierParPrenomPuisNom(visibles);
     }, [
         membresPourCellulesModal,
         animateurRestrictionsMembreEquipeCellModal,
@@ -2883,11 +2884,15 @@ function ListePlanningsOrganisation({
                                 disabled={lineSubmitting}
                             >
                                 <option value="">— Choisir —</option>
-                                {entiteChoicesLigne.map((o) => (
-                                    <option key={o.id} value={o.id}>
-                                        {o.label}
-                                    </option>
-                                ))}
+                                {ligneSourceEffectif === "GROUPE" ? (
+                                    <GroupesSelectOptions groupes={groupes} />
+                                ) : (
+                                    entiteChoicesLigne.map((o) => (
+                                        <option key={o.id} value={o.id}>
+                                            {o.label}
+                                        </option>
+                                    ))
+                                )}
                             </Input>
                         </FormGroup>
                     ) : null}
@@ -3069,19 +3074,13 @@ function ListePlanningsOrganisation({
                                 </p>
                             ) : (
                                 <div className={styles.membresCheckboxes}>
-                                    {groupes.map((g) => (
-                                        <FormGroup check key={g.id} className={styles.membreCheckboxRow}>
-                                            <Label check>
-                                                <Input
-                                                    type="checkbox"
-                                                    checked={cellGroupeIdsSelection.includes(g.id)}
-                                                    onChange={() => toggleCellGroupeId(g.id)}
-                                                    disabled={cellSubmitting}
-                                                />{" "}
-                                                <span className={styles.membreCheckboxLabel}>{g.nom}</span>
-                                            </Label>
-                                        </FormGroup>
-                                    ))}
+                                    <SelectionGroupesParType
+                                        groupes={groupes}
+                                        isSelected={(id) => cellGroupeIdsSelection.includes(id)}
+                                        onToggle={toggleCellGroupeId}
+                                        disabled={cellSubmitting}
+                                        appearance="planning"
+                                    />
                                 </div>
                             )}
                         </FormGroup>

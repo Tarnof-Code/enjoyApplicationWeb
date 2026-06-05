@@ -16,6 +16,7 @@ import {
 } from "../../../types/api";
 import { accountService } from "../../../services/account.service";
 import { peutGererMembresEquipeSejour } from "../../../helpers/peutGererMembresEquipeSejour";
+import { trierParPrenomPuisNom } from "../../../helpers/trierUtilisateurs";
 import { SectionReunionsSejour } from "../../../components/ReunionSejour/SectionReunionsSejour";
 
 /** Anciennes suites par défaut — pour migration du localStorage. */
@@ -295,10 +296,7 @@ const DetailsSejourOverview: React.FC = () => {
                 result.push({ tokenId: m.tokenId, nom: m.nom, prenom: m.prenom });
             }
         }
-        return result.sort((a, b) => {
-            const c = a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
-            return c !== 0 ? c : a.prenom.localeCompare(b.prenom, undefined, { sensitivity: "base" });
-        });
+        return trierParPrenomPuisNom(result);
     })();
 
     const accordionPanelTitle = (panelId: string): string => {
