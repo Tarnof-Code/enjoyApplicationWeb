@@ -117,7 +117,7 @@ let getRoleSystemeByGenre = (role: string | null, genre: string | null): string 
   if (genre === "Feminin" || genre === "Féminin") {
     switch (role) {
       case RoleSysteme.ADMIN:
-        return "Administratrice";
+        return "Admin";
       case RoleSysteme.DIRECTION:
         return "Directrice";
       case RoleSysteme.BASIC_USER:
@@ -128,7 +128,7 @@ let getRoleSystemeByGenre = (role: string | null, genre: string | null): string 
   } else if (genre === "Masculin") {
     switch (role) {
       case RoleSysteme.ADMIN:
-        return "Administrateur";
+        return "Admin";
       case RoleSysteme.DIRECTION:
         return "Directeur";
       case RoleSysteme.BASIC_USER:

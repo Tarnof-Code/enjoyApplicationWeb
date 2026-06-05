@@ -5,6 +5,7 @@ import { observeSiteHeaderHeight } from "../../helpers/siteHeaderHeight";
 import { NavLink, useNavigate, useMatch, useRouteLoaderData, useLocation } from "react-router-dom";
 import { effacerCheminApresConnexion } from "../../helpers/cheminApresConnexion";
 import { accountService } from "../../services/account.service";
+import { libelleRoleBadgeProfil } from "../../helpers/libelleRoleSurSejour";
 import { peutGererMembresEquipeSejour } from "../../helpers/peutGererMembresEquipeSejour";
 import {
   enregistrerDernierSejourVisite,
@@ -30,7 +31,6 @@ import {
   FaNotesMedical,
   FaBed,
 } from "react-icons/fa";
-import { utilisateurService } from "../../services/utilisateur.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
 import {
   SejourDTO,
@@ -71,11 +71,6 @@ const Admin_header: React.FC = () => {
   let role = useSelector((state: RootState) => state.auth.role);
   let genre = useSelector((state: RootState) => state.auth.genre);
 
-  const profilDisplayLabel =
-    role === RoleSysteme.ADMIN || role === RoleSysteme.DIRECTION
-      ? `${prenom ?? ""} (${utilisateurService.getRoleSystemeByGenre(role, genre)})`
-      : (prenom ?? "");
-
   const sejourMatch = useMatch({ path: "/mes-sejours/:id", end: false });
   const sejourLoaderRaw = useRouteLoaderData("sejour-detail") as SejourDetailLoaderData | undefined;
   const sejourDetailData = sejourLoaderRaw;
@@ -105,6 +100,13 @@ const Admin_header: React.FC = () => {
     }
     return headerSejourCache;
   }, [loaderSejour, routeIdStr, headerSejourCache]);
+
+  const profilDisplayLabel = useMemo(() => {
+    const tokenSub = accountService.getTokenInfo()?.payload?.sub;
+    const tokenId = typeof tokenSub === "string" ? tokenSub : null;
+    const roleLabel = libelleRoleBadgeProfil(tokenId, genre ?? null, role ?? null, resolvedForHeader);
+    return roleLabel ? `${prenom ?? ""} (${roleLabel})` : (prenom ?? "");
+  }, [prenom, genre, role, resolvedForHeader]);
 
   const effectiveNavId =
     resolvedForHeader && (routeIdStr ?? String(resolvedForHeader.id));

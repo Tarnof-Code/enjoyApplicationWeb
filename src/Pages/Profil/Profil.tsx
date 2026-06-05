@@ -6,6 +6,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import formaterDate from "../../helpers/formaterDate";
 import dateToISO from "../../helpers/dateToISO";
 import { canEditEmail, getEmailReadOnlyMessage } from "../../helpers/canEditEmail";
+import { libelleRoleBadgeProfil } from "../../helpers/libelleRoleSurSejour";
+import { lireHeaderSejourContext } from "../../helpers/headerSejourContext";
 import { getApiErrorMessage } from "../../helpers/axiosError";
 import { throwRouteLoaderError } from "../../helpers/routeError";
 import { accountService } from "../../services/account.service";
@@ -23,7 +25,8 @@ import {
   faCamera,
   faCheck,
   faTimes,
-  faKey
+  faKey,
+  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import { fr } from "date-fns/locale/fr";
@@ -101,6 +104,28 @@ const Profil: React.FC = () => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [openSections, setOpenSections] = useState<Set<number>>(() => new Set([0]));
+  const [sejourContext] = useState(() => lireHeaderSejourContext());
+
+  const tokenConnecte = accountService.getTokenInfo()?.payload?.sub;
+  const roleBadgeLabel = libelleRoleBadgeProfil(
+    utilisateur?.tokenId ?? (typeof tokenConnecte === "string" ? tokenConnecte : null),
+    utilisateur?.genre ?? null,
+    utilisateur?.role ?? null,
+    sejourContext,
+  );
+
+  const toggleSection = (sectionIndex: number) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionIndex)) {
+        next.delete(sectionIndex);
+      } else {
+        next.add(sectionIndex);
+      }
+      return next;
+    });
+  };
 
   const handleInputChange = (property: string, value: any) => {
     setUtilisateur(prevUtilisateur => ({ 
@@ -269,6 +294,7 @@ const Profil: React.FC = () => {
         <div className="container-fluid">
           <div className="row g-4">
             <div className="col-lg-4">
+              <div className={styles.summaryCardWrap}>
               <Card className={styles.summaryCard}>
                 <CardBody className={styles.summaryBody}>
                   <div className={styles.summaryHeader}>
@@ -283,38 +309,40 @@ const Profil: React.FC = () => {
                       </button>
                     </div>
                     <div className={styles.profileIdentity}>
-                      <h2 className={styles.profileName}>
-                        {utilisateur?.prenom} {utilisateur?.nom}
-                      </h2>
                       <span className={styles.roleBadge}>
-                        {utilisateurService.getRoleSystemeByGenre(utilisateur?.role || null, utilisateur?.genre || null)}
-                      </span>
-                    </div>
-                  </div>           
-                  <div className={styles.summaryContact}>
-                    <div className={styles.contactItem}>
-                      <FontAwesomeIcon icon={faEnvelope} className={styles.contactIcon} />
-                      <span className={styles.contactValue}>
-                        {utilisateur?.email || <span className="text-muted fst-italic">Non renseigné</span>}
+                        {roleBadgeLabel}
                       </span>
                     </div>
                   </div>
                 </CardBody>
               </Card>
+              </div>
             </div>
             <div className="col-lg-8">
-              {sections.map((section, sectionIndex) => (
+              {sections.map((section, sectionIndex) => {
+                const isOpen = openSections.has(sectionIndex);
+                return (
                 <Card key={sectionIndex} className={styles.sectionCard}>
-                  <CardHeader className={styles.sectionHeader}>
+                  <CardHeader
+                    tag="button"
+                    type="button"
+                    className={`${styles.sectionHeader} ${isOpen ? styles.sectionHeaderOpen : ""}`}
+                    onClick={() => toggleSection(sectionIndex)}
+                    aria-expanded={isOpen}
+                  >
                     <h5 className={styles.sectionTitle}>{section.title}</h5>
+                    <FontAwesomeIcon icon={faChevronDown} className={styles.sectionChevron} aria-hidden />
                   </CardHeader>
+                  {isOpen ? (
                   <CardBody>
                     <div className={styles.sectionFields}>
                       {section.fields.map((field) => renderField(field))}
                     </div>
                   </CardBody>
+                  ) : null}
                 </Card>
-              ))}
+              );
+              })}
               {errorMessage && (
                 <div className="alert alert-danger mt-3">
                   {errorMessage}
