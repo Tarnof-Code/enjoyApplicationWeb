@@ -19,6 +19,7 @@ import AddEnfantForm from "../Forms/AddEnfantForm";
 import ImportExcelEnfants from "./ImportExcelEnfants";
 import { NiveauScolaireLabels } from "../../enums/NiveauScolaire";
 import styles from "./ListeEnfants.module.scss";
+import listeStyles from "./Liste.module.scss";
 
 const SECTIONS_TYPE_GROUPE: { type: TypeGroupe; label: string }[] = [
     { type: "THEMATIQUE", label: "Thématique" },
@@ -228,8 +229,8 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
         }),
         createColumn('age', 'Âge', 'custom', {
             filterType: 'number',
-            filterPlaceholder: 'Âge min.',
-            className: styles.colAge,
+            filterPlaceholder: 'Min.',
+            className: listeStyles.colAge,
             render: (_, item) => `${calculerAge(item.dateNaissance)} ans`
         }),
         ...(groupes.length > 0
