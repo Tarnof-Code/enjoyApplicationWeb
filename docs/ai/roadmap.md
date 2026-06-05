@@ -22,6 +22,8 @@
 - [x] Gestion des **types d’activité** (`ListeTypesActivite`, `sejour-type-activite.service.ts`, panneau accordéon `8`, types `TypeActiviteDto` / `SaveTypeActiviteRequest` / `ActiviteDto.typeActivite`, UX suppression si type encore utilisé)
 - [x] Vue **calendrier** des activités dans l’onglet Activités (`ListeActivitesCalendrier` + bascule depuis `ListeActivites`)
 - [x] **Sorties / prestataires** : loader **`activitesPrestataires`**, route **`/activites/sorties-prestas`**, **`ListeActivitesPrestataires`**, intégration calendrier (**`listeActivitesPrestatairesCalendrier`**, conflits, **`nonParticipations`**, anti-doublon date/moment/groupe)
+- [x] **Sorties / prestataires — historique** (`getHistoriqueActivitePrestataire`, **`HistoriqueModificationActivitePrestataireDto`**, modal **`formatSnapshots="activite_prestataire"`**, phrases exclusions/réintégrations avec moments)
+- [x] **Sorties / prestataires — UX non-participations** (nom animateur une fois + cases/liste moments, ordre paramétrage, cartes + formulaire)
 - [x] **Plannings organisation (direction)** : grilles par séjour, CRUD, tableau planning (`ListePlanningsOrganisation`, `sejour-planning-grille.service.ts`, panneau accordéon `10`, `detailsSejourLoader.planningGrilles`)
 - [x] **Chambres (hébergement)** : route **`/mes-sejours/:id/chambres`**, **`chambresLoader`**, **`ListeChambres`** (CRUD, référents type **ENFANT**, **`groupeId`**, filtres, **`sejour-chambre.service.ts`**, types **`ChambreDto`** / **`SaveChambreRequest`**)
 - [x] **Chambres — affectation occupants** (enfants / équipe : picker, capacité, genre/groupe, **`chambreOccupantsUtils`**, endpoints **`…/occupants/…`**)

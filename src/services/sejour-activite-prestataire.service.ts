@@ -1,6 +1,10 @@
 import Axios from "./caller.service";
 import { adaptAxiosError } from "../helpers/axiosError";
-import type { ActivitePrestataireDto, SaveActivitePrestataireRequest } from "../types/api";
+import type {
+    ActivitePrestataireDto,
+    HistoriqueModificationActivitePrestataireDto,
+    SaveActivitePrestataireRequest,
+} from "../types/api";
 
 async function listerActivitesPrestataires(sejourId: number): Promise<ActivitePrestataireDto[]> {
     try {
@@ -86,10 +90,28 @@ async function supprimerActivitePrestataire(
     }
 }
 
+async function getHistoriqueActivitePrestataire(
+    sejourId: number,
+    activitePrestataireId: number,
+): Promise<HistoriqueModificationActivitePrestataireDto[]> {
+    try {
+        const response = await Axios.get<HistoriqueModificationActivitePrestataireDto[]>(
+            `/sejours/${sejourId}/activites-prestataires/${activitePrestataireId}/historique`,
+        );
+        return response.data ?? [];
+    } catch (error: unknown) {
+        adaptAxiosError(error, {
+            defaultMessage: "Impossible de charger l'historique de la sortie",
+            logContext: "sejour-activite-prestataire getHistoriqueActivitePrestataire",
+        });
+    }
+}
+
 export const sejourActivitePrestataireService = {
     listerActivitesPrestataires,
     getActivitePrestataire,
     creerActivitePrestataire,
     modifierActivitePrestataire,
     supprimerActivitePrestataire,
+    getHistoriqueActivitePrestataire,
 };

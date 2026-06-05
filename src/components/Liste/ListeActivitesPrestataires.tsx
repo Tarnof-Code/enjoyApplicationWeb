@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRevalidator } from "react-router-dom";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import type {
@@ -21,6 +21,8 @@ import {
     fusionnerNonParticipationsApresChoix,
     lignesParticipationSortieFormulaire,
     idsActivitesInternesASupprimerPourNonParticipations,
+    grouperLignesParticipationParAnimateur,
+    grouperNonParticipationsParAnimateur,
     libellesNonParticipationsSortie,
     listerConflitsCalendrierPrestataire,
     messageDoublonSortiePrestataire,
@@ -28,7 +30,16 @@ import {
     tokensReferentsConcernesParGroupeIds,
     type ConflitCalendrierPrestataire,
 } from "./listeActivitesPrestatairesCalendrier";
-import { getUserFacingErrorMessage } from "../../helpers/axiosError";
+import { getUserFacingErrorMessage, type AdaptedError } from "../../helpers/axiosError";
+import {
+    formatDateHeureHistorique,
+    formatNomModificateurHistorique,
+    libelleActionHistorique,
+} from "../../helpers/libelleHistoriqueModification";
+import {
+    HistoriqueModificationListeModal,
+    type HistoriqueModificationListeModalLigne,
+} from "../common/HistoriqueModificationListeModal";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import {
     enumererJoursDuSejour,
@@ -146,6 +157,17 @@ function ListeActivitesPrestataires({
     >([]);
     const [panelExclureAnimateur, setPanelExclureAnimateur] = useState(false);
 
+    const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
+    const [historiqueActivitePrestataireId, setHistoriqueActivitePrestataireId] = useState<number | null>(
+        null,
+    );
+    const [historiqueActivitePrestataireNom, setHistoriqueActivitePrestataireNom] = useState("");
+    const [historiqueChargement, setHistoriqueChargement] = useState(false);
+    const [historiqueErreur, setHistoriqueErreur] = useState<string | null>(null);
+    const [historiqueLignes, setHistoriqueLignes] = useState<HistoriqueModificationListeModalLigne[] | null>(
+        null,
+    );
+
     const [filtreDate, setFiltreDate] = useState("");
     const [filtreTexte, setFiltreTexte] = useState("");
 
@@ -190,23 +212,18 @@ function ListeActivitesPrestataires({
                 selectedMomentIds,
                 momentsTriés,
             ),
-        [groupes, selectedGroupeIds, momentsTriés],
+        [groupes, selectedGroupeIds, selectedMomentIds, momentsTriés],
     );
 
-    const nonParticipantsFormulaire = useMemo(() => {
-        const libelles = libellesNonParticipationsSortie(
-            formNonParticipationsElaguees,
-            groupes,
-            momentsTriés,
-        );
-        return formNonParticipationsElaguees
-            .map((np, index) => ({
-                tokenId: np.tokenId,
-                momentId: np.momentId,
-                libelle: libelles[index] ?? `${np.tokenId} (—)`,
-            }))
-            .sort((a, b) => a.libelle.localeCompare(b.libelle, undefined, { sensitivity: "base" }));
-    }, [formNonParticipationsElaguees, groupes, momentsTriés]);
+    const groupesNonParticipantsFormulaire = useMemo(
+        () =>
+            grouperNonParticipationsParAnimateur(
+                formNonParticipationsElaguees,
+                groupes,
+                momentsTriés,
+            ),
+        [formNonParticipationsElaguees, groupes, momentsTriés],
+    );
 
     const lignesParticipationEncoreActives = useMemo(
         () =>
@@ -219,6 +236,11 @@ function ListeActivitesPrestataires({
                     ),
             ),
         [lignesParticipationSortie, formNonParticipationsElaguees],
+    );
+
+    const groupesParticipationEncoreActives = useMemo(
+        () => grouperLignesParticipationParAnimateur(lignesParticipationEncoreActives),
+        [lignesParticipationEncoreActives],
     );
 
     const activitesAffichees = useMemo(() => {
@@ -468,6 +490,7 @@ function ListeActivitesPrestataires({
             );
             setFormNonParticipations(nonParts);
             showSuccessModal("Sortie / prestataire modifiée avec succès.");
+            rafraichirHistoriqueSiOuvert(editingId);
         }
         setModalOpen(false);
         setPanelExclureAnimateur(false);
@@ -629,6 +652,9 @@ function ListeActivitesPrestataires({
             await sejourActivitePrestataireService.supprimerActivitePrestataire(sejour.id, pendingDeleteId);
             setActivites((prev) => prev.filter((x) => x.id !== pendingDeleteId));
             setDeleteModalOpen(false);
+            if (historiqueActivitePrestataireId === pendingDeleteId) {
+                fermerHistoriqueActivitePrestataire();
+            }
             setPendingDeleteId(null);
             showSuccessModal("Sortie / prestataire supprimée avec succès.");
             revalidator.revalidate();
@@ -647,6 +673,69 @@ function ListeActivitesPrestataires({
             .filter(Boolean);
         return noms.length ? noms.join(", ") : "—";
     };
+
+    const chargerHistoriqueActivitePrestataire = useCallback(
+        async (activitePrestataireId: number) => {
+            setHistoriqueChargement(true);
+            setHistoriqueErreur(null);
+            try {
+                const rows = await sejourActivitePrestataireService.getHistoriqueActivitePrestataire(
+                    sejour.id,
+                    activitePrestataireId,
+                );
+                setHistoriqueLignes(
+                    rows.map((r) => ({
+                        id: r.id,
+                        quand: formatDateHeureHistorique(r.dateModification),
+                        qui: formatNomModificateurHistorique(r.modificateurPrenom, r.modificateurNom),
+                        action: libelleActionHistorique(r.action),
+                        ancienneValeur: r.ancienneValeur,
+                        nouvelleValeur: r.nouvelleValeur,
+                    })),
+                );
+            } catch (err: unknown) {
+                const status = (err as AdaptedError).response?.status;
+                setHistoriqueErreur(
+                    status === 404
+                        ? "Sortie introuvable."
+                        : getUserFacingErrorMessage(err, "Impossible de charger l'historique."),
+                );
+                setHistoriqueLignes([]);
+            } finally {
+                setHistoriqueChargement(false);
+            }
+        },
+        [sejour.id],
+    );
+
+    const fermerHistoriqueActivitePrestataire = useCallback(() => {
+        setHistoriqueOuvert(false);
+        setHistoriqueActivitePrestataireId(null);
+        setHistoriqueActivitePrestataireNom("");
+        setHistoriqueErreur(null);
+        setHistoriqueLignes(null);
+        setHistoriqueChargement(false);
+    }, []);
+
+    const ouvrirHistoriqueActivitePrestataire = useCallback(
+        (a: ActivitePrestataireDto) => {
+            setHistoriqueActivitePrestataireId(a.id);
+            setHistoriqueActivitePrestataireNom(a.nom);
+            setHistoriqueOuvert(true);
+            setHistoriqueLignes(null);
+            void chargerHistoriqueActivitePrestataire(a.id);
+        },
+        [chargerHistoriqueActivitePrestataire],
+    );
+
+    const rafraichirHistoriqueSiOuvert = useCallback(
+        (activitePrestataireId: number) => {
+            if (historiqueOuvert && historiqueActivitePrestataireId === activitePrestataireId) {
+                void chargerHistoriqueActivitePrestataire(activitePrestataireId);
+            }
+        },
+        [historiqueOuvert, historiqueActivitePrestataireId, chargerHistoriqueActivitePrestataire],
+    );
 
     return (
         <div>
@@ -705,10 +794,10 @@ function ListeActivitesPrestataires({
                 <div className={styles.list}>
                     {activitesAffichees.map((a) => {
                         const plage = libellePlageHoraire(a.heureDepart, a.heureRetour);
-                        const nonParticipants = libellesNonParticipationsSortie(
-                            a.nonParticipations,
+                        const groupesNonParticipants = grouperNonParticipationsParAnimateur(
+                            a.nonParticipations ?? [],
                             groupes,
-                            moments,
+                            momentsTriés,
                         );
                         return (
                             <article key={a.id} className={styles.card}>
@@ -730,11 +819,40 @@ function ListeActivitesPrestataires({
                                     <p className={styles.meta}>
                                         <strong>Groupes :</strong> {libelleGroupes(a.groupeIds ?? [])}
                                     </p>
-                                    {nonParticipants.length > 0 ? (
-                                        <p className={styles.metaNonParticipation}>
-                                            <strong>Ne participent pas :</strong>{" "}
-                                            {nonParticipants.join(", ")}
-                                        </p>
+                                    {groupesNonParticipants.length > 0 ? (
+                                        <div className={styles.metaNonParticipation}>
+                                            <strong>Ne participent pas :</strong>
+                                            <ul className={styles.cardNonParticipationListe}>
+                                                {groupesNonParticipants.map((groupe) => {
+                                                    const personne =
+                                                        `${groupe.prenom} ${groupe.nom}`.trim() ||
+                                                        "Animateur";
+                                                    return (
+                                                        <li
+                                                            key={groupe.tokenId}
+                                                            className={styles.cardNonParticipationLigne}
+                                                        >
+                                                            <span
+                                                                className={
+                                                                    styles.cardNonParticipationNom
+                                                                }
+                                                            >
+                                                                {personne}
+                                                            </span>
+                                                            <span
+                                                                className={
+                                                                    styles.cardNonParticipationMoments
+                                                                }
+                                                            >
+                                                                {groupe.moments
+                                                                    .map((m) => m.momentNom)
+                                                                    .join(", ")}
+                                                            </span>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        </div>
                                     ) : null}
                                     {a.telephone ? (
                                         <p className={styles.meta}>
@@ -745,26 +863,37 @@ function ListeActivitesPrestataires({
                                         <p className={styles.informations}>{a.informations}</p>
                                     ) : null}
                                 </div>
-                                {peutGererEcritures ? (
-                                    <div className={styles.cardActions}>
-                                        <Button
-                                            color="primary"
-                                            size="sm"
-                                            onClick={() => openEditModal(a)}
-                                            disabled={deletingId === a.id}
-                                        >
-                                            Modifier
-                                        </Button>
-                                        <Button
-                                            color="danger"
-                                            size="sm"
-                                            onClick={() => requestDelete(a.id)}
-                                            disabled={deletingId === a.id}
-                                        >
-                                            Supprimer
-                                        </Button>
-                                    </div>
-                                ) : null}
+                                <div className={styles.cardActions}>
+                                    <Button
+                                        color="secondary"
+                                        size="sm"
+                                        outline
+                                        onClick={() => ouvrirHistoriqueActivitePrestataire(a)}
+                                        disabled={deletingId === a.id}
+                                    >
+                                        Historique
+                                    </Button>
+                                    {peutGererEcritures ? (
+                                        <>
+                                            <Button
+                                                color="primary"
+                                                size="sm"
+                                                onClick={() => openEditModal(a)}
+                                                disabled={deletingId === a.id}
+                                            >
+                                                Modifier
+                                            </Button>
+                                            <Button
+                                                color="danger"
+                                                size="sm"
+                                                onClick={() => requestDelete(a.id)}
+                                                disabled={deletingId === a.id}
+                                            >
+                                                Supprimer
+                                            </Button>
+                                        </>
+                                    ) : null}
+                                </div>
                             </article>
                         );
                     })}
@@ -930,49 +1059,71 @@ function ListeActivitesPrestataires({
                         </div>
                     </FormGroup>
                     {peutGererEcritures &&
-                    (editingId != null || nonParticipantsFormulaire.length > 0) ? (
+                    (editingId != null || groupesNonParticipantsFormulaire.length > 0) ? (
                         <FormGroup className={styles.modalField}>
                             <Label>Ne participent pas</Label>
-                            {nonParticipantsFormulaire.length > 0 ? (
+                            {groupesNonParticipantsFormulaire.length > 0 ? (
                                 <p className={styles.participationHint}>
-                                    Si vous réintégrez un animateur et qu&apos;une activité existe sur le même
-                                    créneau, elle sera supprimée.
+                                    Décochez un moment pour réintégrer l&apos;animateur sur ce créneau.
+                                    Si une activité existe sur le même créneau, elle sera supprimée.
                                 </p>
                             ) : null}
-                            {nonParticipantsFormulaire.length === 0 ? (
+                            {groupesNonParticipantsFormulaire.length === 0 ? (
                                 <p className={styles.noGroupes}>
                                     Aucun animateur exclu de cette sortie.
                                 </p>
                             ) : (
-                                <ul className={styles.participationListe}>
-                                    {nonParticipantsFormulaire.map((ligne) => {
-                                        const cle = cleNonParticipation(
-                                            ligne.tokenId,
-                                            ligne.momentId,
-                                        );
+                                <div className={styles.participationListe}>
+                                    {groupesNonParticipantsFormulaire.map((groupe) => {
+                                        const personne =
+                                            `${groupe.prenom} ${groupe.nom}`.trim() || "Animateur";
                                         return (
-                                            <li key={cle} className={styles.participationRow}>
-                                                <span className={styles.participationLabel}>
-                                                    {ligne.libelle}
-                                                </span>
-                                                <Button
-                                                    color="link"
-                                                    size="sm"
-                                                    className={styles.participationRetirerBtn}
-                                                    disabled={submitting}
-                                                    onClick={() =>
-                                                        retirerNonParticipationFormulaire(
-                                                            ligne.tokenId,
-                                                            ligne.momentId,
-                                                        )
-                                                    }
-                                                >
-                                                    Réintégrer
-                                                </Button>
-                                            </li>
+                                            <div
+                                                key={groupe.tokenId}
+                                                className={styles.participationAnimateurGroupe}
+                                            >
+                                                <div className={styles.participationAnimateurNom}>
+                                                    {personne}
+                                                </div>
+                                                <div className={styles.participationMomentsRow}>
+                                                    {groupe.moments.map((moment) => {
+                                                        const cle = cleNonParticipation(
+                                                            groupe.tokenId,
+                                                            moment.momentId,
+                                                        );
+                                                        return (
+                                                            <div
+                                                                key={cle}
+                                                                className={styles.participationMomentCheckbox}
+                                                            >
+                                                                <Input
+                                                                    type="checkbox"
+                                                                    id={`presta-np-${cle}`}
+                                                                    checked
+                                                                    onChange={(e) => {
+                                                                        if (!e.target.checked) {
+                                                                            retirerNonParticipationFormulaire(
+                                                                                groupe.tokenId,
+                                                                                moment.momentId,
+                                                                            );
+                                                                        }
+                                                                    }}
+                                                                    disabled={submitting}
+                                                                />
+                                                                <Label
+                                                                    for={`presta-np-${cle}`}
+                                                                    className="mb-0"
+                                                                >
+                                                                    {moment.momentNom}
+                                                                </Label>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                         );
                                     })}
-                                </ul>
+                                </div>
                             )}
                         </FormGroup>
                     ) : null}
@@ -1003,36 +1154,55 @@ function ListeActivitesPrestataires({
                                             <div
                                                 className={`${styles.checkboxGroup} ${styles.participationCheckboxGroup}`}
                                             >
-                                                {lignesParticipationEncoreActives.map((ligne) => {
-                                                    const cle = cleNonParticipation(
-                                                        ligne.tokenId,
-                                                        ligne.momentId,
-                                                    );
+                                                {groupesParticipationEncoreActives.map((groupe) => {
                                                     const personne =
-                                                        `${ligne.prenom} ${ligne.nom}`.trim() ||
+                                                        `${groupe.prenom} ${groupe.nom}`.trim() ||
                                                         "Animateur";
                                                     return (
-                                                        <div key={cle} className={styles.checkboxRow}>
-                                                            <Input
-                                                                type="checkbox"
-                                                                id={`presta-excl-${cle}`}
-                                                                checked={false}
-                                                                onChange={(e) => {
-                                                                    if (e.target.checked) {
-                                                                        exclureAnimateurFormulaire(
-                                                                            ligne.tokenId,
-                                                                            ligne.momentId,
-                                                                        );
-                                                                    }
-                                                                }}
-                                                                disabled={submitting}
-                                                            />
-                                                            <Label
-                                                                for={`presta-excl-${cle}`}
-                                                                className="mb-0"
-                                                            >
-                                                                {personne} ({ligne.momentNom})
-                                                            </Label>
+                                                        <div
+                                                            key={groupe.tokenId}
+                                                            className={styles.participationAnimateurGroupe}
+                                                        >
+                                                            <div className={styles.participationAnimateurNom}>
+                                                                {personne}
+                                                            </div>
+                                                            <div className={styles.participationMomentsRow}>
+                                                                {groupe.moments.map((moment) => {
+                                                                    const cle = cleNonParticipation(
+                                                                        groupe.tokenId,
+                                                                        moment.momentId,
+                                                                    );
+                                                                    return (
+                                                                        <div
+                                                                            key={cle}
+                                                                            className={
+                                                                                styles.participationMomentCheckbox
+                                                                            }
+                                                                        >
+                                                                            <Input
+                                                                                type="checkbox"
+                                                                                id={`presta-excl-${cle}`}
+                                                                                checked={false}
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.checked) {
+                                                                                        exclureAnimateurFormulaire(
+                                                                                            groupe.tokenId,
+                                                                                            moment.momentId,
+                                                                                        );
+                                                                                    }
+                                                                                }}
+                                                                                disabled={submitting}
+                                                                            />
+                                                                            <Label
+                                                                                for={`presta-excl-${cle}`}
+                                                                                className="mb-0"
+                                                                            >
+                                                                                {moment.momentNom}
+                                                                            </Label>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
@@ -1166,6 +1336,22 @@ function ListeActivitesPrestataires({
                     </Button>
                 </ModalFooter>
             </Modal>
+
+            <HistoriqueModificationListeModal
+                isOpen={historiqueOuvert}
+                onFermer={fermerHistoriqueActivitePrestataire}
+                titre="Historique de la sortie"
+                sousTitre={
+                    historiqueActivitePrestataireNom.trim() !== ""
+                        ? `« ${historiqueActivitePrestataireNom} »`
+                        : undefined
+                }
+                chargement={historiqueChargement}
+                erreur={historiqueErreur}
+                lignes={historiqueLignes}
+                messageListeVide="Aucune modification enregistrée"
+                formatSnapshots="activite_prestataire"
+            />
         </div>
     );
 }

@@ -53,7 +53,8 @@ export type HistoriqueSnapshotDomaine =
     | "activite"
     | "planning_cellule"
     | "cahier_infi"
-    | "chambre";
+    | "chambre"
+    | "activite_prestataire";
 
 const CHAMPS_SNAPSHOT_ACTIVITE = [
     "Date",
@@ -495,6 +496,197 @@ function formaterComparaisonHistoriqueChambre(
     return null;
 }
 
+/** Libellés snapshots sortie / prestataire : `Nom: … | Date: … | …` (séparateur ` | `). */
+const CLES_ACTIVITE_PRESTATAIRE_HISTORIQUE = [
+    "Nom",
+    "Date",
+    "Moments",
+    "Heure départ",
+    "Heure retour",
+    "Informations",
+    "Téléphone",
+    "Groupes",
+    "Non-participations",
+] as const;
+
+function valeurActivitePrestataireHistoriqueAffichable(v: string): boolean {
+    const t = v.trim();
+    return t !== "" && t !== "-";
+}
+
+function clesActivitePrestataireHistoriqueOrdonnees(
+    mapA: Record<string, string>,
+    mapN: Record<string, string>,
+): string[] {
+    const allKeys = new Set([...Object.keys(mapA), ...Object.keys(mapN)]);
+    const fixes = CLES_ACTIVITE_PRESTATAIRE_HISTORIQUE.filter((k) => allKeys.has(k));
+    const extras = [...allKeys].filter(
+        (k) => !(CLES_ACTIVITE_PRESTATAIRE_HISTORIQUE as readonly string[]).includes(k),
+    );
+    extras.sort((a, b) => a.localeCompare(b, "fr"));
+    return [...fixes, ...extras];
+}
+
+function formaterSegmentDateSnapshotActivitePrestataire(segment: string): string {
+    const t = segment.trim();
+    if (t === "" || t === "-") return t;
+    return formaterSegmentDateSnapshotActivite(t);
+}
+
+function formaterValeurSnapshotActivitePrestataire(cle: string, valeur: string): string {
+    if (cle === "Date") return formaterSegmentDateSnapshotActivitePrestataire(valeur);
+    return valeur;
+}
+
+/** Entrées snapshot « Non-participations » : `Prénom Nom (Moment), …`. */
+function parserEntreesNonParticipationsSnapshot(segment: string): Set<string> {
+    const t = segment.trim();
+    if (!valeurActivitePrestataireHistoriqueAffichable(t)) return new Set();
+    return new Set(
+        t
+            .split(/,\s*/)
+            .map((s) => s.trim())
+            .filter(Boolean),
+    );
+}
+
+function parserEntreeNonParticipationSnapshot(
+    entree: string,
+): { nom: string; moment: string } | null {
+    const t = entree.trim();
+    if (!t) return null;
+    const m = /^(.+?)\s*\(([^)]+)\)\s*$/.exec(t);
+    if (!m) return { nom: t, moment: "" };
+    return { nom: m[1].trim(), moment: m[2].trim() };
+}
+
+/** Regroupe les moments par animateur (ordre d’apparition dans le snapshot). */
+function grouperMomentsParNomAnimateurHistorique(
+    entrees: Iterable<string>,
+): { nom: string; moments: string[] }[] {
+    const ordreNoms: string[] = [];
+    const map = new Map<string, string[]>();
+    for (const entree of entrees) {
+        const parsed = parserEntreeNonParticipationSnapshot(entree);
+        if (!parsed) continue;
+        let moments = map.get(parsed.nom);
+        if (!moments) {
+            ordreNoms.push(parsed.nom);
+            moments = [];
+            map.set(parsed.nom, moments);
+        }
+        if (parsed.moment !== "" && !moments.includes(parsed.moment)) {
+            moments.push(parsed.moment);
+        }
+    }
+    return ordreNoms
+        .map((nom) => ({ nom, moments: map.get(nom) ?? [] }))
+        .filter((g) => g.moments.length > 0 || g.nom !== "");
+}
+
+function suffixeMomentsNonParticipationHistorique(moments: string[]): string {
+    if (moments.length === 0) return "";
+    return ` (${moments.join(", ")})`;
+}
+
+function phrasesExclusionNonParticipationSortieHistorique(entrees: string[]): string[] {
+    return grouperMomentsParNomAnimateurHistorique(entrees).map(
+        ({ nom, moments }) =>
+            `${nom} ne participe pas à la sortie${suffixeMomentsNonParticipationHistorique(moments)}.`,
+    );
+}
+
+function phrasesReintegrationNonParticipationSortieHistorique(entrees: string[]): string[] {
+    return grouperMomentsParNomAnimateurHistorique(entrees).map(
+        ({ nom, moments }) =>
+            `${nom} réintègre la sortie${suffixeMomentsNonParticipationHistorique(moments)}.`,
+    );
+}
+
+function formaterDiffNonParticipationsActivitePrestataire(ancien: string, nouveau: string): string | null {
+    const setA = parserEntreesNonParticipationsSnapshot(ancien);
+    const setN = parserEntreesNonParticipationsSnapshot(nouveau);
+    const ajoutees = [...setN].filter((e) => !setA.has(e));
+    const retirees = [...setA].filter((e) => !setN.has(e));
+    const phrases = [
+        ...phrasesExclusionNonParticipationSortieHistorique(ajoutees),
+        ...phrasesReintegrationNonParticipationSortieHistorique(retirees),
+    ];
+    return phrases.length > 0 ? phrases.join("\n") : null;
+}
+
+function formaterNonParticipationsSnapshotActivitePrestataire(segment: string): string | null {
+    const entrees = parserEntreesNonParticipationsSnapshot(segment);
+    const phrases = phrasesExclusionNonParticipationSortieHistorique([...entrees]);
+    return phrases.length > 0 ? phrases.join("\n") : null;
+}
+
+/** Comparaison / affichage création-suppression pour snapshots sortie / prestataire (`Nom: … | …`). */
+function formaterComparaisonHistoriqueActivitePrestataire(
+    ancienneValeur: string | null | undefined,
+    nouvelleValeur: string | null | undefined,
+): string | null {
+    const aRaw = (ancienneValeur ?? "").trim();
+    const nRaw = (nouvelleValeur ?? "").trim();
+    if (aRaw === "" && nRaw === "") return null;
+
+    const mapA = aRaw ? parseHistoriqueValeurChambre(aRaw) : {};
+    const mapN = nRaw ? parseHistoriqueValeurChambre(nRaw) : {};
+    const hasA = aRaw !== "";
+    const hasN = nRaw !== "";
+
+    if (hasA && hasN) {
+        const lines: string[] = [];
+        for (const cle of clesActivitePrestataireHistoriqueOrdonnees(mapA, mapN)) {
+            const va = (mapA[cle] ?? "").trim();
+            const vn = (mapN[cle] ?? "").trim();
+            if (va === vn) continue;
+            if (cle === "Non-participations") {
+                const diff = formaterDiffNonParticipationsActivitePrestataire(va, vn);
+                if (diff) lines.push(diff);
+                continue;
+            }
+            const affA = valeurActivitePrestataireHistoriqueAffichable(va)
+                ? formaterValeurSnapshotActivitePrestataire(cle, va)
+                : "Vide";
+            const affN = valeurActivitePrestataireHistoriqueAffichable(vn)
+                ? formaterValeurSnapshotActivitePrestataire(cle, vn)
+                : "Vide";
+            lines.push(`${cle} : ${affA} → ${affN}`);
+        }
+        if (lines.length === 0) return null;
+        return formaterInstantsIsoDansTexteHistorique(lines.join("\n"));
+    }
+
+    if (!hasA && hasN) {
+        const lines: string[] = [];
+        for (const cle of clesActivitePrestataireHistoriqueOrdonnees({}, mapN)) {
+            const vn = (mapN[cle] ?? "").trim();
+            if (!valeurActivitePrestataireHistoriqueAffichable(vn)) continue;
+            if (cle === "Non-participations") {
+                const phrase = formaterNonParticipationsSnapshotActivitePrestataire(vn);
+                if (phrase) lines.push(phrase);
+                continue;
+            }
+            lines.push(`${cle} : ${formaterValeurSnapshotActivitePrestataire(cle, vn)}`);
+        }
+        return lines.length > 0 ? formaterInstantsIsoDansTexteHistorique(lines.join("\n")) : null;
+    }
+
+    if (hasA && !hasN) {
+        const lines: string[] = [];
+        for (const cle of clesActivitePrestataireHistoriqueOrdonnees(mapA, {})) {
+            const va = (mapA[cle] ?? "").trim();
+            if (!valeurActivitePrestataireHistoriqueAffichable(va)) continue;
+            if (cle === "Non-participations") continue;
+            lines.push(`${cle} : ${formaterValeurSnapshotActivitePrestataire(cle, va)} → Vide`);
+        }
+        return lines.length > 0 ? formaterInstantsIsoDansTexteHistorique(lines.join("\n")) : null;
+    }
+
+    return null;
+}
+
 /**
  * Compare ancienne / nouvelle valeur pour affichage lisible : **`champ : ancien → nouveau`** par ligne
  * (snapshots pipe-separated doc API), ou blocs JSON / texte sinon.
@@ -509,6 +701,9 @@ export function formaterComparaisonHistoriqueSnapshots(
     }
     if (domaine === "chambre") {
         return formaterComparaisonHistoriqueChambre(ancienneValeur, nouvelleValeur);
+    }
+    if (domaine === "activite_prestataire") {
+        return formaterComparaisonHistoriqueActivitePrestataire(ancienneValeur, nouvelleValeur);
     }
 
     const aRaw = (ancienneValeur ?? "").trim();
@@ -596,6 +791,21 @@ export function formaterValeurHistoriquePourAffichage(
                 const v = (map[cle] ?? "").trim();
                 if (!valeurChambreHistoriqueAffichable(v)) return null;
                 return `${cle} : ${v}`;
+            })
+            .filter((l): l is string => l != null);
+        if (lines.length > 0) return formaterInstantsIsoDansTexteHistorique(lines.join("\n"));
+    }
+
+    if (domaine === "activite_prestataire") {
+        const map = parseHistoriqueValeurChambre(t);
+        const lines = clesActivitePrestataireHistoriqueOrdonnees(map, map)
+            .map((cle) => {
+                const v = (map[cle] ?? "").trim();
+                if (!valeurActivitePrestataireHistoriqueAffichable(v)) return null;
+                if (cle === "Non-participations") {
+                    return formaterNonParticipationsSnapshotActivitePrestataire(v);
+                }
+                return `${cle} : ${formaterValeurSnapshotActivitePrestataire(cle, v)}`;
             })
             .filter((l): l is string => l != null);
         if (lines.length > 0) return formaterInstantsIsoDansTexteHistorique(lines.join("\n"));

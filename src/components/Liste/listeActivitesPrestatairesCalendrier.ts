@@ -6,6 +6,7 @@ import type {
     NonParticipationPrestataireDto,
     SaveActivitePrestataireRequest,
 } from "../../types/api";
+import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import { activiteDateToFilterKey, formatActiviteDateForDisplay } from "./listeActivitesUtils";
 
 export type ConflitCalendrierPrestataire = {
@@ -449,6 +450,53 @@ export type LigneParticipationSortieFormulaire = {
     momentNom: string;
 };
 
+/** Animateur + moments (ordre paramétrage) pour le formulaire sortie. */
+export type GroupeMomentsAnimateurParticipation = {
+    tokenId: string;
+    nom: string;
+    prenom: string;
+    moments: { momentId: number; momentNom: string }[];
+};
+
+function indexMomentsParametrage(moments: MomentDto[]): Map<number, number> {
+    return new Map(trierMomentsChronologiquement(moments).map((m, i) => [m.id, i]));
+}
+
+function idsMomentsDansOrdreParametrage(momentIds: Iterable<number>, moments: MomentDto[]): number[] {
+    const set = new Set(momentIds);
+    return trierMomentsChronologiquement(moments)
+        .filter((m) => set.has(m.id))
+        .map((m) => m.id);
+}
+
+function comparerPersonnePuisMomentParametrage<
+    T extends { prenom: string; nom: string; momentId: number },
+>(a: T, b: T, ordreMoment: Map<number, number>): number {
+    const cmpPersonne = `${a.prenom} ${a.nom}`
+        .trim()
+        .localeCompare(`${b.prenom} ${b.nom}`.trim(), undefined, { sensitivity: "base" });
+    if (cmpPersonne !== 0) return cmpPersonne;
+    return (ordreMoment.get(a.momentId) ?? 0) - (ordreMoment.get(b.momentId) ?? 0);
+}
+
+/** Non-participations triées : animateur (A→Z), puis moments dans l’ordre du paramétrage. */
+export function triNonParticipationsParPersonneEtMoment(
+    nonParticipations: NonParticipationPrestataireDto[],
+    groupes: GroupeDto[],
+    moments: MomentDto[],
+): NonParticipationPrestataireDto[] {
+    const ordreMoment = indexMomentsParametrage(moments);
+    return [...nonParticipations].sort((a, b) => {
+        const la = libelleAnimateur(groupes, a.tokenId);
+        const lb = libelleAnimateur(groupes, b.tokenId);
+        return comparerPersonnePuisMomentParametrage(
+            { ...la, momentId: a.momentId },
+            { ...lb, momentId: b.momentId },
+            ordreMoment,
+        );
+    });
+}
+
 /** Une ligne par couple référent × moment sélectionné (formulaire sortie). */
 export function lignesParticipationSortieFormulaire(
     groupes: GroupeDto[],
@@ -456,10 +504,11 @@ export function lignesParticipationSortieFormulaire(
     momentIds: Iterable<number>,
     moments: MomentDto[],
 ): LigneParticipationSortieFormulaire[] {
-    const idsMoments = [...momentIds];
+    const idsMoments = idsMomentsDansOrdreParametrage(momentIds, moments);
     if (groupeIds.length === 0 || idsMoments.length === 0) return [];
 
     const momentParId = new Map(moments.map((m) => [m.id, m.nom]));
+    const ordreMoment = indexMomentsParametrage(moments);
     const concernes = [...tokensReferentsConcernesParGroupeIds(groupes, groupeIds)].sort();
     const lignes: LigneParticipationSortieFormulaire[] = [];
 
@@ -476,27 +525,71 @@ export function lignesParticipationSortieFormulaire(
         }
     }
 
-    return lignes.sort((a, b) => {
-        const cmpPersonne = `${a.prenom} ${a.nom}`
-            .trim()
-            .localeCompare(`${b.prenom} ${b.nom}`.trim(), undefined, { sensitivity: "base" });
-        if (cmpPersonne !== 0) return cmpPersonne;
-        return a.momentNom.localeCompare(b.momentNom, undefined, { sensitivity: "base" });
-    });
+    return lignes.sort((a, b) => comparerPersonnePuisMomentParametrage(a, b, ordreMoment));
 }
 
+function grouperLignesParAnimateurToken<
+    T extends { tokenId: string; nom: string; prenom: string; momentId: number; momentNom: string },
+>(lignes: T[]): GroupeMomentsAnimateurParticipation[] {
+    const ordre: string[] = [];
+    const map = new Map<string, GroupeMomentsAnimateurParticipation>();
+    for (const ligne of lignes) {
+        let groupe = map.get(ligne.tokenId);
+        if (!groupe) {
+            ordre.push(ligne.tokenId);
+            groupe = {
+                tokenId: ligne.tokenId,
+                nom: ligne.nom,
+                prenom: ligne.prenom,
+                moments: [],
+            };
+            map.set(ligne.tokenId, groupe);
+        }
+        groupe.moments.push({ momentId: ligne.momentId, momentNom: ligne.momentNom });
+    }
+    return ordre.map((tokenId) => map.get(tokenId)!);
+}
+
+export function grouperLignesParticipationParAnimateur(
+    lignes: LigneParticipationSortieFormulaire[],
+): GroupeMomentsAnimateurParticipation[] {
+    return grouperLignesParAnimateurToken(lignes);
+}
+
+export function grouperNonParticipationsParAnimateur(
+    nonParticipations: NonParticipationPrestataireDto[],
+    groupes: GroupeDto[],
+    moments: MomentDto[],
+): GroupeMomentsAnimateurParticipation[] {
+    const momentParId = new Map(moments.map((m) => [m.id, m.nom]));
+    const lignes = triNonParticipationsParPersonneEtMoment(nonParticipations, groupes, moments).map(
+        (np) => {
+            const { nom, prenom } = libelleAnimateur(groupes, np.tokenId);
+            return {
+                tokenId: np.tokenId,
+                nom,
+                prenom,
+                momentId: np.momentId,
+                momentNom: momentParId.get(np.momentId)?.trim() || "—",
+            };
+        },
+    );
+    return grouperLignesParAnimateurToken(lignes);
+}
+
+/** Un libellé par animateur : `Prénom Nom (Matin 1, Matin 2, …)`. */
 export function libellesNonParticipationsSortie(
     nonParticipations: NonParticipationPrestataireDto[] | undefined,
     groupes: GroupeDto[],
     moments: MomentDto[],
 ): string[] {
-    const momentParId = new Map(moments.map((m) => [m.id, m.nom]));
-    return (nonParticipations ?? []).map((np) => {
-        const { nom, prenom } = libelleAnimateur(groupes, np.tokenId);
-        const personne = `${prenom} ${nom}`.trim() || np.tokenId.trim();
-        const momentNom = momentParId.get(np.momentId) ?? "—";
-        return `${personne} (${momentNom})`;
-    });
+    return grouperNonParticipationsParAnimateur(nonParticipations ?? [], groupes, moments).map(
+        (groupe) => {
+            const personne = `${groupe.prenom} ${groupe.nom}`.trim() || groupe.tokenId.trim();
+            const momentsStr = groupe.moments.map((m) => m.momentNom).join(", ");
+            return `${personne} (${momentsStr})`;
+        },
+    );
 }
 
 export function sortieVersSaveRequest(

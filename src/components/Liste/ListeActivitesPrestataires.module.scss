@@ -227,6 +227,37 @@
     font-size: 0.92rem;
     color: #7a4a00;
     line-height: 1.35;
+
+    strong {
+        display: block;
+        margin-bottom: 0.2rem;
+        color: #7a4a00;
+    }
+}
+
+.cardNonParticipationListe {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.cardNonParticipationLigne {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
+}
+
+.cardNonParticipationNom {
+    font-weight: 600;
+    color: #5c3a00;
+}
+
+.cardNonParticipationMoments {
+    color: #7a4a00;
 }
 
 .participationHint {
@@ -237,7 +268,6 @@
 }
 
 .participationListe {
-    list-style: none;
     margin: 0;
     padding: 0.5rem 0.6rem;
     max-height: 14rem;
@@ -247,15 +277,11 @@
     background: #fafbfc;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.15rem;
 }
 
-.participationRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.35rem 0.15rem;
+.participationAnimateurGroupe {
+    padding: 0.45rem 0.15rem;
     border-bottom: 1px solid #eceff1;
 
     &:last-child {
@@ -263,20 +289,29 @@
     }
 }
 
-.participationLabel {
+.participationAnimateurNom {
+    font-weight: 600;
     font-size: 0.92rem;
     line-height: 1.35;
-    color: #333;
+    color: #222;
+    margin-bottom: 0.35rem;
 }
 
-.participationRetirerBtn {
-    flex-shrink: 0;
-    padding: 0;
-    font-size: 0.85rem;
-    text-decoration: none !important;
+.participationMomentsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+}
 
-    &:hover {
-        text-decoration: underline !important;
+.participationMomentCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    :global(label.form-label) {
+        font-weight: 400;
+        font-size: 0.88rem;
+        color: #444;
     }
 }
 

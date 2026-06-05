@@ -827,7 +827,8 @@ export type HistoriqueModificationType =
   | "ACTIVITE"
   | "PLANNING_CELLULE"
   | "CAHIER_INFIRMERIE"
-  | "CHAMBRE";
+  | "CHAMBRE"
+  | "ACTIVITE_PRESTATAIRE";
 
 /** Cahier d'infirmerie — enums alignés sur enjoyApi. */
 export type TypeSoinInfirmerie =
@@ -957,6 +958,28 @@ export interface HistoriqueModificationChambreDto {
   nouvelleValeur: string | null;
   chambreId: number;
 }
+
+/**
+ * Snapshots : `Nom: … | Date: … | Moments: … | …` (séparateur ` | `, champs vides = « - »).
+ */
+export interface HistoriqueModificationActivitePrestataireDto {
+  id: number;
+  type: "ACTIVITE_PRESTATAIRE";
+  dateModification: string;
+  modificateurTokenId: string;
+  modificateurNom: string | null;
+  modificateurPrenom: string | null;
+  action: HistoriqueModificationAction;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  activitePrestataireId: number;
+}
+
+export type HistoriqueModificationDto =
+  | HistoriqueModificationActiviteDto
+  | HistoriqueModificationChambreDto
+  | HistoriqueModificationCahierInfirmerieDto
+  | HistoriqueModificationActivitePrestataireDto;
 
 // ============================================================================
 // Plannings direction (grilles génériques) — PlanningGrilleController
