@@ -324,6 +324,7 @@ const DetailsSejourOverview: React.FC = () => {
                     <Equipe
                         membres={sejour.equipe || []}
                         groupes={groupes || []}
+                        chambres={chambres || []}
                         sejourId={sejour.id}
                         peutGererMembres={peutGererMembresEquipe}
                     />

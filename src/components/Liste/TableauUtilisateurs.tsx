@@ -5,21 +5,39 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt } from "@fortawesome/free-solid-svg-icons";
 import Liste, { ColumnConfig } from "./Liste";
 import UserForm from "../Forms/UserForm";
-import { GroupeDto, ProfilUtilisateurDTO, TypeGroupe } from "../../types/api";
+import { ChambreDto, GroupeDto, ProfilUtilisateurDTO } from "../../types/api";
+import AffichageGroupesListe, { SECTIONS_TYPE_GROUPE, texteFiltreGroupes } from "./AffichageGroupesListe";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { sejourGroupeService } from "../../services/sejour-groupe.service";
-import { RoleSejour, RoleSejourLabels } from "../../enums/RoleSejour";
+import { sejourChambreService } from "../../services/sejour-chambre.service";
+import {
+  genrePersonneCompatibleAvecChambre,
+  indexerAffectationsOccupants,
+} from "../../helpers/chambreOccupantsUtils";
+import { RoleSejour } from "../../enums/RoleSejour";
 import { RoleSysteme, RoleSystemeLabels } from "../../enums/RoleSysteme";
 import styles from "./TableauUtilisateurs.module.scss";
 import listeStyles from "./Liste.module.scss";
 
-const SECTIONS_TYPE_GROUPE: { type: TypeGroupe; label: string }[] = [
-    { type: "THEMATIQUE", label: "Thématique" },
-    { type: "AGE", label: "Par âge" },
-    { type: "NIVEAU_SCOLAIRE", label: "Par niveau scolaire" },
-];
+function libelleRoleSejourCourt(role: string | null | undefined): string {
+    if (!role) return "—";
+    switch (role) {
+        case RoleSejour.AS:
+            return "AS";
+        case RoleSejour.SB:
+            return "SB";
+        case RoleSejour.ANIM:
+            return "Anim";
+        case RoleSejour.ADJOINT:
+            return "Adj";
+        case RoleSejour.AUTRE:
+            return "Autre";
+        default:
+            return role;
+    }
+}
 
 interface TableauUtilisateursProps {
   users: ProfilUtilisateurDTO[];
@@ -30,6 +48,7 @@ interface TableauUtilisateursProps {
   canDelete?: boolean;
   sejourId?: number;
   groupes?: GroupeDto[];
+  chambres?: ChambreDto[];
   onDelete?: (user: ProfilUtilisateurDTO) => Promise<void>;
   deleteConfirmationMessage?: (user: ProfilUtilisateurDTO) => string;
 }
@@ -43,6 +62,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   canDelete = true,
   sejourId,
   groupes = [],
+  chambres = [],
   onDelete: customOnDelete,
   deleteConfirmationMessage
 }) => {
@@ -51,6 +71,13 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   const [selectedGroupeIds, setSelectedGroupeIds] = useState<Set<number>>(new Set());
   const [isSavingGroupes, setIsSavingGroupes] = useState(false);
   const [groupeModalError, setGroupeModalError] = useState<string | null>(null);
+  const [chambreModalMembre, setChambreModalMembre] = useState<ProfilUtilisateurDTO | null>(null);
+  const [selectedChambreId, setSelectedChambreId] = useState<number | null>(null);
+  const [isSavingChambre, setIsSavingChambre] = useState(false);
+  const [chambreModalError, setChambreModalError] = useState<string | null>(null);
+
+  const chambresEquipe = chambres.filter((c) => c.typeChambre === "EQUIPE");
+  const affectationIndex = indexerAffectationsOccupants(chambresEquipe);
 
   const handleDefaultDelete = async (user: ProfilUtilisateurDTO) => {
       if (!user.tokenId) return;
@@ -64,10 +91,6 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
 
   const getGroupesPourReferent = (tokenId: string): GroupeDto[] => {
     return groupes.filter((g) => g.referents?.some((r) => r.tokenId === tokenId));
-  };
-
-  const getNomsGroupesPourReferent = (tokenId: string): string[] => {
-    return getGroupesPourReferent(tokenId).map((g) => g.nom);
   };
 
   const openGroupeModal = (membre: ProfilUtilisateurDTO) => {
@@ -92,6 +115,85 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
       else next.add(groupeId);
       return next;
     });
+  };
+
+  const getChambrePourMembre = (tokenId: string): ChambreDto | null => {
+    return affectationIndex.membreTokenIdVersChambre.get(tokenId.trim()) ?? null;
+  };
+
+  const getIdentifiantChambrePourMembre = (tokenId: string): string => {
+    const chambre = getChambrePourMembre(tokenId);
+    if (!chambre) return "—";
+    return chambre.identifiant.trim() || "—";
+  };
+
+  const placesRestantesChambre = (chambre: ChambreDto) =>
+    Math.max(0, chambre.capaciteMax - (chambre.occupants?.length ?? 0));
+
+  const chambreEligiblePourMembre = (
+    membre: ProfilUtilisateurDTO,
+    chambre: ChambreDto,
+    chambreActuelleId: number | null
+  ) => {
+    if (!genrePersonneCompatibleAvecChambre(membre.genre, chambre.genreAutorise)) return false;
+    const estActuelle = chambre.id === chambreActuelleId;
+    return estActuelle || placesRestantesChambre(chambre) > 0;
+  };
+
+  const chambresProposablesPourMembre = (membre: ProfilUtilisateurDTO): ChambreDto[] => {
+    if (!membre.tokenId) return [];
+    const chambreActuelleId = getChambrePourMembre(membre.tokenId)?.id ?? null;
+    return chambresEquipe
+      .filter((c) => chambreEligiblePourMembre(membre, c, chambreActuelleId))
+      .sort((a, b) =>
+        a.identifiant.localeCompare(b.identifiant, "fr", { sensitivity: "base" })
+      );
+  };
+
+  const openChambreModal = (membre: ProfilUtilisateurDTO) => {
+    if (!membre.tokenId) return;
+    const chambre = getChambrePourMembre(membre.tokenId);
+    setSelectedChambreId(chambre?.id ?? null);
+    setChambreModalError(null);
+    setChambreModalMembre(membre);
+  };
+
+  const closeChambreModal = () => {
+    if (isSavingChambre) return;
+    setChambreModalMembre(null);
+    setChambreModalError(null);
+    setSelectedChambreId(null);
+  };
+
+  const handleSaveChambre = async () => {
+    if (!chambreModalMembre?.tokenId || sejourId == null) return;
+    const tokenId = chambreModalMembre.tokenId.trim();
+    const chambreActuelle = getChambrePourMembre(tokenId);
+    const ancienneChambreId = chambreActuelle?.id ?? null;
+
+    if (selectedChambreId === ancienneChambreId) {
+      closeChambreModal();
+      return;
+    }
+
+    setIsSavingChambre(true);
+    setChambreModalError(null);
+    try {
+      if (selectedChambreId == null && ancienneChambreId != null) {
+        await sejourChambreService.retirerMembreEquipe(sejourId, ancienneChambreId, tokenId);
+      } else if (selectedChambreId != null) {
+        await sejourChambreService.affecterMembreEquipe(sejourId, selectedChambreId, tokenId);
+      }
+      closeChambreModal();
+      revalidator.revalidate();
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la chambre", error);
+      setChambreModalError(
+        error instanceof Error ? error.message : "Erreur lors de la mise à jour de la chambre"
+      );
+    } finally {
+      setIsSavingChambre(false);
+    }
   };
 
   const handleSaveGroupesReferent = async () => {
@@ -141,21 +243,18 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
     }
   });
 
-  const roleSejourColumn: ColumnConfig = createColumn('roleSejour', 'Rôle de séjour', 'custom', {
+  const roleSejourColumn: ColumnConfig = createColumn('roleSejour', 'Rôle', 'custom', {
     filterType: 'select',
+    className: styles.colRole,
     filterOptions: [
       { value: '', label: 'Tous' },
-      ...Object.values(RoleSejour).map(role => ({
-        value: role,
-        label: RoleSejourLabels[role]
-      }))
+      { value: RoleSejour.AS, label: 'AS' },
+      { value: RoleSejour.SB, label: 'SB' },
+      { value: RoleSejour.ANIM, label: 'Anim' },
+      { value: RoleSejour.ADJOINT, label: 'Adj' },
+      { value: RoleSejour.AUTRE, label: 'Autre' },
     ],
-    render: (value, item) => {
-      if (value) {
-        return utilisateurService.getRoleSejourByGenre(value as string, item.genre);
-      }
-      return '-';
-    }
+    render: (value) => libelleRoleSejourCourt(value as string),
   });
 
   const validiteColumn: ColumnConfig = createColumn('dateExpirationCompte', 'Validité', 'date', {
@@ -170,18 +269,43 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
     }
   });
 
-  const groupesReferentColumn: ColumnConfig = createColumn('groupesReferent', 'Groupe(s)', 'text', {
+  const chambreColumn: ColumnConfig = createColumn("chambre", "Chambre", "text", {
     filterable: true,
+    className: styles.colChambre,
     render: (_, item) => {
       const tokenId = item.tokenId as string | undefined;
-      const noms = tokenId ? getNomsGroupesPourReferent(tokenId) : [];
-      const label = noms.length > 0 ? noms.join(", ") : "—";
+      const label = tokenId ? getIdentifiantChambrePourMembre(tokenId) : "—";
       if (!canEdit || !tokenId) {
         return label;
       }
       return (
         <span className={styles.groupeCell}>
           <span>{label}</span>
+          <FontAwesomeIcon
+            className={`icone_crayon_edit ${styles.groupeEditIcon}`}
+            icon={faPencilAlt}
+            onClick={() => openChambreModal(item)}
+            title="Gérer la chambre"
+          />
+        </span>
+      );
+    },
+  });
+
+  const groupesReferentColumn: ColumnConfig = createColumn('groupesReferent', 'Groupe(s)', 'text', {
+    filterable: true,
+    className: styles.colGroupes,
+    render: (_, item) => {
+      const tokenId = item.tokenId as string | undefined;
+      const contenu = (
+        <AffichageGroupesListe groupes={tokenId ? getGroupesPourReferent(tokenId) : []} />
+      );
+      if (!canEdit || !tokenId) {
+        return contenu;
+      }
+      return (
+        <span className={styles.groupeCell}>
+          <span className={styles.groupeCellContent}>{contenu}</span>
           <FontAwesomeIcon
             className={`icone_crayon_edit ${styles.groupeEditIcon}`}
             icon={faPencilAlt}
@@ -194,8 +318,8 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   });
 
   const baseColumns: ColumnConfig[] = [
-    createColumn('nom', 'Nom'),
-    createColumn('prenom', 'Prénom'),
+    createColumn('nom', 'Nom', 'text', sejourId != null ? { className: styles.colNom } : undefined),
+    createColumn('prenom', 'Prénom', 'text', sejourId != null ? { className: styles.colPrenom } : undefined),
     createColumn('age', 'Age', 'custom', {
       filterType: 'number',
       filterPlaceholder: 'Min.',
@@ -214,22 +338,44 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   ];
 
   const afficherColonneGroupes = sejourId != null && groupes.length > 0;
+  const afficherColonneChambres = sejourId != null && chambresEquipe.length > 0;
 
   const columns: ColumnConfig[] = sejourId
     ? [
-        ...baseColumns.slice(0, 3),
+        createColumn('nom', 'Nom', 'text', { className: styles.colNom }),
+        createColumn('prenom', 'Prénom', 'text', { className: styles.colPrenom }),
+        createColumn('age', 'Age', 'custom', {
+          filterType: 'number',
+          filterPlaceholder: 'Min.',
+          className: listeStyles.colAge,
+          render: (_, item) => `${calculerAge(item.dateNaissance)} ans`,
+        }),
         roleSejourColumn,
-        ...baseColumns.slice(3),
+        createColumn('genre', 'Genre', 'select', {
+          className: styles.colGenre,
+          filterOptions: [
+            { value: '', label: 'Tous' },
+            { value: 'Masculin', label: 'Masculin' },
+            { value: 'Féminin', label: 'Féminin' },
+          ],
+        }),
+        createColumn('email', 'Email', 'email', { className: styles.colEmail }),
+        createColumn('telephone', 'Téléphone', 'tel', { className: styles.colTelephone }),
         ...(afficherColonneGroupes ? [groupesReferentColumn] : []),
+        ...(afficherColonneChambres ? [chambreColumn] : []),
       ]
     : [...baseColumns.slice(0, 3), roleSystemeColumn, ...baseColumns.slice(3), validiteColumn];
 
   const dataListe = users.map((user) => {
-    if (!afficherColonneGroupes || !user.tokenId) return user;
-    return {
-      ...user,
-      groupesReferent: getNomsGroupesPourReferent(user.tokenId).join(", ") || "—",
-    };
+    if (sejourId == null || !user.tokenId) return user;
+    const extra: Record<string, string> = {};
+    if (afficherColonneGroupes) {
+      extra.groupesReferent = texteFiltreGroupes(getGroupesPourReferent(user.tokenId));
+    }
+    if (afficherColonneChambres) {
+      extra.chambre = getIdentifiantChambrePourMembre(user.tokenId);
+    }
+    return Object.keys(extra).length > 0 ? { ...user, ...extra } : user;
   });
 
   const FormWithProps = (props: any) => (
@@ -255,6 +401,60 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         addButtonText="Ajouter un membre"
         deleteConfirmationMessage={deleteConfirmationMessage}
       />
+
+      {canEdit && afficherColonneChambres && chambreModalMembre && (
+        <Modal isOpen toggle={closeChambreModal} size="md">
+          <ModalHeader toggle={closeChambreModal}>
+            Chambre de {chambreModalMembre.prenom} {chambreModalMembre.nom}
+          </ModalHeader>
+          <ModalBody>
+            <p className={styles.groupeModalIntro}>
+              Choisissez la chambre d&apos;affectation de ce membre.
+            </p>
+            <ul className={styles.groupePickerList}>
+              <li className={styles.groupePickerRow}>
+                <label className={styles.groupePickerLabel}>
+                  <input
+                    type="radio"
+                    className={styles.groupePickerCheckbox}
+                    name="chambre-membre"
+                    checked={selectedChambreId === null}
+                    onChange={() => setSelectedChambreId(null)}
+                    disabled={isSavingChambre}
+                  />
+                  <span>Aucune chambre</span>
+                </label>
+              </li>
+              {chambresProposablesPourMembre(chambreModalMembre).map((chambre) => (
+                <li key={chambre.id} className={styles.groupePickerRow}>
+                  <label className={styles.groupePickerLabel}>
+                    <input
+                      type="radio"
+                      className={styles.groupePickerCheckbox}
+                      name="chambre-membre"
+                      checked={selectedChambreId === chambre.id}
+                      onChange={() => setSelectedChambreId(chambre.id)}
+                      disabled={isSavingChambre}
+                    />
+                    <span>{chambre.identifiant.trim()}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {chambreModalError && (
+              <div className={styles.errorMessage}>{chambreModalError}</div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="secondary" onClick={closeChambreModal} disabled={isSavingChambre}>
+              Annuler
+            </Button>
+            <Button color="success" onClick={handleSaveChambre} disabled={isSavingChambre}>
+              {isSavingChambre ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
 
       {canEdit && afficherColonneGroupes && groupeModalMembre && (
         <Modal isOpen toggle={closeGroupeModal} size="md">

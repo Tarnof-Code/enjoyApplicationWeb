@@ -1,0 +1,24 @@
+.groupesAffichage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    line-height: 1.25;
+}
+
+.groupeLigne {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.groupePastille {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    border: 1px solid;
+    display: inline-block;
+    line-height: 1.2;
+}

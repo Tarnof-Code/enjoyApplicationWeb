@@ -228,3 +228,16 @@ textarea[readonly]:hover {
 .tiptap:hover {
   cursor: text;
 }
+
+/* Placeholders compacts — filtres des tableaux / listes */
+table.table thead input::placeholder,
+[class*="filterContainer"] input::placeholder,
+[class*="filterInputWithIcon"] input::placeholder,
+[class*="filterInput"]::placeholder,
+[class*="filtersBar"] input::placeholder,
+[class*="filtresRow"] input::placeholder,
+[class*="filtersRow"] input::placeholder,
+#cahier-filtre-texte::placeholder {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}

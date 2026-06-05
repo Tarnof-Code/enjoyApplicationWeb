@@ -29,5 +29,8 @@
 - [x] **Chambres — affectation occupants** (enfants / équipe : picker, capacité, genre/groupe, **`chambreOccupantsUtils`**, endpoints **`…/occupants/…`**)
 - [x] **Chambres — historique des modifications** (`getHistoriqueChambre`, **`HistoriqueModificationChambreDto`**, modal **`formatSnapshots="chambre"`**, diff occupants accordé genre)
 - [x] **Chambres — UX recherche / formulaire** (`textesRechercheChambre`, étage numérique, icône retrait occupant)
+- [x] **Vue générale — colonnes groupes / chambres** : **`ListeEnfants`** (affectation groupe + chambre enfant depuis la liste) ; **`Equipe`** / **`TableauUtilisateurs`** (référent groupe + chambre équipe, rôle abrégé) ; **`chambres`** dans **`detailsSejourLoader`**
+- [x] **Affichage groupes en pastilles** : **`AffichageGroupesListe`** partagé enfants + équipe ; **`couleurGroupe.ts`** (couleur stable par id) ; une ligne par type
+- [x] **Liste générique** : **`ColumnConfig.className`** / **`filterPlaceholder`** ; **`colAge`** ; placeholders filtres compacts
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)
 - [ ] Optimiser les performances des listes si nécessaire (virtualisation si beaucoup d'éléments)

@@ -3,7 +3,8 @@ import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { ChambreDto, EnfantDto, GroupeDto, TypeGroupe } from "../../types/api";
+import { ChambreDto, EnfantDto, GroupeDto } from "../../types/api";
+import AffichageGroupesListe, { SECTIONS_TYPE_GROUPE, texteFiltreGroupes } from "./AffichageGroupesListe";
 import Liste, { ColumnConfig } from "./Liste";
 import { sejourEnfantService } from "../../services/sejour-enfant.service";
 import { sejourGroupeService } from "../../services/sejour-groupe.service";
@@ -20,12 +21,6 @@ import ImportExcelEnfants from "./ImportExcelEnfants";
 import { NiveauScolaireLabels } from "../../enums/NiveauScolaire";
 import styles from "./ListeEnfants.module.scss";
 import listeStyles from "./Liste.module.scss";
-
-const SECTIONS_TYPE_GROUPE: { type: TypeGroupe; label: string }[] = [
-    { type: "THEMATIQUE", label: "Thématique" },
-    { type: "AGE", label: "Par âge" },
-    { type: "NIVEAU_SCOLAIRE", label: "Par niveau scolaire" },
-];
 
 export interface ListeEnfantsProps {
     enfants: EnfantDto[];
@@ -71,10 +66,6 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
 
     const getGroupesPourEnfant = (enfantId: number): GroupeDto[] => {
         return groupes.filter((g) => g.enfants.some((e) => e.id === enfantId));
-    };
-
-    const getNomsGroupesPourEnfant = (enfantId: number): string[] => {
-        return getGroupesPourEnfant(enfantId).map((g) => g.nom);
     };
 
     const openGroupeModal = (enfant: EnfantDto) => {
@@ -238,14 +229,15 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 createColumn('groupes', 'Groupe(s)', 'text', {
                     filterable: true,
                     render: (_, item) => {
-                        const noms = getNomsGroupesPourEnfant(item.id);
-                        const label = noms.length > 0 ? noms.join(", ") : "—";
+                        const contenu = (
+                            <AffichageGroupesListe groupes={getGroupesPourEnfant(item.id)} />
+                        );
                         if (!peutGererEnfants) {
-                            return label;
+                            return contenu;
                         }
                         return (
                             <span className={styles.groupeCell}>
-                                <span>{label}</span>
+                                <span className={styles.groupeCellContent}>{contenu}</span>
                                 <FontAwesomeIcon
                                     className={`icone_crayon_edit ${styles.groupeEditIcon}`}
                                     icon={faPencilAlt}
@@ -287,7 +279,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
     const dataListe = enfants.map((e) => {
         const extra: Record<string, string> = {};
         if (groupes.length > 0) {
-            extra.groupes = getNomsGroupesPourEnfant(e.id).join(", ") || "—";
+            extra.groupes = texteFiltreGroupes(getGroupesPourEnfant(e.id));
         }
         if (chambresEnfants.length > 0) {
             extra.chambre = getIdentifiantChambrePourEnfant(e.id);

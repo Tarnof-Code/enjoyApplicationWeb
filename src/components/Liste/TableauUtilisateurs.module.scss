@@ -1,9 +1,57 @@
+.colNom {
+    min-width: 7.5rem;
+    width: 9%;
+}
+
+.colPrenom {
+    min-width: 7rem;
+    width: 8%;
+}
+
+.colRole {
+    min-width: 4.75rem;
+    max-width: 5.75rem;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.colGenre {
+    min-width: 5.5rem;
+    max-width: 6.75rem;
+    white-space: nowrap;
+}
+
+.colEmail {
+    min-width: 9rem;
+    width: 14%;
+}
+
+.colTelephone {
+    min-width: 6.5rem;
+    width: 9%;
+}
+
+.colGroupes {
+    min-width: 11rem;
+    width: 13%;
+}
+
+.colChambre {
+    min-width: 7.5rem;
+    width: 9%;
+}
+
 .groupeCell {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 0.35rem;
     width: 100%;
+    min-width: 0;
+}
+
+.groupeCellContent {
+    flex: 1;
     min-width: 0;
 }
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { useRevalidator } from "react-router-dom";
-import { GroupeDto, ProfilUtilisateurDTO } from "../../types/api";
+import { ChambreDto, GroupeDto, ProfilUtilisateurDTO } from "../../types/api";
 import TableauUtilisateurs from "./TableauUtilisateurs";
 import { sejourEquipeService } from "../../services/sejour-equipe.service";
 import { RoleSysteme } from "../../enums/RoleSysteme";
@@ -8,12 +8,13 @@ import { RoleSysteme } from "../../enums/RoleSysteme";
 interface EquipeProps {
     membres: ProfilUtilisateurDTO[];
     groupes?: GroupeDto[];
+    chambres?: ChambreDto[];
     sejourId: number;
     /** Directeur du séjour ou adjoint : boutons ajout / édition / suppression */
     peutGererMembres: boolean;
 }
 
-const Equipe: React.FC<EquipeProps> = ({ membres, groupes = [], sejourId, peutGererMembres }) => {
+const Equipe: React.FC<EquipeProps> = ({ membres, groupes = [], chambres = [], sejourId, peutGererMembres }) => {
     const revalidator = useRevalidator();
 
     const handleDeleteMembre = async (user: ProfilUtilisateurDTO) => {
@@ -32,6 +33,7 @@ const Equipe: React.FC<EquipeProps> = ({ membres, groupes = [], sejourId, peutGe
             canDelete={peutGererMembres}
             sejourId={sejourId}
             groupes={groupes}
+            chambres={chambres}
             onDelete={handleDeleteMembre}
             deleteConfirmationMessage={(user) => `Voulez-vous retirer ${user.prenom} ${user.nom} de l'équipe de ce séjour ?`}
         />
