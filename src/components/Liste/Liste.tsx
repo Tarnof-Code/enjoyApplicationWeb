@@ -31,6 +31,8 @@ export interface ColumnConfig {
   filterOptions?: { value: string; label: string }[];
   render?: (value: any, item: any, index: number) => React.ReactNode;
   colSpan?: number;
+  className?: string;
+  filterPlaceholder?: string;
 }
 
 export interface FilterState {
@@ -400,7 +402,7 @@ const Liste = <T extends Record<string, any>>({
         </td>
 
         {columns.map(column => (
-          <td key={column.key} colSpan={column.colSpan || 1}>
+          <td key={column.key} colSpan={column.colSpan || 1} className={column.className}>
             {renderCell(column, item, filteredIndex)}
           </td>
         ))}
@@ -445,7 +447,7 @@ const Liste = <T extends Record<string, any>>({
             <tr>
               <th></th>
               {columns.map(column => (
-                <th key={column.key} colSpan={column.colSpan || 1}>
+                <th key={column.key} colSpan={column.colSpan || 1} className={column.className}>
                   {column.label}
                 </th>
               ))}
@@ -455,7 +457,7 @@ const Liste = <T extends Record<string, any>>({
             <tr>
               <th></th>
               {columns.map(column => (
-                <th key={`filter-${column.key}`} colSpan={column.colSpan || 1}>
+                <th key={`filter-${column.key}`} colSpan={column.colSpan || 1} className={column.className}>
                   {column.filterable && (
                     <div className={styles.filterContainer}>
                       {column.filterType === 'select' ? (
@@ -471,7 +473,10 @@ const Liste = <T extends Record<string, any>>({
                         </select>
                         ) : column.filterType === 'number' ? (
                           <input
-                            placeholder={column.key === 'duree' ? 'Durée exacte' : `${column.label} minimum`}
+                            placeholder={
+                              column.filterPlaceholder ??
+                              (column.key === 'duree' ? 'Durée exacte' : `${column.label} minimum`)
+                            }
                             type="number"
                             value={filters[`${column.key}Filter`] || ""}
                             onChange={(e) => updateFilter(`${column.key}Filter`, e.target.value)}

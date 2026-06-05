@@ -11,6 +11,7 @@ import { sejourHoraireService } from "../../../services/sejour-horaire.service";
 import { sejourPlanningGrilleService } from "../../../services/sejour-planning-grille.service";
 import { sejourReunionService } from "../../../services/sejour-reunion.service";
 import { sejourActivitePrestataireService } from "../../../services/sejour-activite-prestataire.service";
+import { sejourChambreService } from "../../../services/sejour-chambre.service";
 import { mettreEnCacheSejourRoute } from "./sejourDetailRouteCache";
 
 export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
@@ -34,6 +35,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             planningGrilles,
             reunions,
             activitesPrestataires,
+            chambres,
         ] = await Promise.all([
             sejourService.getSejourById(params.id),
             sejourEnfantService.getEnfantsDuSejour(sejourId),
@@ -46,6 +48,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             sejourPlanningGrilleService.listerGrilles(sejourId),
             sejourReunionService.listerReunions(sejourId),
             sejourActivitePrestataireService.listerActivitesPrestataires(sejourId),
+            sejourChambreService.getChambresDuSejour(sejourId),
         ]);
         if (params.id) {
             mettreEnCacheSejourRoute(params.id, sejour);
@@ -62,6 +65,7 @@ export async function detailsSejourLoader({ params }: LoaderFunctionArgs) {
             planningGrilles,
             reunions,
             activitesPrestataires,
+            chambres: Array.isArray(chambres) ? chambres : [],
         };
     } catch (error) {
         throwRouteLoaderError(error);

@@ -11,6 +11,7 @@ import {
     SejourDTO,
     EnfantDto,
     GroupeDto,
+    ChambreDto,
     ReunionDto,
 } from "../../../types/api";
 import { accountService } from "../../../services/account.service";
@@ -104,6 +105,7 @@ type SejourDetailLoaderSuccess = {
     sejour: SejourDTO;
     enfants: EnfantDto[];
     groupes: GroupeDto[];
+    chambres: ChambreDto[];
     reunions: ReunionDto[];
 };
 
@@ -245,6 +247,7 @@ const DetailsSejourOverview: React.FC = () => {
         sejour,
         enfants,
         groupes,
+        chambres,
         reunions,
     } = loaderData;
 
@@ -329,6 +332,7 @@ const DetailsSejourOverview: React.FC = () => {
                     <ListeEnfants
                         enfants={enfants || []}
                         groupes={groupes || []}
+                        chambres={chambres || []}
                         sejourId={sejour.id}
                         peutGererEnfants={peutGererMembresEquipe}
                     />

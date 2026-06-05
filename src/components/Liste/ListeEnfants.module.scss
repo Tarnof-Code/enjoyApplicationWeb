@@ -1,3 +1,16 @@
+.colAge {
+    width: 1%;
+    min-width: 5.5rem;
+    max-width: 10rem;
+    white-space: nowrap;
+
+    input[type="number"] {
+        min-width: 0;
+        width: 100%;
+        max-width: 9rem;
+    }
+}
+
 .actionsContainer {
     display: flex;
     gap: 1rem;

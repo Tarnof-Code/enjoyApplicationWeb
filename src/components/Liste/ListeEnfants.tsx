@@ -3,10 +3,16 @@ import { useRevalidator, useNavigate } from "react-router-dom";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencilAlt, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { EnfantDto, GroupeDto, TypeGroupe } from "../../types/api";
+import { ChambreDto, EnfantDto, GroupeDto, TypeGroupe } from "../../types/api";
 import Liste, { ColumnConfig } from "./Liste";
 import { sejourEnfantService } from "../../services/sejour-enfant.service";
 import { sejourGroupeService } from "../../services/sejour-groupe.service";
+import { sejourChambreService } from "../../services/sejour-chambre.service";
+import {
+    enfantCompatibleAvecGenreChambre,
+    idsEnfantsDuGroupeChambre,
+    indexerAffectationsOccupants,
+} from "../../helpers/chambreOccupantsUtils";
 import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 import AddEnfantForm from "../Forms/AddEnfantForm";
@@ -23,12 +29,19 @@ const SECTIONS_TYPE_GROUPE: { type: TypeGroupe; label: string }[] = [
 export interface ListeEnfantsProps {
     enfants: EnfantDto[];
     groupes?: GroupeDto[];
+    chambres?: ChambreDto[];
     sejourId: number;
     /** Directeur du séjour ou adjoint : import, ajout, édition, suppressions ; sinon lecture + dossier uniquement */
     peutGererEnfants: boolean;
 }
 
-const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejourId, peutGererEnfants }) => {
+const ListeEnfants: React.FC<ListeEnfantsProps> = ({
+    enfants,
+    groupes = [],
+    chambres = [],
+    sejourId,
+    peutGererEnfants,
+}) => {
     const revalidator = useRevalidator();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -38,6 +51,13 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
     const [selectedGroupeIds, setSelectedGroupeIds] = useState<Set<number>>(new Set());
     const [isSavingGroupes, setIsSavingGroupes] = useState(false);
     const [groupeModalError, setGroupeModalError] = useState<string | null>(null);
+    const [chambreModalEnfant, setChambreModalEnfant] = useState<EnfantDto | null>(null);
+    const [selectedChambreId, setSelectedChambreId] = useState<number | null>(null);
+    const [isSavingChambre, setIsSavingChambre] = useState(false);
+    const [chambreModalError, setChambreModalError] = useState<string | null>(null);
+
+    const chambresEnfants = chambres.filter((c) => c.typeChambre === "ENFANT");
+    const affectationIndex = indexerAffectationsOccupants(chambresEnfants);
 
     const handleDeleteEnfant = async (enfant: EnfantDto, _index: number) => {
         await sejourEnfantService.supprimerEnfantDuSejour(sejourId, enfant.id);
@@ -77,6 +97,81 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
             else next.add(groupeId);
             return next;
         });
+    };
+
+    const getChambrePourEnfant = (enfantId: number): ChambreDto | null => {
+        return affectationIndex.enfantIdVersChambre.get(enfantId) ?? null;
+    };
+
+    const getIdentifiantChambrePourEnfant = (enfantId: number): string => {
+        const chambre = getChambrePourEnfant(enfantId);
+        if (!chambre) return "—";
+        return chambre.identifiant.trim() || "—";
+    };
+
+    const placesRestantesChambre = (chambre: ChambreDto) =>
+        Math.max(0, chambre.capaciteMax - (chambre.occupants?.length ?? 0));
+
+    const chambreEligiblePourEnfant = (enfant: EnfantDto, chambre: ChambreDto, chambreActuelleId: number | null) => {
+        if (!enfantCompatibleAvecGenreChambre(enfant.genre, chambre.genreAutorise)) return false;
+        const idsGroupe = idsEnfantsDuGroupeChambre(chambre, groupes);
+        if (idsGroupe != null && !idsGroupe.has(enfant.id)) return false;
+        const estActuelle = chambre.id === chambreActuelleId;
+        return estActuelle || placesRestantesChambre(chambre) > 0;
+    };
+
+    const chambresProposablesPourEnfant = (enfant: EnfantDto): ChambreDto[] => {
+        const chambreActuelleId = getChambrePourEnfant(enfant.id)?.id ?? null;
+        return chambresEnfants
+            .filter((c) => chambreEligiblePourEnfant(enfant, c, chambreActuelleId))
+            .sort((a, b) =>
+                a.identifiant.localeCompare(b.identifiant, "fr", { sensitivity: "base" })
+            );
+    };
+
+    const openChambreModal = (enfant: EnfantDto) => {
+        const chambre = getChambrePourEnfant(enfant.id);
+        setSelectedChambreId(chambre?.id ?? null);
+        setChambreModalError(null);
+        setChambreModalEnfant(enfant);
+    };
+
+    const closeChambreModal = () => {
+        if (isSavingChambre) return;
+        setChambreModalEnfant(null);
+        setChambreModalError(null);
+        setSelectedChambreId(null);
+    };
+
+    const handleSaveChambre = async () => {
+        if (!chambreModalEnfant) return;
+        const enfantId = chambreModalEnfant.id;
+        const chambreActuelle = getChambrePourEnfant(enfantId);
+        const ancienneChambreId = chambreActuelle?.id ?? null;
+
+        if (selectedChambreId === ancienneChambreId) {
+            closeChambreModal();
+            return;
+        }
+
+        setIsSavingChambre(true);
+        setChambreModalError(null);
+        try {
+            if (selectedChambreId == null && ancienneChambreId != null) {
+                await sejourChambreService.retirerEnfant(sejourId, ancienneChambreId, enfantId);
+            } else if (selectedChambreId != null) {
+                await sejourChambreService.affecterEnfant(sejourId, selectedChambreId, enfantId);
+            }
+            closeChambreModal();
+            revalidator.revalidate();
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour de la chambre", error);
+            setChambreModalError(
+                error instanceof Error ? error.message : "Erreur lors de la mise à jour de la chambre"
+            );
+        } finally {
+            setIsSavingChambre(false);
+        }
     };
 
     const handleSaveGroupes = async () => {
@@ -133,6 +228,8 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
         }),
         createColumn('age', 'Âge', 'custom', {
             filterType: 'number',
+            filterPlaceholder: 'Âge min.',
+            className: styles.colAge,
             render: (_, item) => `${calculerAge(item.dateNaissance)} ans`
         }),
         ...(groupes.length > 0
@@ -160,11 +257,42 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
                 })
             ]
             : []),
+        ...(chambresEnfants.length > 0
+            ? [
+                createColumn("chambre", "Chambre", "text", {
+                    filterable: true,
+                    render: (_, item) => {
+                        const label = getIdentifiantChambrePourEnfant(item.id);
+                        if (!peutGererEnfants) {
+                            return label;
+                        }
+                        return (
+                            <span className={styles.groupeCell}>
+                                <span>{label}</span>
+                                <FontAwesomeIcon
+                                    className={`icone_crayon_edit ${styles.groupeEditIcon}`}
+                                    icon={faPencilAlt}
+                                    onClick={() => openChambreModal(item)}
+                                    title="Gérer la chambre"
+                                />
+                            </span>
+                        );
+                    },
+                }),
+            ]
+            : []),
     ];
 
-    const dataWithGroupes = groupes.length > 0
-        ? enfants.map((e) => ({ ...e, groupes: getNomsGroupesPourEnfant(e.id).join(", ") || "—" }))
-        : enfants;
+    const dataListe = enfants.map((e) => {
+        const extra: Record<string, string> = {};
+        if (groupes.length > 0) {
+            extra.groupes = getNomsGroupesPourEnfant(e.id).join(", ") || "—";
+        }
+        if (chambresEnfants.length > 0) {
+            extra.chambre = getIdentifiantChambrePourEnfant(e.id);
+        }
+        return Object.keys(extra).length > 0 ? { ...e, ...extra } : e;
+    });
 
     const handleDeleteAllEnfants = async () => {
         setIsDeletingAll(true);
@@ -221,7 +349,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
             <Liste
                 title={`Liste des enfants (${enfants.length})`}
                 columns={columns}
-                data={dataWithGroupes}
+                data={dataListe}
                 loading={false}
                 onDelete={handleDeleteEnfant}
                 canAdd={peutGererEnfants}
@@ -234,6 +362,60 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({ enfants, groupes = [], sejo
                 deleteConfirmationMessage={(enfant) => `Voulez-vous retirer ${enfant.prenom} ${enfant.nom} de ce séjour ?`}
                 errorMessage={errorMessage}
             />
+
+            {peutGererEnfants && chambreModalEnfant && (
+                <Modal isOpen toggle={closeChambreModal} size="md">
+                    <ModalHeader toggle={closeChambreModal}>
+                        Chambre de {chambreModalEnfant.prenom} {chambreModalEnfant.nom}
+                    </ModalHeader>
+                    <ModalBody>
+                        <p className={styles.groupeModalIntro}>
+                            Choisissez la chambre d&apos;affectation de cet enfant.
+                        </p>
+                        <ul className={styles.groupePickerList}>
+                            <li className={styles.groupePickerRow}>
+                                <label className={styles.groupePickerLabel}>
+                                    <input
+                                        type="radio"
+                                        className={styles.groupePickerCheckbox}
+                                        name="chambre-enfant"
+                                        checked={selectedChambreId === null}
+                                        onChange={() => setSelectedChambreId(null)}
+                                        disabled={isSavingChambre}
+                                    />
+                                    <span>Aucune chambre</span>
+                                </label>
+                            </li>
+                            {chambresProposablesPourEnfant(chambreModalEnfant).map((chambre) => (
+                                <li key={chambre.id} className={styles.groupePickerRow}>
+                                    <label className={styles.groupePickerLabel}>
+                                        <input
+                                            type="radio"
+                                            className={styles.groupePickerCheckbox}
+                                            name="chambre-enfant"
+                                            checked={selectedChambreId === chambre.id}
+                                            onChange={() => setSelectedChambreId(chambre.id)}
+                                            disabled={isSavingChambre}
+                                        />
+                                        <span>{chambre.identifiant.trim()}</span>
+                                    </label>
+                                </li>
+                            ))}
+                        </ul>
+                        {chambreModalError && (
+                            <div className={styles.errorMessage}>{chambreModalError}</div>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button color="secondary" onClick={closeChambreModal} disabled={isSavingChambre}>
+                            Annuler
+                        </Button>
+                        <Button color="success" onClick={handleSaveChambre} disabled={isSavingChambre}>
+                            {isSavingChambre ? "Enregistrement..." : "Enregistrer"}
+                        </Button>
+                    </ModalFooter>
+                </Modal>
+            )}
 
             {peutGererEnfants && groupeModalEnfant && (
                 <Modal isOpen toggle={closeGroupeModal} size="md">
