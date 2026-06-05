@@ -19,7 +19,8 @@ import type { RootState } from "../../redux/store";
 import { useSelector } from "react-redux";
 import { accountService } from "../../services/account.service";
 import { sejourReunionService } from "../../services/sejour-reunion.service";
-import { ReunionContenuRichText } from "./ReunionContenuRichText";
+import type { SejourPrintContext } from "../../print";
+import { ReunionCompteRenduAccordionItem } from "./ReunionCompteRenduAccordionItem";
 import { ReunionFormulaireModal } from "./ReunionFormulaireModal";
 import styles from "./SectionReunionsSejour.module.scss";
 
@@ -48,6 +49,8 @@ export type SectionReunionsSejourProps = {
     sejourId: number;
     sejourDirecteur?: DirecteurInfos | null;
     equipe?: ProfilUtilisateurDTO[];
+    /** Contexte séjour réutilisé pour l'en-tête d'impression */
+    sejourPrintContext?: SejourPrintContext;
     /** Données préchargées par le loader séjour (évite le skeleton au montage). */
     initialReunions?: ReunionDto[];
 };
@@ -60,6 +63,7 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
     sejourId,
     sejourDirecteur,
     equipe,
+    sejourPrintContext,
     initialReunions,
 }) => {
     const roleGlobal = useSelector((state: RootState) => state.auth.role);
@@ -315,71 +319,19 @@ export const SectionReunionsSejour: FC<SectionReunionsSejourProps> = ({
                             Aucun compte rendu ne correspond aux filtres.
                         </p>
                     ) : null}
-                    {reunionsAffichees.map((r) => {
-                        const ouvert = reunionDeployeeId === r.id;
-                        return (
-                            <div key={r.id} className={styles.reunionAccordionItem}>
-                                <button
-                                    type="button"
-                                    className={styles.reunionAccordionHeaderBtn}
-                                    onClick={() => basculerPanneau(r.id)}
-                                    aria-expanded={ouvert}
-                                >
-                                    <span className={styles.reunionDateLine}>
-                                        {formaterDateReunionCourte(r.date)}
-                                    </span>
-                                    {r.ordreDuJour?.trim() ? (
-                                        <>
-                                            <span className={styles.reunionHeaderSep} aria-hidden>
-                                                —
-                                            </span>
-                                            <span
-                                                className={styles.reunionOdjLineHeader}
-                                                title={r.ordreDuJour.trim()}
-                                            >
-                                                {r.ordreDuJour.trim()}
-                                            </span>
-                                        </>
-                                    ) : null}
-                                </button>
-                                {ouvert ? (
-                                    <div className={styles.reunionBody}>
-                                        {r.ordreDuJour?.trim() ? (
-                                            <div className={styles.reunionOdJDetail}>
-                                                <strong>Ordre du jour</strong>
-                                                {r.ordreDuJour.trim()}
-                                            </div>
-                                        ) : null}
-                                        <ReunionContenuRichText
-                                            key={r.id}
-                                            editable={false}
-                                            value={r.contenu}
-                                        />
-                                        {peutGererEcritures ? (
-                                            <div className={styles.detailActionsRow}>
-                                                <Button
-                                                    color="secondary"
-                                                    size="sm"
-                                                    outline
-                                                    onClick={() => ouvrirEdition(r)}
-                                                >
-                                                    Modifier
-                                                </Button>
-                                                <Button
-                                                    color="danger"
-                                                    size="sm"
-                                                    outline
-                                                    onClick={() => demanderSuppression(r)}
-                                                >
-                                                    Supprimer
-                                                </Button>
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                ) : null}
-                            </div>
-                        );
-                    })}
+                    {reunionsAffichees.map((r) => (
+                        <ReunionCompteRenduAccordionItem
+                            key={r.id}
+                            reunion={r}
+                            ouvert={reunionDeployeeId === r.id}
+                            dateFormatee={formaterDateReunionCourte(r.date)}
+                            sejourPrintContext={sejourPrintContext}
+                            peutGererEcritures={peutGererEcritures}
+                            onToggle={() => basculerPanneau(r.id)}
+                            onModifier={() => ouvrirEdition(r)}
+                            onSupprimer={() => demanderSuppression(r)}
+                        />
+                    ))}
                 </div>
             ) : null}
 

@@ -1,0 +1,14 @@
+.triggerIcon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 0 !important;
+    width: 2.25rem;
+    height: calc(1.5em + 0.75rem);
+    padding: 0 !important;
+    line-height: 1;
+
+    svg {
+        display: block;
+    }
+}

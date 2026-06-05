@@ -1,4 +1,5 @@
 @use "./variables" as *;
+@use "./print/printGlobals";
 
 html {
   --site-header-height: 4.5rem;
