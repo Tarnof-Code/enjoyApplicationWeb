@@ -383,6 +383,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 canPrint
                 printDocumentTitle="Liste des enfants"
                 printHeaderContext={buildPrintDocumentContext("Liste des enfants")}
+                tableTopMargin
             />
 
             {peutGererEnfants && chambreModalEnfant && (

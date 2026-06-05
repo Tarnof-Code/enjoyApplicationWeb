@@ -4,19 +4,35 @@ import type { PrintPageFormat } from "./types";
 
 /** Marge interne du contenu lorsque @page margin vaut 0 (évite URL / numéro navigateur) */
 export const PRINT_CONTENT_PADDING = "12mm";
+export const PRINT_RUNNING_HEADER_HEIGHT = "12mm";
 
-function buildPageRules(format: PrintPageFormat, runningHeaderLabel?: string): string {
-    const size = format === "landscape-a4" ? "size: A4 landscape;" : "size: A4;";
+export type RunningHeaderMode = "margin-box" | "fixed";
+
+function buildPageRules(
+    format: PrintPageFormat | undefined,
+    runningHeaderLabel?: string,
+    runningHeaderMode?: RunningHeaderMode,
+): string {
+    /** Sans `size` explicite : le dialogue d'impression (portrait / paysage) reste effectif. */
+    const sizeDecl =
+        format === "landscape-a4"
+            ? "size: A4 landscape;"
+            : format === "portrait-a4"
+              ? "size: A4;"
+              : "";
 
     if (runningHeaderLabel == null || runningHeaderLabel === "") {
-        return `@page { ${size} margin: 0; }`;
+        return `@page { ${sizeDecl} margin: 0; }`;
+    }
+
+    if (runningHeaderMode === "fixed") {
+        return `@page { ${sizeDecl} margin: 0; }`;
     }
 
     const title = escapeCssContent(runningHeaderLabel);
     return `
         @page {
-            ${size}
-            /* marge basse à 0 : pas de bandeau ni pied de page navigateur (URL, date…) */
+            ${sizeDecl}
             margin: 14mm 12mm 0 12mm;
             @top-left {
                 content: "${title} — " counter(page) " / " counter(pages);
@@ -37,6 +53,28 @@ function buildPageRules(format: PrintPageFormat, runningHeaderLabel?: string): s
     `;
 }
 
+function buildFixedRunningHeaderStyles(): string {
+    return `
+        .${c.withRunningHeader} {
+            padding: calc(${PRINT_RUNNING_HEADER_HEIGHT} + 4mm) ${PRINT_CONTENT_PADDING} ${PRINT_CONTENT_PADDING} ${PRINT_CONTENT_PADDING} !important;
+        }
+        .${c.runningHeader} {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 2.5mm ${PRINT_CONTENT_PADDING} 2mm;
+            font-size: 9pt;
+            line-height: 1.3;
+            font-weight: 600;
+            color: #333;
+            background: #fff;
+            border-bottom: 1px solid #ccc;
+        }
+    `;
+}
+
 /**
  * Construit la feuille de styles injectée dans la fenêtre d'impression react-to-print.
  * Les classes globales `enjoy-print-*` sont définies ici pour garantir le rendu hors écran.
@@ -44,15 +82,17 @@ function buildPageRules(format: PrintPageFormat, runningHeaderLabel?: string): s
 export function buildPrintPageStyle(options?: {
     format?: PrintPageFormat;
     extra?: string;
-    /** Titre répété en marge haute avec numérotation (Chrome 131+, Safari 18.2+) */
     runningHeaderLabel?: string;
+    /** `margin-box` (Chromium / Safari) ou `fixed` (Firefox) */
+    runningHeaderMode?: RunningHeaderMode;
 }): string {
-    const format = options?.format ?? "portrait-a4";
     const hasRunningHeader =
         options?.runningHeaderLabel != null && options.runningHeaderLabel !== "";
+    const fixedRunningHeader = options?.runningHeaderMode === "fixed";
 
     return `
-        ${buildPageRules(format, options?.runningHeaderLabel)}
+        ${buildPageRules(options?.format, options?.runningHeaderLabel, options?.runningHeaderMode)}
+        ${fixedRunningHeader ? buildFixedRunningHeaderStyles() : ""}
         html, body {
             margin: 0 !important;
             padding: 0 !important;

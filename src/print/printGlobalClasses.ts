@@ -13,6 +13,9 @@ export const PRINT_GLOBAL_CLASS = {
     documentLabel: "enjoy-print-document-label",
     documentMeta: "enjoy-print-document-meta",
     documentMetaRow: "enjoy-print-document-meta-row",
+    runningHeader: "enjoy-print-running-header",
+    runningHeaderTitle: "enjoy-print-running-header-title",
+    withRunningHeader: "enjoy-print-with-running-header",
     /** Tableau liste dédié à l'impression (pagination multi-pages) */
     listePrintTable: "enjoy-liste-print-table",
 } as const;

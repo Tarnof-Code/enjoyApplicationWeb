@@ -20,7 +20,7 @@
 
 .page_headToolbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
@@ -77,9 +77,18 @@
   }
 }
 
+.printTrigger {
+  margin-top: 0.5rem;
+}
+
 .table_container {
   max-height: 73vh;
   overflow-y: auto;
+
+  &TopMargin {
+    margin-top: 1.25rem;
+  }
+
   thead tr {
     position: sticky;
     top: 0;

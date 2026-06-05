@@ -28,7 +28,7 @@ export const ReunionCompteRenduAccordionItem: FC<ReunionCompteRenduAccordionItem
     onModifier,
     onSupprimer,
 }) => {
-    const { contentRef, print } = usePrintContent({
+    const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
         documentTitle: `Compte rendu réunion — ${dateFormatee}`,
         runningHeaderLabel: `Compte rendu — ${dateFormatee}`,
     });
@@ -57,7 +57,10 @@ export const ReunionCompteRenduAccordionItem: FC<ReunionCompteRenduAccordionItem
             </button>
             {ouvert ? (
                 <div className={styles.reunionBody}>
-                    <PrintContentRoot contentRef={contentRef}>
+                    <PrintContentRoot
+                        contentRef={contentRef}
+                        fixedRunningHeaderLabel={fixedRunningHeaderLabel}
+                    >
                         {odj ? (
                             <div className={styles.reunionOdJDetail}>
                                 <strong>Ordre du jour</strong>

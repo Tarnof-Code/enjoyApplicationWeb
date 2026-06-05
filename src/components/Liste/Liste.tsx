@@ -79,6 +79,8 @@ export interface ListeProps<T = any> {
   printDocumentTitle?: string;
   /** En-tête séjour / titre document (complété par effectifs et filtres actifs) */
   printHeaderContext?: PrintDocumentContext;
+  /** Marge au-dessus du tableau (listes séjour : enfants, équipe) */
+  tableTopMargin?: boolean;
 }
 
 const checkValidityFilter = (itemValue: string | number | undefined, filterValue: string): boolean => {
@@ -192,11 +194,12 @@ const Liste = <T extends Record<string, any>>({
   canPrint = false,
   printDocumentTitle,
   printHeaderContext,
+  tableTopMargin = false,
 }: ListeProps<T>) => {
 
   const revalidator = useRevalidator();
 
-  const { contentRef, print } = usePrintContent({
+  const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
     documentTitle: printDocumentTitle ?? title,
     extraPageStyle: canPrint ? PRINT_STYLE_PRESETS.listeTable : undefined,
     runningHeaderLabel: canPrint ? (printHeaderContext?.documentLabel ?? title) : undefined,
@@ -549,6 +552,9 @@ const Liste = <T extends Record<string, any>>({
                     onPrint={print}
                     label="Imprimer la liste filtrée"
                     buttonText="Imprimer"
+                    className={
+                      toggleableColumns.length > 0 ? styles.printTrigger : undefined
+                    }
                   />
                 ) : null}
               </div>
@@ -557,7 +563,10 @@ const Liste = <T extends Record<string, any>>({
         </Col>
       </Row>
 
-      <PrintContentRoot contentRef={contentRef}>
+      <PrintContentRoot
+        contentRef={contentRef}
+        fixedRunningHeaderLabel={fixedRunningHeaderLabel}
+      >
         {canPrint ? (
           <PrintDocumentHeader context={{ meta: printHeaderComplet.meta }} />
         ) : null}
@@ -597,7 +606,15 @@ const Liste = <T extends Record<string, any>>({
           </table>
         ) : null}
 
-      <div className={`${styles.table_container}${canPrint ? ` ${PRINT_GLOBAL_CLASS.noPrint}` : ""}`}>
+      <div
+        className={[
+          styles.table_container,
+          tableTopMargin ? styles.table_containerTopMargin : undefined,
+          canPrint ? PRINT_GLOBAL_CLASS.noPrint : undefined,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <table className="table align-middle">
           <thead className={styles.enTete}>
             <tr>

@@ -19,6 +19,10 @@ import {
 } from "../../helpers/chambreOccupantsUtils";
 import { RoleSejour } from "../../enums/RoleSejour";
 import { RoleSysteme, RoleSystemeLabels } from "../../enums/RoleSysteme";
+import {
+    buildPrintDocumentContext,
+    PRINT_GLOBAL_CLASS,
+} from "../../print";
 import styles from "./TableauUtilisateurs.module.scss";
 import listeStyles from "./Liste.module.scss";
 
@@ -245,6 +249,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   });
 
   const roleSejourColumn: ColumnConfig = createColumn('roleSejour', 'Rôle', 'custom', {
+    toggleable: true,
     filterType: 'select',
     className: styles.colRole,
     filterOptions: [
@@ -256,6 +261,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
       { value: RoleSejour.AUTRE, label: 'Autre' },
     ],
     render: (value) => libelleRoleSejourCourt(value as string),
+    printValue: (item) => libelleRoleSejourCourt(item.roleSejour as string),
   });
 
   const validiteColumn: ColumnConfig = createColumn('dateExpirationCompte', 'Validité', 'date', {
@@ -271,6 +277,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   });
 
   const chambreColumn: ColumnConfig = createColumn("chambre", "Chambre", "text", {
+    toggleable: true,
     filterable: true,
     className: styles.colChambre,
     render: (_, item) => {
@@ -283,7 +290,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         <span className={styles.groupeCell}>
           <span>{label}</span>
           <FontAwesomeIcon
-            className={`icone_crayon_edit ${styles.groupeEditIcon}`}
+            className={`icone_crayon_edit ${styles.groupeEditIcon} ${PRINT_GLOBAL_CLASS.noPrint}`}
             icon={faPencilAlt}
             onClick={() => openChambreModal(item)}
             title="Gérer la chambre"
@@ -291,9 +298,14 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         </span>
       );
     },
+    printValue: (item) => {
+      const tokenId = item.tokenId as string | undefined;
+      return tokenId ? getIdentifiantChambrePourMembre(tokenId) : "—";
+    },
   });
 
   const groupesReferentColumn: ColumnConfig = createColumn('groupesReferent', 'Groupe(s)', 'text', {
+    toggleable: true,
     filterable: true,
     className: styles.colGroupes,
     render: (_, item) => {
@@ -308,13 +320,17 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         <span className={styles.groupeCell}>
           <span className={styles.groupeCellContent}>{contenu}</span>
           <FontAwesomeIcon
-            className={`icone_crayon_edit ${styles.groupeEditIcon}`}
+            className={`icone_crayon_edit ${styles.groupeEditIcon} ${PRINT_GLOBAL_CLASS.noPrint}`}
             icon={faPencilAlt}
             onClick={() => openGroupeModal(item)}
             title="Gérer les groupes référents"
           />
         </span>
       );
+    },
+    printValue: (item) => {
+      const tokenId = item.tokenId as string | undefined;
+      return tokenId ? texteFiltreGroupes(getGroupesPourReferent(tokenId)) : "—";
     },
   });
 
@@ -346,13 +362,16 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         createColumn('nom', 'Nom', 'text', { className: styles.colNom }),
         createColumn('prenom', 'Prénom', 'text', { className: styles.colPrenom }),
         createColumn('age', 'Age', 'custom', {
+          toggleable: true,
           filterType: 'number',
           filterPlaceholder: 'Min.',
           className: listeStyles.colAge,
           render: (_, item) => `${calculerAge(item.dateNaissance)} ans`,
+          printValue: (item) => `${calculerAge(item.dateNaissance)} ans`,
         }),
         roleSejourColumn,
         createColumn('genre', 'Genre', 'select', {
+          toggleable: true,
           className: styles.colGenre,
           filterOptions: [
             { value: '', label: 'Tous' },
@@ -360,8 +379,8 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
             { value: 'Féminin', label: 'Féminin' },
           ],
         }),
-        createColumn('email', 'Email', 'email', { className: styles.colEmail }),
-        createColumn('telephone', 'Téléphone', 'tel', { className: styles.colTelephone }),
+        createColumn('email', 'Email', 'email', { toggleable: true, className: styles.colEmail }),
+        createColumn('telephone', 'Téléphone', 'tel', { toggleable: true, className: styles.colTelephone }),
         ...(afficherColonneGroupes ? [groupesReferentColumn] : []),
         ...(afficherColonneChambres ? [chambreColumn] : []),
       ]
@@ -401,6 +420,12 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         formComponent={FormWithProps}
         addButtonText="Ajouter un membre"
         deleteConfirmationMessage={deleteConfirmationMessage}
+        canPrint={sejourId != null}
+        printDocumentTitle="Membres de l'équipe"
+        printHeaderContext={
+          sejourId != null ? buildPrintDocumentContext("Membres de l'équipe") : undefined
+        }
+        tableTopMargin={sejourId != null}
       />
 
       {canEdit && afficherColonneChambres && chambreModalMembre && (

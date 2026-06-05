@@ -11,6 +11,7 @@ export type PrintDocumentContext = {
 
 export type UsePrintContentOptions = {
     documentTitle: string;
+    /** Force l'orientation en CSS ; si absent, le dialogue d'impression du navigateur s'applique. */
     format?: PrintPageFormat;
     /** Titre répété en marge haute à l'impression — ex. « Liste des enfants — 1/3 » */
     runningHeaderLabel?: string;
