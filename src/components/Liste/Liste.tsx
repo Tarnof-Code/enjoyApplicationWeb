@@ -45,6 +45,8 @@ export interface ColumnConfig {
   filterPlaceholder?: string;
   /** Valeur texte pour l'impression (sans icônes ni composants interactifs) */
   printValue?: (item: any) => string;
+  /** Colonne masquable via case à cocher dans l'en-tête */
+  toggleable?: boolean;
 }
 
 export interface FilterState {
@@ -269,6 +271,36 @@ const Liste = <T extends Record<string, any>>({
     setFilters(prev => ({ ...prev, [field]: "" }));
   };
 
+  const [hiddenColumnKeys, setHiddenColumnKeys] = useState<Set<string>>(() => new Set());
+
+  const toggleableColumns = useMemo(
+    () => columns.filter((column) => column.toggleable),
+    [columns],
+  );
+
+  const visibleColumns = useMemo(
+    () => columns.filter((column) => !hiddenColumnKeys.has(column.key)),
+    [columns, hiddenColumnKeys],
+  );
+
+  const toggleColumnVisibility = (columnKey: string, visible: boolean) => {
+    setHiddenColumnKeys((prev) => {
+      const next = new Set(prev);
+      if (visible) {
+        next.delete(columnKey);
+      } else {
+        next.add(columnKey);
+      }
+      return next;
+    });
+    if (!visible) {
+      const filterKey = `${columnKey}Filter`;
+      if (filters[filterKey]) {
+        updateFilter(filterKey, "");
+      }
+    }
+  };
+
   // Fonction pour effacer tous les filtres
   const clearAllFilters = () => {
     const clearedFilters: FilterState = {};
@@ -370,7 +402,7 @@ const Liste = <T extends Record<string, any>>({
     });
   })();
 
-  const filtresActifsLibelle = libelleFiltresListeActifs(filters, columns);
+  const filtresActifsLibelle = libelleFiltresListeActifs(filters, visibleColumns);
 
   const printHeaderComplet = useMemo((): PrintDocumentContext => {
     const meta: { label: string; value: string }[] = [
@@ -458,7 +490,7 @@ const Liste = <T extends Record<string, any>>({
           </div>
         </td>
 
-        {columns.map(column => (
+        {visibleColumns.map(column => (
           <td key={column.key} colSpan={column.colSpan || 1} className={column.className}>
             {renderCell(column, item, filteredIndex)}
           </td>
@@ -476,36 +508,53 @@ const Liste = <T extends Record<string, any>>({
       {errorMessage && <p className="errorMessage">{errorMessage}</p>}
       
       <Row className={`${styles.page_head} ${PRINT_GLOBAL_CLASS.noPrint} align-items-center`}>
-        <Col xs={6} lg={3}>
+        <Col xs={12} sm={6} lg={3}>
           <h1 className="page-title">{title}</h1>
         </Col>
-        <Col xs={3} lg={2}>
-          <Button 
-            color="secondary" 
-          
-            onClick={clearAllFilters}
-            disabled={Object.values(filters).every(value => !value)}
-          >
-            Effacer filtres
-          </Button>
+        <Col xs={12} lg={9} className={styles.page_headToolbarCol}>
+          <div className={styles.page_headToolbar}>
+            <div className={styles.page_headButtons}>
+              <Button
+                color="secondary"
+                onClick={clearAllFilters}
+                disabled={Object.values(filters).every(value => !value)}
+              >
+                Effacer filtres
+              </Button>
+              {canAdd && FormComponent ? (
+                <Button color="success" onClick={openAddModal}>
+                  {addButtonText}
+                </Button>
+              ) : null}
+            </div>
+            {toggleableColumns.length > 0 || canPrint ? (
+              <div className={styles.page_headToolbarRight}>
+                {toggleableColumns.length > 0 ? (
+                  <div className={styles.columnToggles} aria-label="Colonnes affichées">
+                    {toggleableColumns.map((column) => (
+                      <label key={column.key} className={styles.columnToggle}>
+                        <input
+                          type="checkbox"
+                          checked={!hiddenColumnKeys.has(column.key)}
+                          onChange={(e) => toggleColumnVisibility(column.key, e.target.checked)}
+                        />
+                        {column.label}
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+                {canPrint ? (
+                  <PrintTrigger
+                    variant="button"
+                    onPrint={print}
+                    label="Imprimer la liste filtrée"
+                    buttonText="Imprimer"
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </Col>
-        {canAdd && FormComponent && (
-          <Col xs={3} lg={2}>
-            <Button color="success" onClick={openAddModal}>
-              {addButtonText}
-            </Button>
-          </Col>
-        )}
-        {canPrint ? (
-          <Col xs="auto" className="ms-auto d-flex align-items-center">
-            <PrintTrigger
-              variant="button"
-              onPrint={print}
-              label="Imprimer la liste filtrée"
-              buttonText="Imprimer"
-            />
-          </Col>
-        ) : null}
       </Row>
 
       <PrintContentRoot contentRef={contentRef}>
@@ -517,7 +566,7 @@ const Liste = <T extends Record<string, any>>({
           <table className={`table align-middle ${PRINT_GLOBAL_CLASS.listePrintTable} ${PRINT_GLOBAL_CLASS.only}`}>
             <thead>
               <tr>
-                {columns.map((column) => (
+                {visibleColumns.map((column) => (
                   <th key={column.key} colSpan={column.colSpan || 1}>
                     {column.label}
                   </th>
@@ -527,7 +576,7 @@ const Liste = <T extends Record<string, any>>({
             <tbody>
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="text-center">
+                  <td colSpan={visibleColumns.length} className="text-center">
                     {!data || data.length === 0
                       ? "Aucune donnée disponible"
                       : "Aucun résultat trouvé pour les filtres appliqués"}
@@ -536,7 +585,7 @@ const Liste = <T extends Record<string, any>>({
               ) : (
                 filteredData.map((item, index) => (
                   <tr key={item.id ?? `print-row-${index}`}>
-                    {columns.map((column) => (
+                    {visibleColumns.map((column) => (
                       <td key={column.key} colSpan={column.colSpan || 1}>
                         {renderPrintCell(column, item)}
                       </td>
@@ -553,7 +602,7 @@ const Liste = <T extends Record<string, any>>({
           <thead className={styles.enTete}>
             <tr>
               <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
-              {columns.map(column => (
+              {visibleColumns.map(column => (
                 <th key={column.key} colSpan={column.colSpan || 1} className={column.className}>
                   {column.label}
                 </th>
@@ -563,7 +612,7 @@ const Liste = <T extends Record<string, any>>({
             {/* Ligne des filtres */}
             <tr className="enjoy-liste-filter-row">
               <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
-              {columns.map(column => (
+              {visibleColumns.map(column => (
                 <th key={`filter-${column.key}`} colSpan={column.colSpan || 1} className={column.className}>
                   {column.filterable && (
                     <div className={styles.filterContainer}>
@@ -629,7 +678,7 @@ const Liste = <T extends Record<string, any>>({
           <tbody>
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 1} className="text-center py-4">
+                <td colSpan={visibleColumns.length + 1} className="text-center py-4">
                   <p className="mb-0 text-muted">
                     {!data || data.length === 0 
                       ? "Aucune donnée disponible" 

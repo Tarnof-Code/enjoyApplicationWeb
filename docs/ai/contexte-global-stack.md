@@ -16,6 +16,7 @@ Application Web de gestion de séjours (Enjoy).
 - Détail séjour : **`Pages/_Sejours/DetailsSejour/`** — `DetailsSejourOverview.tsx`, `DetailsSejourActivites.tsx`, **`DetailsSejourChambres.tsx`**, **`DetailsSejourParametrage.tsx`**, `SejourDetailOutlet.tsx`, `detailsSejourLoader.ts`, styles `DetailsSejour.module.scss` ; composant accordéon partagé **`components/DetailsSejour/DetailsSejourAccordionItem.tsx`** (styles importés depuis `DetailsSejour.module.scss`).
 - Helpers dans `helpers/`, types dans `types/`, services dans `services/`.
 - Composants de liste génériques dans `components/Liste/`.
+- Impression navigateur : module **`src/print/`** (`usePrintContent`, `PrintTrigger`, classes globales **`PRINT_GLOBAL_CLASS`**) — consommé par **`Liste.tsx`** et extensible à d’autres écrans.
 
 Les règles obligatoires courtes (langue, lint, périmètre) restent dans [`.cursor/rules/`](../../.cursor/rules/).
 

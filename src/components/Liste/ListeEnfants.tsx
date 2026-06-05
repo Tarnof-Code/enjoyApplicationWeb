@@ -28,6 +28,12 @@ import listeStyles from "./Liste.module.scss";
 
 import styles from "./ListeEnfants.module.scss";
 
+function libelleGenreEnfant(genre: string): string {
+    if (genre === "Masculin") return "Garçon";
+    if (genre === "Féminin") return "Fille";
+    return genre;
+}
+
 export interface ListeEnfantsProps {
     enfants: EnfantDto[];
     groupes?: GroupeDto[];
@@ -209,13 +215,17 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
         createColumn('nom', 'Nom'),
         createColumn('prenom', 'Prénom'),
         createColumn('genre', 'Genre', 'select', {
+            toggleable: true,
             filterOptions: [
                 { value: '', label: 'Tous' },
-                { value: 'Masculin', label: 'Masculin' },
-                { value: 'Féminin', label: 'Féminin' }
-            ]
+                { value: 'Masculin', label: 'Garçon' },
+                { value: 'Féminin', label: 'Fille' }
+            ],
+            render: (value) => libelleGenreEnfant(value),
+            printValue: (item) => libelleGenreEnfant(item.genre),
         }),
         createColumn('niveauScolaire', 'Niveau scolaire', 'text', {
+            toggleable: true,
             render: (value) => {
                 const niveau = value as keyof typeof NiveauScolaireLabels;
                 return NiveauScolaireLabels[niveau] || value;
@@ -226,10 +236,12 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
             },
         }),
         createColumn('dateNaissance', 'Date de naissance', 'date', {
+            toggleable: true,
             render: (value) => formaterDate(new Date(value)),
             printValue: (item) => formaterDate(new Date(item.dateNaissance)),
         }),
         createColumn('age', 'Âge', 'custom', {
+            toggleable: true,
             filterType: 'number',
             filterPlaceholder: 'Min.',
             className: listeStyles.colAge,
@@ -239,6 +251,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
         ...(groupes.length > 0
             ? [
                 createColumn('groupes', 'Groupe(s)', 'text', {
+                    toggleable: true,
                     filterable: true,
                     render: (_, item) => {
                         const contenu = (
@@ -265,6 +278,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
         ...(chambresEnfants.length > 0
             ? [
                 createColumn("chambre", "Chambre", "text", {
+                    toggleable: true,
                     filterable: true,
                     render: (_, item) => {
                         const label = getIdentifiantChambrePourEnfant(item.id);
