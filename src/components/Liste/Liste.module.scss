@@ -241,16 +241,17 @@
 
 .actions_cell {
   vertical-align: middle !important;
-  width: 1%;
+  width: 6.5rem;
   min-width: 6.5rem;
+  max-width: 6.5rem;
   white-space: nowrap;
 }
 
 .colAge {
   /* Largeur fixe : évite que la colonne se compresse quand le bouton × apparaît */
-  width: 5.5rem;
-  min-width: 5.5rem;
-  max-width: 5.5rem;
+  width: 4.5rem;
+  min-width: 4.5rem;
+  max-width: 4.5rem;
   white-space: nowrap;
 
   .filterContainer {

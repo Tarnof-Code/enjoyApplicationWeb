@@ -1,3 +1,48 @@
+.colNom {
+    min-width: 7.5rem;
+}
+
+.colPrenom {
+    min-width: 7rem;
+}
+
+.colGenre {
+    width: 6.5rem;
+    min-width: 6.5rem;
+    max-width: 6.5rem;
+    white-space: nowrap;
+}
+
+.colNiveauScolaire {
+    width: 6.75rem;
+    min-width: 6.75rem;
+    max-width: 6.75rem;
+}
+
+.colDateNaissance {
+    width: 7.25rem;
+    min-width: 7.25rem;
+    max-width: 7.25rem;
+}
+
+.colGroupes {
+    min-width: 11rem;
+}
+
+.colChambre {
+    min-width: 7.5rem;
+}
+
+/**
+ * Vue écran : largeur auto. Les colonnes genre/niveau/date/âge/actions ont une
+ * largeur figée explicite ; nom/prénom/groupes/chambre n’ont qu’un min-width et
+ * absorbent l’espace restant. Quand la fenêtre rétrécit, les colonnes gardent
+ * leur largeur et une barre de défilement horizontale apparaît.
+ */
+.tableListeEnfants {
+    width: 100%;
+}
+
 .actionsContainer {
     display: flex;
     gap: 1rem;

@@ -32,13 +32,18 @@ import {
 } from "../../print";
 import { ListePrintActions } from "./ListePrintActions";
 import { ListePrintTable } from "./ListePrintTable";
+import { CheckboxFilterDropdown } from "./CheckboxFilterDropdown";
+import {
+  parseMultiselectFilterValue,
+  stringifyMultiselectFilterValue,
+} from "../../helpers/multiselectFilter";
 
 export interface ColumnConfig {
   key: string;
   label: string;
   type: 'text' | 'number' | 'date' | 'select' | 'email' | 'tel' | 'custom';
   filterable?: boolean;
-  filterType?: 'text' | 'select' | 'number' | 'date';
+  filterType?: 'text' | 'select' | 'number' | 'date' | 'multiselect';
   filterOptions?: { value: string; label: string }[];
   render?: (value: any, item: any, index: number) => React.ReactNode;
   colSpan?: number;
@@ -84,6 +89,8 @@ export interface ListeProps<T = any> {
   printHeaderContext?: PrintDocumentContext;
   /** Marge au-dessus du tableau (listes séjour : enfants, équipe) */
   tableTopMargin?: boolean;
+  /** Classe CSS additionnelle sur le tableau écran (hors impression) */
+  tableClassName?: string;
   /** Impression avec sélection manuelle des lignes et titre personnalisé */
   canPrintCustomSelection?: boolean;
   /** Libellé affiché dans la modale de sélection (défaut : prénom + nom si disponibles) */
@@ -117,6 +124,11 @@ const applyFilters = <T extends Record<string, any>>(
       return column.key === 'dateExpirationCompte' 
         ? checkValidityFilter(itemValue, filterValue)
         : itemValue === filterValue;
+    case 'multiselect': {
+      const selected = parseMultiselectFilterValue(filterValue);
+      if (selected.size === 0) return true;
+      return selected.has(String(itemValue ?? ""));
+    }
     case 'number':
       if (column.key === 'age' && item.dateNaissance) {
         return calculerAge(item.dateNaissance) >= parseInt(filterValue);
@@ -204,6 +216,7 @@ const Liste = <T extends Record<string, any>>({
   printDocumentTitle,
   printHeaderContext,
   tableTopMargin = false,
+  tableClassName,
   canPrintCustomSelection = false,
   printRowLabel,
   printRowKey,
@@ -625,6 +638,7 @@ const Liste = <T extends Record<string, any>>({
           className={[
             "table",
             "align-middle",
+            tableClassName,
             canPrint ? PRINT_GLOBAL_CLASS.noPrint : undefined,
           ]
             .filter(Boolean)
@@ -632,7 +646,7 @@ const Liste = <T extends Record<string, any>>({
         >
           <thead className={styles.enTete}>
             <tr>
-              <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
+              <th className={`${styles.actions_cell} ${PRINT_GLOBAL_CLASS.noPrint}`}></th>
               {visibleColumns.map(column => (
                 <th key={column.key} colSpan={column.colSpan || 1} className={column.className}>
                   {column.label}
@@ -649,7 +663,7 @@ const Liste = <T extends Record<string, any>>({
                 .filter(Boolean)
                 .join(" ")}
             >
-              <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
+              <th className={`${styles.actions_cell} ${PRINT_GLOBAL_CLASS.noPrint}`}></th>
               {visibleColumns.map(column => (
                 <th key={`filter-${column.key}`} colSpan={column.colSpan || 1} className={column.className}>
                   {column.filterable && (
@@ -665,6 +679,22 @@ const Liste = <T extends Record<string, any>>({
                             </option>
                           ))}
                         </select>
+                        ) : column.filterType === 'multiselect' ? (
+                          <CheckboxFilterDropdown
+                            compact
+                            options={column.filterOptions ?? []}
+                            selectedValues={parseMultiselectFilterValue(
+                              filters[`${column.key}Filter`] || "",
+                            )}
+                            onSelectedValuesChange={(next) =>
+                              updateFilter(
+                                `${column.key}Filter`,
+                                stringifyMultiselectFilterValue(next),
+                              )
+                            }
+                            ariaLabel={`Filtrer ${column.label.toLowerCase()}`}
+                            summaryWhenEmpty="Tous"
+                          />
                         ) : column.filterType === 'number' ? (
                           <input
                             placeholder={
@@ -688,7 +718,7 @@ const Liste = <T extends Record<string, any>>({
                           <FontAwesomeIcon icon={faSearch} className={styles.filterIcon} />
                           <input
                             type="text"
-                            placeholder={column.label}
+                            placeholder={column.filterPlaceholder ?? column.label}
                             value={filters[`${column.key}Filter`] || ""}
                             onChange={(e) => updateFilter(`${column.key}Filter`, e.target.value)}
                             autoComplete="off"
@@ -696,7 +726,9 @@ const Liste = <T extends Record<string, any>>({
                           />
                         </div>
                       )}
-                      {filters[`${column.key}Filter`] && column.filterType !== 'select' && (
+                      {filters[`${column.key}Filter`] &&
+                        column.filterType !== 'select' &&
+                        column.filterType !== 'multiselect' && (
                         <button
                           type="button"
                           className={styles.clearFilterButton}

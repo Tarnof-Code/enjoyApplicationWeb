@@ -279,6 +279,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
   const chambreColumn: ColumnConfig = createColumn("chambre", "Chambre", "text", {
     toggleable: true,
     filterable: true,
+    filterPlaceholder: "",
     className: styles.colChambre,
     render: (_, item) => {
       const tokenId = item.tokenId as string | undefined;
@@ -426,6 +427,7 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
           sejourId != null ? buildPrintDocumentContext("Membres de l'équipe") : undefined
         }
         tableTopMargin={sejourId != null}
+        tableClassName={sejourId != null ? styles.tableEquipeMembres : undefined}
       />
 
       {canEdit && afficherColonneChambres && chambreModalMembre && (

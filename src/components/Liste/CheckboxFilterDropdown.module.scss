@@ -1,0 +1,133 @@
+@use "../../_variables" as *;
+
+.root {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.rootCompact .btn {
+    min-height: calc(1.5em + 0.375rem + 2px);
+    padding: 0.15rem 0.35rem;
+    font-size: 0.72rem;
+}
+
+.rootCompact .panel {
+    width: max-content;
+    min-width: 100%;
+    max-width: 9.5rem;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    width: 100%;
+    min-height: calc(1.5em + 0.375rem + 2px);
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    background: #fff;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #222;
+    text-align: left;
+    cursor: pointer;
+    line-height: 1.25;
+    box-sizing: border-box;
+
+    &:hover {
+        border-color: $bleu_principal;
+        background: #fafbfc;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $bleu_principal;
+        outline-offset: 1px;
+    }
+}
+
+.btnText {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chevron {
+    flex-shrink: 0;
+    font-size: 0.6rem;
+    color: #666;
+    line-height: 1;
+}
+
+.panel {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    z-index: 70;
+    min-width: 100%;
+    max-height: 14rem;
+    overflow-y: auto;
+    padding: 0.25rem 0;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+.bulk {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0.5rem 0.32rem;
+    border-bottom: 1px solid #e8eaed;
+    margin-bottom: 0.12rem;
+}
+
+.bulkBtn {
+    padding: 0.06rem 0 !important;
+    font-size: 0.75rem !important;
+    min-height: auto !important;
+    line-height: 1.25 !important;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.65rem;
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #222;
+
+    &:hover {
+        background: #f4f6f8;
+    }
+}
+
+.item input[type="checkbox"].checkbox {
+    flex: 0 0 0.95rem !important;
+    width: 0.95rem !important;
+    height: 0.95rem !important;
+    min-width: 0.95rem !important;
+    max-width: 0.95rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer;
+    align-self: center;
+    border-radius: 0.15rem;
+    aspect-ratio: 1;
+}
+
+.itemLabel {
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.25;
+    cursor: pointer;
+    user-select: none;
+}

@@ -1,3 +1,8 @@
+import {
+    libelleResumeMultiselectFilter,
+    parseMultiselectFilterValue,
+} from "../helpers/multiselectFilter";
+
 type ColonneFiltrable = {
     key: string;
     label: string;
@@ -22,6 +27,11 @@ export function libelleFiltresListeActifs(
         if (column.filterType === "select" && column.filterOptions) {
             const opt = column.filterOptions.find((o) => o.value === raw);
             if (opt?.label) libelleValeur = opt.label;
+        } else if (column.filterType === "multiselect" && column.filterOptions) {
+            libelleValeur = libelleResumeMultiselectFilter(
+                column.filterOptions,
+                parseMultiselectFilterValue(raw),
+            );
         }
 
         parties.push(`${column.label} : ${libelleValeur}`);

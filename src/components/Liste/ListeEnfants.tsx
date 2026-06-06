@@ -19,7 +19,7 @@ import calculerAge from "../../helpers/calculerAge";
 import formaterDate from "../../helpers/formaterDate";
 import AddEnfantForm from "../Forms/AddEnfantForm";
 import ImportExcelEnfants from "./ImportExcelEnfants";
-import { NiveauScolaireLabels } from "../../enums/NiveauScolaire";
+import { NiveauScolaire, NiveauScolaireLabels } from "../../enums/NiveauScolaire";
 import {
     buildPrintDocumentContext,
     PRINT_GLOBAL_CLASS,
@@ -27,6 +27,11 @@ import {
 import listeStyles from "./Liste.module.scss";
 
 import styles from "./ListeEnfants.module.scss";
+
+const niveauScolaireFilterOptions = Object.values(NiveauScolaire).map((value) => ({
+    value,
+    label: NiveauScolaireLabels[value],
+}));
 
 function libelleGenreEnfant(genre: string): string {
     if (genre === "Masculin") return "Garçon";
@@ -212,10 +217,11 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
     };
 
     const columns: ColumnConfig[] = [
-        createColumn('nom', 'Nom'),
-        createColumn('prenom', 'Prénom'),
+        createColumn('nom', 'Nom', 'text', { className: styles.colNom }),
+        createColumn('prenom', 'Prénom', 'text', { className: styles.colPrenom }),
         createColumn('genre', 'Genre', 'select', {
             toggleable: true,
+            className: styles.colGenre,
             filterOptions: [
                 { value: '', label: 'Tous' },
                 { value: 'Masculin', label: 'Garçon' },
@@ -226,6 +232,9 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
         }),
         createColumn('niveauScolaire', 'Niveau scolaire', 'text', {
             toggleable: true,
+            filterType: 'multiselect',
+            filterOptions: niveauScolaireFilterOptions,
+            className: styles.colNiveauScolaire,
             render: (value) => {
                 const niveau = value as keyof typeof NiveauScolaireLabels;
                 return NiveauScolaireLabels[niveau] || value;
@@ -237,6 +246,8 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
         }),
         createColumn('dateNaissance', 'Date de naissance', 'date', {
             toggleable: true,
+            filterable: false,
+            className: styles.colDateNaissance,
             render: (value) => formaterDate(new Date(value)),
             printValue: (item) => formaterDate(new Date(item.dateNaissance)),
         }),
@@ -253,6 +264,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 createColumn('groupes', 'Groupe(s)', 'text', {
                     toggleable: true,
                     filterable: true,
+                    className: styles.colGroupes,
                     render: (_, item) => {
                         const contenu = (
                             <AffichageGroupesListe groupes={getGroupesPourEnfant(item.id)} />
@@ -280,6 +292,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 createColumn("chambre", "Chambre", "text", {
                     toggleable: true,
                     filterable: true,
+                    className: styles.colChambre,
                     render: (_, item) => {
                         const label = getIdentifiantChambrePourEnfant(item.id);
                         if (!peutGererEnfants) {
@@ -387,6 +400,7 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 printRowLabel={(enfant) => `${enfant.prenom} ${enfant.nom}`}
                 printRowKey={(enfant) => enfant.id}
                 tableTopMargin
+                tableClassName={styles.tableListeEnfants}
             />
 
             {peutGererEnfants && chambreModalEnfant && (

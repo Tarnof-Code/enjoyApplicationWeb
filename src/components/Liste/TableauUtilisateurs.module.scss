@@ -1,44 +1,55 @@
 .colNom {
     min-width: 7.5rem;
-    width: 9%;
 }
 
 .colPrenom {
     min-width: 7rem;
-    width: 8%;
 }
 
 .colRole {
-    min-width: 4.75rem;
+    width: 5.75rem;
+    min-width: 5.75rem;
     max-width: 5.75rem;
     white-space: nowrap;
     text-align: center;
 }
 
 .colGenre {
-    min-width: 5.5rem;
+    width: 6.75rem;
+    min-width: 6.75rem;
     max-width: 6.75rem;
     white-space: nowrap;
 }
 
+/**
+ * Vue écran : largeur auto. Les colonnes âge/rôle/genre/actions ont une largeur
+ * figée explicite (elles ne s’étendent pas) ; les colonnes nom/prénom/groupes/
+ * chambre n’ont qu’un min-width et absorbent l’espace restant. L’email reste sur
+ * une seule ligne et dimensionne sa colonne d’après son contenu.
+ */
+.tableEquipeMembres {
+    width: 100%;
+}
+
 .colEmail {
     min-width: 9rem;
-    width: 14%;
+    white-space: nowrap;
 }
 
 .colTelephone {
     min-width: 6.5rem;
-    width: 9%;
+    white-space: nowrap;
 }
 
 .colGroupes {
-    min-width: 11rem;
-    width: 13%;
+    min-width: 8rem;
 }
 
 .colChambre {
-    min-width: 7.5rem;
-    width: 9%;
+    width: 5.5rem;
+    min-width: 5.5rem;
+    max-width: 5.5rem;
+    white-space: nowrap;
 }
 
 .groupeCell {
