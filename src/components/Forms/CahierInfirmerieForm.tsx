@@ -590,7 +590,7 @@ const CahierInfirmerieForm: React.FC<CahierInfirmerieFormProps> = ({
 
       <FormGroup>
         <Label for="cahier-soigneur" className={classTitreChamp}>
-          Soigneur <AstChampObligatoire />
+          Soigné(e) par <AstChampObligatoire />
         </Label>
         <Input
           id="cahier-soigneur"

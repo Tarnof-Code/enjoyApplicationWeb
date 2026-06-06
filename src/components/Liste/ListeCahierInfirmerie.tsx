@@ -14,6 +14,7 @@ import {
 import { getApiErrorMessage } from "../../helpers/axiosError";
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
 import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
+import { normaliserPourRechercheTexte } from "../../helpers/libelleChambre";
 import {
   formatDateHeureHistorique,
   formatNomModificateurHistorique,
@@ -39,6 +40,9 @@ import { ListePrintTable } from "./ListePrintTable";
 import listeStyles from "./Liste.module.scss";
 
 const CAHIER_PRINT_CELL_CENTER = "enjoy-cahier-print-cell-center";
+const CAHIER_PRINT_COL_DATE_HEURE = "enjoy-cahier-print-col-date-heure";
+const CAHIER_PRINT_COL_SOIGNE_PAR = "enjoy-cahier-print-col-soigne-par";
+const CAHIER_COL_SOIGNE_PAR_STYLE = { minWidth: "11rem" };
 
 function libelleTitreImpressionCahier(sejour: SejourDTO): string {
   const debut = formaterDate(sejour.dateDebut);
@@ -47,7 +51,7 @@ function libelleTitreImpressionCahier(sejour: SejourDTO): string {
   return `Cahier d'infirmerie — ${sejour.nom}${periode}`;
 }
 
-const CAHIER_PRINT_EXTRA_STYLE = `${buildListePrintExtraStyle(7)}
+const CAHIER_PRINT_EXTRA_STYLE = `${buildListePrintExtraStyle(8)}
         .enjoy-liste-print-table thead th {
             text-align: center !important;
             vertical-align: middle !important;
@@ -55,6 +59,13 @@ const CAHIER_PRINT_EXTRA_STYLE = `${buildListePrintExtraStyle(7)}
         .${CAHIER_PRINT_CELL_CENTER} {
             text-align: center !important;
             vertical-align: middle !important;
+        }
+        .${CAHIER_PRINT_COL_DATE_HEURE} {
+            white-space: pre-line;
+        }
+        .${CAHIER_PRINT_COL_SOIGNE_PAR} {
+            min-width: 9rem;
+            width: 11%;
         }
         .enjoy-liste-print-table th:last-child,
         .enjoy-liste-print-table td:last-child {
@@ -108,6 +119,35 @@ function libelleAppels(e: CahierInfirmerieEntreeDto): string {
 function libelleSoigneurEntree(e: CahierInfirmerieEntreeDto): string {
   const s = [e.soigneurPrenom, e.soigneurNom].filter(Boolean).join(" ").trim();
   return s || "—";
+}
+
+function formaterDateHeureListeCahier(value: string | number): { date: string; heure: string } {
+  const d = parseDate(value);
+  if (!d) {
+    const fallback = typeof value === "string" ? value : String(value);
+    return { date: fallback, heure: "" };
+  }
+  return {
+    date: d.toLocaleDateString("fr-FR", { dateStyle: "short" }),
+    heure: d.toLocaleTimeString("fr-FR", { timeStyle: "short" }),
+  };
+}
+
+function formaterDateHeureListeCahierTexte(value: string | number): string {
+  const { date, heure } = formaterDateHeureListeCahier(value);
+  return heure ? `${date}\n${heure}` : date;
+}
+
+function renduDateHeureListeCahier(value: string | number): React.ReactNode {
+  const { date, heure } = formaterDateHeureListeCahier(value);
+  if (!heure) return date;
+  return (
+    <>
+      {date}
+      <br />
+      {heure}
+    </>
+  );
 }
 
 /** Jours calendaires inclus entre début et fin de séjour (fuseau local). */
@@ -221,26 +261,26 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
     if (!joursSejourOptions.some((j) => j.ymd === jourFiltre)) setJourFiltre("");
   }, [jourFiltre, joursSejourOptions]);
 
-  const filtreNorm = filtre.trim().toLowerCase();
+  const filtreNorm = useMemo(() => normaliserPourRechercheTexte(filtre), [filtre]);
 
   const lignesFiltrees = useMemo(() => {
     return entrees.filter((e) => {
       if (!entreeCorrespondAuJourLocal(e.dateHeure, jourFiltre)) return false;
       if (!filtreNorm) return true;
-      const parts = [
-        e.description,
-        e.enfantPrenom,
-        e.enfantNom,
-        libelleSoigneurEntree(e),
-        e.localisationCorps ?? "",
-        libelleSoins(e),
-        libelleAppels(e),
-        e.createurPrenom ?? "",
-        e.createurNom ?? "",
-        formatDateHeureHistorique(e.dateHeure),
-      ]
-        .join(" ")
-        .toLowerCase();
+      const parts = normaliserPourRechercheTexte(
+        [
+          e.description,
+          e.enfantPrenom,
+          e.enfantNom,
+          libelleSoigneurEntree(e),
+          e.localisationCorps ?? "",
+          libelleSoins(e),
+          libelleAppels(e),
+          e.createurPrenom ?? "",
+          e.createurNom ?? "",
+          formatDateHeureHistorique(e.dateHeure),
+        ].join(" "),
+      );
       return parts.includes(filtreNorm);
     });
   }, [entrees, filtreNorm, jourFiltre]);
@@ -249,10 +289,10 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
     return [
       {
         key: "dateHeure",
-        label: "Date / heure",
+        label: "Date\nheure",
         type: "text",
-        className: CAHIER_PRINT_CELL_CENTER,
-        printValue: (e: CahierInfirmerieEntreeDto) => formatDateHeureHistorique(e.dateHeure),
+        className: `${CAHIER_PRINT_CELL_CENTER} ${CAHIER_PRINT_COL_DATE_HEURE}`,
+        printValue: (e: CahierInfirmerieEntreeDto) => formaterDateHeureListeCahierTexte(e.dateHeure),
       },
       {
         key: "enfant",
@@ -266,6 +306,13 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
         label: "Description",
         type: "text",
         printValue: (e: CahierInfirmerieEntreeDto) => e.description ?? "",
+      },
+      {
+        key: "localisation",
+        label: "Localisation",
+        type: "text",
+        className: CAHIER_PRINT_CELL_CENTER,
+        printValue: (e: CahierInfirmerieEntreeDto) => e.localisationCorps?.trim() || "—",
       },
       {
         key: "soins",
@@ -282,9 +329,9 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
       },
       {
         key: "soigneur",
-        label: "Soigneur",
+        label: "Soigné(e) par",
         type: "text",
-        className: CAHIER_PRINT_CELL_CENTER,
+        className: `${CAHIER_PRINT_CELL_CENTER} ${CAHIER_PRINT_COL_SOIGNE_PAR}`,
         printValue: libelleSoigneurEntree,
       },
       {
@@ -472,19 +519,26 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
           <thead className={listeStyles.enTete}>
             <tr className="align-middle">
               <th className={listeStyles.actions_cell} aria-label="Actions" />
-              <th className="text-center">Date / heure</th>
+              <th className="text-center">
+                Date
+                <br />
+                heure
+              </th>
               <th className="text-center">Enfant</th>
               <th>Description</th>
+              <th className="text-center">Localisation</th>
               <th className="text-center">Soins</th>
               <th className="text-center">Appels</th>
-              <th className="text-center">Soigneur</th>
+              <th className="text-center" style={CAHIER_COL_SOIGNE_PAR_STYLE}>
+                Soigné(e) par
+              </th>
               <th className="text-center">Auteur</th>
             </tr>
           </thead>
           <tbody>
             {lignesFiltrees.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-4 text-muted">
+                <td colSpan={9} className="text-center py-4 text-muted">
                   {entrees.length === 0
                     ? "Aucune entrée pour ce séjour."
                     : "Aucune entrée ne correspond à ce jour ou à cette recherche."}
@@ -542,7 +596,7 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
                         </span>
                       </div>
                     </td>
-                    <td className="text-center">{formatDateHeureHistorique(e.dateHeure)}</td>
+                    <td className="text-center">{renduDateHeureListeCahier(e.dateHeure)}</td>
                     <td className="text-center">
                       {e.enfantPrenom} {e.enfantNom}
                     </td>
@@ -552,13 +606,18 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
                     >
                       {e.description}
                     </td>
+                    <td className="text-center" style={{ maxWidth: "140px", fontSize: "0.9rem" }}>
+                      {e.localisationCorps?.trim() || "—"}
+                    </td>
                     <td className="text-center" style={{ maxWidth: "200px", fontSize: "0.9rem" }}>
                       {libelleSoins(e)}
                     </td>
                     <td className="text-center" style={{ maxWidth: "160px", fontSize: "0.9rem" }}>
                       {libelleAppels(e)}
                     </td>
-                    <td className="text-center">{libelleSoigneurEntree(e)}</td>
+                    <td className="text-center" style={CAHIER_COL_SOIGNE_PAR_STYLE}>
+                      {libelleSoigneurEntree(e)}
+                    </td>
                     <td className="text-center" style={{ fontSize: "0.9rem" }}>
                       {e.createurPrenom || e.createurNom
                         ? `${e.createurPrenom ?? ""} ${e.createurNom ?? ""}`.trim()
