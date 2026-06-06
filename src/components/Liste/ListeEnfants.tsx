@@ -381,8 +381,11 @@ const ListeEnfants: React.FC<ListeEnfantsProps> = ({
                 deleteConfirmationMessage={(enfant) => `Voulez-vous retirer ${enfant.prenom} ${enfant.nom} de ce séjour ?`}
                 errorMessage={errorMessage}
                 canPrint
+                canPrintCustomSelection
                 printDocumentTitle="Liste des enfants"
                 printHeaderContext={buildPrintDocumentContext("Liste des enfants")}
+                printRowLabel={(enfant) => `${enfant.prenom} ${enfant.nom}`}
+                printRowKey={(enfant) => enfant.id}
                 tableTopMargin
             />
 

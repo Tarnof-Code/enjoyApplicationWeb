@@ -31,6 +31,7 @@ import {
   usePrintContent,
   type PrintDocumentContext,
 } from "../../print";
+import { ListePrintActions } from "./ListePrintActions";
 
 export interface ColumnConfig {
   key: string;
@@ -81,6 +82,12 @@ export interface ListeProps<T = any> {
   printHeaderContext?: PrintDocumentContext;
   /** Marge au-dessus du tableau (listes séjour : enfants, équipe) */
   tableTopMargin?: boolean;
+  /** Impression avec sélection manuelle des lignes et titre personnalisé */
+  canPrintCustomSelection?: boolean;
+  /** Libellé affiché dans la modale de sélection (défaut : prénom + nom si disponibles) */
+  printRowLabel?: (item: T) => string;
+  /** Clé stable pour identifier une ligne dans la sélection (défaut : item.id) */
+  printRowKey?: (item: T) => string | number;
 }
 
 const checkValidityFilter = (itemValue: string | number | undefined, filterValue: string): boolean => {
@@ -195,6 +202,9 @@ const Liste = <T extends Record<string, any>>({
   printDocumentTitle,
   printHeaderContext,
   tableTopMargin = false,
+  canPrintCustomSelection = false,
+  printRowLabel,
+  printRowKey,
 }: ListeProps<T>) => {
 
   const revalidator = useRevalidator();
@@ -447,6 +457,14 @@ const Liste = <T extends Record<string, any>>({
     return String(value);
   };
 
+  const resolvePrintRowLabel = (item: T): string => {
+    if (printRowLabel) return printRowLabel(item);
+    if (item.prenom && item.nom) return `${item.prenom} ${item.nom}`;
+    if (item.nom) return String(item.nom);
+    if (item.prenom) return String(item.prenom);
+    return "Ligne";
+  };
+
   // Rendu des lignes de données
   const dataRows = filteredData.map((item, filteredIndex) => {
     // Trouver l'index réel dans data pour onDelete
@@ -530,7 +548,7 @@ const Liste = <T extends Record<string, any>>({
                 </Button>
               ) : null}
             </div>
-            {toggleableColumns.length > 0 || canPrint ? (
+            {toggleableColumns.length > 0 || canPrint || canPrintCustomSelection ? (
               <div className={styles.page_headToolbarRight}>
                 {toggleableColumns.length > 0 ? (
                   <div className={styles.columnToggles} aria-label="Colonnes affichées">
@@ -546,13 +564,19 @@ const Liste = <T extends Record<string, any>>({
                     ))}
                   </div>
                 ) : null}
-                {canPrint ? (
-                  <PrintTrigger
-                    variant="button"
-                    onPrint={print}
-                    label="Imprimer la liste filtrée"
-                    buttonText="Imprimer"
-                    className={
+                {canPrint || canPrintCustomSelection ? (
+                  <ListePrintActions
+                    canPrintFiltered={canPrint}
+                    canPrintCustom={canPrintCustomSelection}
+                    onPrintFiltered={print}
+                    filteredCount={filteredData.length}
+                    data={filteredData}
+                    visibleColumns={visibleColumns}
+                    defaultTitle={printDocumentTitle ?? title}
+                    printRowLabel={resolvePrintRowLabel}
+                    printRowKey={printRowKey}
+                    renderPrintCell={renderPrintCell}
+                    printTriggerClassName={
                       toggleableColumns.length > 0 ? styles.printTrigger : undefined
                     }
                   />

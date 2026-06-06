@@ -2,6 +2,8 @@
 
 Point d’entrée racine : [`AI_MEMORY.md`](../../AI_MEMORY.md).
 
+**Mise à jour** : commande Cursor **`/maj`** (`.cursor/commands/maj.md`) — recoupe code + `git diff`, met à jour les fiches pertinentes.
+
 1. **[contexte-global-stack.md](contexte-global-stack.md)** — Stack, tooling pnpm, structure du dépôt, glossaire métier (rappel court).
 2. **[contexte-actif.md](contexte-actif.md)** — Phase courante, journal des changements récents, dernières réalisations.
 3. **[decisions-architecturales.md](decisions-architecturales.md)** — React 19 / Compiler, loaders, formulaires, composants, styles, API client, Redux, types, variables d’environnement, enums, helpers.

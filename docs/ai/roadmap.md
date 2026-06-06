@@ -37,6 +37,8 @@
 - [x] **Header responsive** : burger **&lt; 1400px** (`expand="xxl"`) ; **`--site-header-height`** dynamique ; correction bande blanche droite (`overflow-x: clip`, retrait `scrollbar-gutter: stable`)
 - [x] **Liste générique** : **`ColumnConfig.className`** / **`filterPlaceholder`** ; **`colAge`** ; placeholders filtres compacts
 - [x] **Impression listes séjour** : module **`src/print/`** — en-tête répété (margin boxes + fallback Firefox), **`ListeEnfants`** + **`TableauUtilisateurs`** (`canPrint`, colonnes **`toggleable`**, **`printValue`**)
+- [x] **Impression personnalisée liste enfants** : **`ListePrintActions`** (bouton unique → choix filtrée / personnalisée), **`ListeCustomPrintSelection`** (titre + cases lignes)
+- [x] **Commande Cursor `/maj`** : `.cursor/commands/maj.md` — sync Memory Bank (`AI_MEMORY.md` + `docs/ai/`)
 - [x] **Page Profil — refonte UX** : carte circulaire (photo + badge rôle), 3 accordéons (1er ouvert), champs compacts label/value
 - [x] **Profil & Header — rôle contextuel** : **`libelleRoleSurSejour.ts`** — rôle sur le séjour sélectionné (**`headerSejourContext`**) ou rôle système ; **Admin** affiché **Admin**
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)

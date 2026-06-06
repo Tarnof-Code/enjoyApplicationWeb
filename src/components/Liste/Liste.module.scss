@@ -81,6 +81,102 @@
   margin-top: 0.5rem;
 }
 
+.printChoiceIntro {
+  margin-bottom: 1rem;
+}
+
+.printChoiceOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.printChoiceOption {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  text-align: left;
+  padding: 0.85rem 1rem !important;
+  white-space: normal;
+
+  &:hover,
+  &:focus,
+  &:active {
+    .printChoiceOptionDesc {
+      color: rgba(255, 255, 255, 0.9) !important;
+    }
+  }
+}
+
+.printChoiceOptionTitle {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.printChoiceOptionDesc {
+  font-size: 0.875rem;
+  color: #6c757d;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.customPrintTitleField {
+  margin-bottom: 1rem;
+
+  label {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+}
+
+.customPrintSelectionToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.customPrintSelectionCount {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.customPrintSelectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.customPrintRowList {
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.customPrintRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+
+  input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+  }
+}
+
+.customPrintEmpty {
+  margin: 0;
+  color: #6c757d;
+}
+
 .table_container {
   max-height: 73vh;
   overflow-y: auto;
