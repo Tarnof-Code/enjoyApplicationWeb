@@ -350,8 +350,8 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
         { value: 'Féminin', label: 'Féminin' }
       ]
     }),
-    createColumn('email', 'Email', 'email'),
-    createColumn('telephone', 'Téléphone', 'tel')
+    createColumn('email', 'Email', 'email', { printNoWrap: true }),
+    createColumn('telephone', 'Téléphone', 'tel', { printNoWrap: true })
   ];
 
   const afficherColonneGroupes = sejourId != null && groupes.length > 0;
@@ -379,8 +379,8 @@ const TableauUtilisateurs: React.FC<TableauUtilisateursProps> = ({
             { value: 'Féminin', label: 'Féminin' },
           ],
         }),
-        createColumn('email', 'Email', 'email', { toggleable: true, className: styles.colEmail }),
-        createColumn('telephone', 'Téléphone', 'tel', { toggleable: true, className: styles.colTelephone }),
+        createColumn('email', 'Email', 'email', { toggleable: true, className: styles.colEmail, printNoWrap: true }),
+        createColumn('telephone', 'Téléphone', 'tel', { toggleable: true, className: styles.colTelephone, printNoWrap: true }),
         ...(afficherColonneGroupes ? [groupesReferentColumn] : []),
         ...(afficherColonneChambres ? [chambreColumn] : []),
       ]

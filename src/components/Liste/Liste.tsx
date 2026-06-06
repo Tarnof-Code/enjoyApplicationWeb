@@ -26,12 +26,12 @@ import {
   PRINT_GLOBAL_CLASS,
   PrintContentRoot,
   PrintDocumentHeader,
-  PrintTrigger,
-  PRINT_STYLE_PRESETS,
+  buildListePrintExtraStyle,
   usePrintContent,
   type PrintDocumentContext,
 } from "../../print";
 import { ListePrintActions } from "./ListePrintActions";
+import { ListePrintTable } from "./ListePrintTable";
 
 export interface ColumnConfig {
   key: string;
@@ -48,6 +48,8 @@ export interface ColumnConfig {
   printValue?: (item: any) => string;
   /** Colonne masquable via case à cocher dans l'en-tête */
   toggleable?: boolean;
+  /** À l'impression : garder le contenu sur une seule ligne (ex. email) */
+  printNoWrap?: boolean;
 }
 
 export interface FilterState {
@@ -209,12 +211,6 @@ const Liste = <T extends Record<string, any>>({
 
   const revalidator = useRevalidator();
 
-  const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
-    documentTitle: printDocumentTitle ?? title,
-    extraPageStyle: canPrint ? PRINT_STYLE_PRESETS.listeTable : undefined,
-    runningHeaderLabel: canPrint ? (printHeaderContext?.documentLabel ?? title) : undefined,
-  });
-
   // Gestion de l'état modal directement dans Liste
   const [modalState, setModalState] = useState<{
     show: boolean;
@@ -295,6 +291,13 @@ const Liste = <T extends Record<string, any>>({
     () => columns.filter((column) => !hiddenColumnKeys.has(column.key)),
     [columns, hiddenColumnKeys],
   );
+
+  const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+    documentTitle: printDocumentTitle ?? title,
+    extraPageStyle: canPrint ? buildListePrintExtraStyle(visibleColumns.length) : undefined,
+    ignoreGlobalStyles: canPrint,
+    runningHeaderLabel: canPrint ? (printHeaderContext?.documentLabel ?? title) : undefined,
+  });
 
   const toggleColumnVisibility = (columnKey: string, visible: boolean) => {
     setHiddenColumnKeys((prev) => {
@@ -596,50 +599,37 @@ const Liste = <T extends Record<string, any>>({
         ) : null}
 
         {canPrint ? (
-          <table className={`table align-middle ${PRINT_GLOBAL_CLASS.listePrintTable} ${PRINT_GLOBAL_CLASS.only}`}>
-            <thead>
-              <tr>
-                {visibleColumns.map((column) => (
-                  <th key={column.key} colSpan={column.colSpan || 1}>
-                    {column.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={visibleColumns.length} className="text-center">
-                    {!data || data.length === 0
-                      ? "Aucune donnée disponible"
-                      : "Aucun résultat trouvé pour les filtres appliqués"}
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item, index) => (
-                  <tr key={item.id ?? `print-row-${index}`}>
-                    {visibleColumns.map((column) => (
-                      <td key={column.key} colSpan={column.colSpan || 1}>
-                        {renderPrintCell(column, item)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <ListePrintTable
+            visibleColumns={visibleColumns}
+            rows={filteredData}
+            getRowKey={(item, index) => item.id ?? `print-row-${index}`}
+            renderPrintCell={renderPrintCell}
+            emptyMessage={
+              !data || data.length === 0
+                ? "Aucune donnée disponible"
+                : "Aucun résultat trouvé pour les filtres appliqués"
+            }
+          />
         ) : null}
+      </PrintContentRoot>
 
       <div
         className={[
           styles.table_container,
           tableTopMargin ? styles.table_containerTopMargin : undefined,
-          canPrint ? PRINT_GLOBAL_CLASS.noPrint : undefined,
         ]
           .filter(Boolean)
           .join(" ")}
       >
-        <table className="table align-middle">
+        <table
+          className={[
+            "table",
+            "align-middle",
+            canPrint ? PRINT_GLOBAL_CLASS.noPrint : undefined,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <thead className={styles.enTete}>
             <tr>
               <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
@@ -651,7 +641,14 @@ const Liste = <T extends Record<string, any>>({
             </tr>
             
             {/* Ligne des filtres */}
-            <tr className="enjoy-liste-filter-row">
+            <tr
+              className={[
+                "enjoy-liste-filter-row",
+                canPrint ? PRINT_GLOBAL_CLASS.noPrint : undefined,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <th className={PRINT_GLOBAL_CLASS.noPrint}></th>
               {visibleColumns.map(column => (
                 <th key={`filter-${column.key}`} colSpan={column.colSpan || 1} className={column.className}>
@@ -734,7 +731,6 @@ const Liste = <T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
-      </PrintContentRoot>
 
       {/* Modal unifié pour ajout et modification */}
       {FormComponent && (

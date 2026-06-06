@@ -18,6 +18,19 @@ export const PRINT_GLOBAL_CLASS = {
     withRunningHeader: "enjoy-print-with-running-header",
     /** Tableau liste dédié à l'impression (pagination multi-pages) */
     listePrintTable: "enjoy-liste-print-table",
+    listePrintWrap: "enjoy-liste-print-wrap",
+    /** Cellule liste print : contenu sur une seule ligne (ex. email) */
+    listePrintNoWrap: "enjoy-liste-print-nowrap",
+    /** Grille planning organisation — styles dans `PRINT_STYLE_PRESETS.planningGrid` */
+    planningPrintGrid: "enjoy-planning-print-grid",
+    planningPrintTable: "enjoy-planning-print-table",
+    planningPrintThSection: "enjoy-planning-print-th-section",
+    planningPrintTdSection: "enjoy-planning-print-td-section",
+    planningPrintThLigne: "enjoy-planning-print-th-ligne",
+    planningPrintTdLigne: "enjoy-planning-print-td-ligne",
+    planningPrintThJour: "enjoy-planning-print-th-jour",
+    planningPrintTdJour: "enjoy-planning-print-td-jour",
+    planningPrintCellMuted: "enjoy-planning-print-cell-muted",
     /** Grille menus (calendrier / liste) — styles dans `PRINT_STYLE_PRESETS.menusGrid` */
     menusPrintGrid: "enjoy-menus-print-grid",
     menusPrintTable: "enjoy-menus-print-table",

@@ -1818,7 +1818,7 @@ function ListePlanningsOrganisation({
     const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
         documentTitle: planningTitreImpression,
         runningHeaderLabel: planningTitreImpression,
-        extraPageStyle: `${PRINT_STYLE_PRESETS.wideTable}\n${PRINT_STYLE_PRESETS.planningGrid}`,
+        extraPageStyle: PRINT_STYLE_PRESETS.planningGrid,
     });
 
     const printHeaderContext = useMemo(() => {
@@ -1846,22 +1846,23 @@ function ListePlanningsOrganisation({
 
     const renderPlanningPrintGrid = () => {
         if (!detail) return null;
+        const c = PRINT_GLOBAL_CLASS;
         return (
-            <table className={`${styles.gridTable} ${styles.planningPrintGrid}`}>
+            <table className={c.planningPrintTable}>
                 <thead>
                     <tr>
                         {afficherColonneRegroupement ? (
-                            <th className={styles.regroupementColHead} scope="col">
+                            <th className={c.planningPrintThSection} scope="col">
                                 Section
                             </th>
                         ) : null}
                         {afficherColonneLibelleLigne ? (
-                            <th className={styles.rowLabelHead} scope="col">
+                            <th className={c.planningPrintThLigne} scope="col">
                                 Ligne
                             </th>
                         ) : null}
                         {joursFenetre.map(({ ymd, label }) => (
-                            <th key={ymd} className={styles.planningGridHead} scope="col">
+                            <th key={ymd} className={c.planningPrintThJour} scope="col">
                                 {label}
                             </th>
                         ))}
@@ -1885,29 +1886,26 @@ function ListePlanningsOrganisation({
                                 {afficherColonneRegroupement && rgInfo.showLeadingCell ? (
                                     <td
                                         rowSpan={rgInfo.rowspan}
-                                        className={styles.regroupementCellVertical}
+                                        className={c.planningPrintTdSection}
                                     >
                                         {rgInfo.libelleRegroupement ?? ""}
                                     </td>
                                 ) : null}
                                 {afficherColonneLibelleLigne ? (
-                                    <td className={styles.rowLabel}>
-                                        <span
-                                            className={styles.rowLabelInner}
-                                            style={{ paddingLeft: `${indent * 12}px` }}
-                                        >
+                                    <td className={c.planningPrintTdLigne}>
+                                        <span style={{ paddingLeft: `${indent * 8}px` }}>
                                             {libelleCol.trim() !== "" ? (
                                                 libelleCol
                                             ) : (
-                                                <span className={styles.cellMuted}>—</span>
+                                                <span className={c.planningPrintCellMuted}>—</span>
                                             )}
                                         </span>
                                     </td>
                                 ) : null}
                                 {joursFenetre.map(({ ymd: j }) => {
-                                    const c = cellulePourJour(ligne, j);
+                                    const cellule = cellulePourJour(ligne, j);
                                     const texteCellule = resumeCellule(
-                                        c,
+                                        cellule,
                                         groupes,
                                         lieuxPourPlannings,
                                         horaires,
@@ -1915,10 +1913,12 @@ function ListePlanningsOrganisation({
                                         membresPourCellulesModal
                                     );
                                     return (
-                                        <td key={j} className={styles.planningGridCell}>
+                                        <td key={j} className={c.planningPrintTdJour}>
                                             <span
                                                 className={
-                                                    texteCellule === "—" ? styles.cellMuted : undefined
+                                                    texteCellule === "—"
+                                                        ? c.planningPrintCellMuted
+                                                        : undefined
                                                 }
                                                 style={{ whiteSpace: "pre-line" }}
                                             >
@@ -2406,7 +2406,9 @@ function ListePlanningsOrganisation({
                         fixedRunningHeaderLabel={fixedRunningHeaderLabel}
                     >
                         <PrintDocumentHeader context={printHeaderContext} />
-                        <div className="planning-print-grid">{renderPlanningPrintGrid()}</div>
+                        <div className={PRINT_GLOBAL_CLASS.planningPrintGrid}>
+                            {renderPlanningPrintGrid()}
+                        </div>
                     </PrintContentRoot>
                 </div>
             ) : null}

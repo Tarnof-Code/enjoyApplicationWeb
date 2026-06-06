@@ -16,7 +16,13 @@
  */
 
 export { PRINT_GLOBAL_CLASS } from "./printGlobalClasses";
-export { buildPrintPageStyle, PRINT_CONTENT_PADDING, PRINT_STYLE_PRESETS } from "./printPageStyles";
+export {
+    buildListePrintExtraStyle,
+    buildPrintPageStyle,
+    PRINT_CONTENT_PADDING,
+    PRINT_PAGE_MARGIN_BOTTOM,
+    PRINT_STYLE_PRESETS,
+} from "./printPageStyles";
 export { buildPrintDocumentContext } from "./printDocumentContext";
 export { libelleFiltresListeActifs } from "./libelleFiltresListeActifs";
 export { usePrintContent, imprimerPageCourante } from "./usePrintContent";

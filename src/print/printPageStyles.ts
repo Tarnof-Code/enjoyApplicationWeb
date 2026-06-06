@@ -4,9 +4,27 @@ import type { PrintPageFormat } from "./types";
 
 /** Marge interne du contenu lorsque @page margin vaut 0 (évite URL / numéro navigateur) */
 export const PRINT_CONTENT_PADDING = "12mm";
+/** Marge bas de page (souvent plus large pour éviter rognage / numéros navigateur) */
+export const PRINT_PAGE_MARGIN_BOTTOM = "20mm";
 export const PRINT_RUNNING_HEADER_HEIGHT = "12mm";
 
 export type RunningHeaderMode = "margin-box" | "fixed";
+
+/** Bloque les en-têtes/pieds navigateur (URL, date…) tout en conservant les marges @page */
+function buildBrowserMarginBoxReset(): string {
+    const empty = "content: '';";
+    return `
+            @top-left-corner { ${empty} }
+            @top-center { ${empty} }
+            @top-right { ${empty} }
+            @top-right-corner { ${empty} }
+            @bottom-left-corner { ${empty} }
+            @bottom-left { ${empty} }
+            @bottom-center { ${empty} }
+            @bottom-right { ${empty} }
+            @bottom-right-corner { ${empty} }
+    `;
+}
 
 function buildPageRules(
     format: PrintPageFormat | undefined,
@@ -21,19 +39,33 @@ function buildPageRules(
               ? "size: A4;"
               : "";
 
+    const bottom = PRINT_PAGE_MARGIN_BOTTOM;
+
     if (runningHeaderLabel == null || runningHeaderLabel === "") {
-        return `@page { ${sizeDecl} margin: 0; }`;
+        return `
+        @page {
+            ${sizeDecl}
+            margin: 0 0 ${bottom} 0;
+            ${buildBrowserMarginBoxReset()}
+        }
+        `;
     }
 
     if (runningHeaderMode === "fixed") {
-        return `@page { ${sizeDecl} margin: 0; }`;
+        return `
+        @page {
+            ${sizeDecl}
+            margin: 0 0 ${bottom} 0;
+            ${buildBrowserMarginBoxReset()}
+        }
+        `;
     }
 
     const title = escapeCssContent(runningHeaderLabel);
     return `
         @page {
             ${sizeDecl}
-            margin: 14mm 12mm 0 12mm;
+            margin: 14mm 12mm ${bottom} 12mm;
             @top-left {
                 content: "${title} — " counter(page) " / " counter(pages);
                 font-family: system-ui, -apple-system, sans-serif;
@@ -44,11 +76,7 @@ function buildPageRules(
                 padding-bottom: 2mm;
                 border-bottom: 0.5pt solid #ccc;
             }
-            @bottom-left-corner { content: none; }
-            @bottom-left { content: none; }
-            @bottom-center { content: none; }
-            @bottom-right { content: none; }
-            @bottom-right-corner { content: none; }
+            ${buildBrowserMarginBoxReset()}
         }
     `;
 }
@@ -56,7 +84,7 @@ function buildPageRules(
 function buildFixedRunningHeaderStyles(): string {
     return `
         .${c.withRunningHeader} {
-            padding: calc(${PRINT_RUNNING_HEADER_HEIGHT} + 4mm) ${PRINT_CONTENT_PADDING} ${PRINT_CONTENT_PADDING} ${PRINT_CONTENT_PADDING} !important;
+            padding: calc(${PRINT_RUNNING_HEADER_HEIGHT} + 4mm) ${PRINT_CONTENT_PADDING} 0 ${PRINT_CONTENT_PADDING} !important;
         }
         .${c.runningHeader} {
             position: fixed;
@@ -100,6 +128,7 @@ export function buildPrintPageStyle(options?: {
         html, body {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -111,7 +140,12 @@ export function buildPrintPageStyle(options?: {
         }
         .${c.contentRoot} {
             box-sizing: border-box;
-            padding: ${hasRunningHeader ? "0" : PRINT_CONTENT_PADDING};
+            width: 100% !important;
+            max-width: 100%;
+            overflow: visible;
+            padding: ${hasRunningHeader
+                ? "0"
+                : `${PRINT_CONTENT_PADDING} ${PRINT_CONTENT_PADDING} 0 ${PRINT_CONTENT_PADDING}`};
         }
         .${c.only} { display: block !important; }
         .${c.noPrint} { display: none !important; }
@@ -155,9 +189,39 @@ export function buildPrintPageStyle(options?: {
             display: table-row-group;
         }
         .${c.listePrintTable} {
-            width: 100%;
+            display: table !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: auto !important;
             border-collapse: collapse;
             page-break-inside: auto;
+            border: 1px solid #d0d7de;
+        }
+        .${c.listePrintTable} thead { display: table-header-group !important; }
+        .${c.listePrintTable} tbody { display: table-row-group !important; }
+        .${c.listePrintTable} tr { display: table-row !important; }
+        .${c.listePrintTable} th,
+        .${c.listePrintTable} td { display: table-cell !important; }
+        .${c.listePrintTable} .${c.listePrintNoWrap} {
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            overflow-wrap: normal !important;
+            hyphens: none !important;
+        }
+        .${c.listePrintTable} th,
+        .${c.listePrintTable} td {
+            border: 1px solid #e2e8ef;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: normal;
+            hyphens: auto;
+            max-width: none !important;
+            min-width: 0 !important;
+        }
+        .${c.listePrintTable} thead th {
+            background: #f4f6f8;
+            font-weight: 600;
+            border-color: #d0d7de;
         }
         .${c.listePrintTable} thead {
             display: table-header-group;
@@ -177,9 +241,68 @@ export const PRINT_STYLE_PRESETS = {
         table { font-size: 9pt; }
         th, td { padding: 0.25rem 0.35rem; }
     `,
-    /** Grilles type planning — orientation paysage recommandée */
+    /** Grille planning organisation */
     planningGrid: `
-        .planning-print-grid { width: 100%; }
+        .enjoy-planning-print-grid {
+            width: 100%;
+            max-width: 100%;
+        }
+        .enjoy-planning-print-table {
+            width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 8pt;
+            line-height: 1.3;
+        }
+        .enjoy-planning-print-table th,
+        .enjoy-planning-print-table td {
+            border: 1px solid #ccc;
+            padding: 0.3rem 0.35rem;
+            vertical-align: top;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: normal;
+            hyphens: auto;
+        }
+        .enjoy-planning-print-th-section,
+        .enjoy-planning-print-td-section {
+            width: 10%;
+            font-weight: 600;
+            background: #f4f6f8;
+        }
+        .enjoy-planning-print-th-ligne,
+        .enjoy-planning-print-td-ligne {
+            width: 12%;
+            font-weight: 600;
+            background: #fafbfc;
+        }
+        .enjoy-planning-print-th-jour {
+            text-align: center;
+            font-weight: 600;
+            background: #eef2f6;
+            font-size: 7.5pt;
+        }
+        .enjoy-planning-print-td-jour {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .enjoy-planning-print-cell-muted {
+            color: #aaa;
+            font-style: italic;
+        }
+        @media print and (orientation: portrait) {
+            .enjoy-planning-print-table {
+                font-size: 6.5pt;
+            }
+            .enjoy-planning-print-table th,
+            .enjoy-planning-print-table td {
+                padding: 0.15rem 0.2rem;
+            }
+            .enjoy-planning-print-th-jour {
+                font-size: 6pt;
+            }
+        }
     `,
     /** Grille menus séjour (calendrier repas × jours, vue liste) */
     menusGrid: `
@@ -302,8 +425,30 @@ export const PRINT_STYLE_PRESETS = {
             background: #fff !important;
         }
     `,
-    /** Tableau Liste : masque le tableau écran ; styles du tableau print dédié */
+    /** Tableau Liste : masque le tableau écran ; adaptation portrait */
     listeTable: `
         .enjoy-no-print { display: none !important; }
+        .enjoy-liste-filter-row { display: none !important; }
+        .enjoy-liste-print-table thead tr > th:empty,
+        .enjoy-liste-print-table tbody tr > td:empty {
+            display: none !important;
+            width: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+        }
+        @media print and (orientation: portrait) {
+            .enjoy-liste-print-table {
+                font-size: 7.5pt;
+            }
+            .enjoy-liste-print-table th,
+            .enjoy-liste-print-table td {
+                padding: 0.2rem 0.25rem;
+            }
+        }
     `,
 } as const;
+
+/** Preset liste : filtres masqués (largeurs colonnes = auto, table 100 % de la page) */
+export function buildListePrintExtraStyle(_columnCount: number): string {
+    return PRINT_STYLE_PRESETS.listeTable;
+}

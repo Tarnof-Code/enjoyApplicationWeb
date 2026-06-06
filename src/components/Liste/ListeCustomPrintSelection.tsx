@@ -9,14 +9,14 @@ import {
     ModalHeader,
 } from "reactstrap";
 import {
-    PRINT_GLOBAL_CLASS,
-    PRINT_STYLE_PRESETS,
+    buildListePrintExtraStyle,
     PrintContentRoot,
     PrintDocumentHeader,
     usePrintContent,
     type PrintDocumentContext,
 } from "../../print";
 import type { ColumnConfig } from "./Liste";
+import { ListePrintTable } from "./ListePrintTable";
 import styles from "./Liste.module.scss";
 
 export type ListeCustomPrintSelectionProps<T extends Record<string, unknown>> = {
@@ -52,7 +52,8 @@ export function ListeCustomPrintSelection<T extends Record<string, unknown>>({
 
     const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
         documentTitle: customTitle.trim() || defaultTitle,
-        extraPageStyle: PRINT_STYLE_PRESETS.listeTable,
+        extraPageStyle: buildListePrintExtraStyle(visibleColumns.length),
+        ignoreGlobalStyles: true,
         runningHeaderLabel: customTitle.trim() || defaultTitle,
     });
 
@@ -174,36 +175,16 @@ export function ListeCustomPrintSelection<T extends Record<string, unknown>>({
                 fixedRunningHeaderLabel={fixedRunningHeaderLabel}
             >
                 <PrintDocumentHeader context={printHeaderContext} />
-                <table className={`table align-middle ${PRINT_GLOBAL_CLASS.listePrintTable} ${PRINT_GLOBAL_CLASS.only}`}>
-                    <thead>
-                        <tr>
-                            {visibleColumns.map((column) => (
-                                <th key={column.key} colSpan={column.colSpan || 1}>
-                                    {column.label}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {selectedData.length === 0 ? (
-                            <tr>
-                                <td colSpan={visibleColumns.length} className="text-center">
-                                    Aucune ligne sélectionnée
-                                </td>
-                            </tr>
-                        ) : (
-                            selectedData.map((item, index) => (
-                                <tr key={String(printRowKey(item)) ?? `custom-print-${index}`}>
-                                    {visibleColumns.map((column) => (
-                                        <td key={column.key} colSpan={column.colSpan || 1}>
-                                            {renderPrintCell(column, item)}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                <ListePrintTable
+                    visibleColumns={visibleColumns}
+                    rows={selectedData}
+                    getRowKey={(item, index) => {
+                        const key = printRowKey(item);
+                        return key != null ? String(key) : `custom-print-${index}`;
+                    }}
+                    renderPrintCell={renderPrintCell}
+                    emptyMessage={emptySelectionMessage}
+                />
             </PrintContentRoot>
         </>
     );

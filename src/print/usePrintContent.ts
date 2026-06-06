@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useReactToPrint } from "react-to-print";
 import { supportsPageMarginBoxes } from "./detectPrintCapabilities";
 import { buildPrintPageStyle, type RunningHeaderMode } from "./printPageStyles";
@@ -20,6 +20,7 @@ export function usePrintContent({
     format,
     runningHeaderLabel,
     extraPageStyle,
+    ignoreGlobalStyles,
     onBeforePrint,
     onAfterPrint,
 }: UsePrintContentOptions) {
@@ -27,15 +28,22 @@ export function usePrintContent({
     const runningHeaderMode = resolveRunningHeaderMode(runningHeaderLabel);
     const fixedRunningHeader = runningHeaderMode === "fixed";
 
+    const pageStyle = useMemo(
+        () =>
+            buildPrintPageStyle({
+                format,
+                extra: extraPageStyle,
+                runningHeaderLabel,
+                runningHeaderMode,
+            }),
+        [format, extraPageStyle, runningHeaderLabel, runningHeaderMode],
+    );
+
     const print = useReactToPrint({
         contentRef,
         documentTitle,
-        pageStyle: buildPrintPageStyle({
-            format,
-            extra: extraPageStyle,
-            runningHeaderLabel,
-            runningHeaderMode,
-        }),
+        ignoreGlobalStyles,
+        pageStyle,
         onBeforePrint: onBeforePrint ? () => Promise.resolve(onBeforePrint()) : undefined,
         onAfterPrint,
     });

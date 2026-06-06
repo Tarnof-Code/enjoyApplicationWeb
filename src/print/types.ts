@@ -17,6 +17,8 @@ export type UsePrintContentOptions = {
     runningHeaderLabel?: string;
     /** Règles CSS additionnelles injectées dans la fenêtre d'impression */
     extraPageStyle?: string;
+    /** N'injecte que `pageStyle` (évite les largeurs de colonnes héritées du tableau écran) */
+    ignoreGlobalStyles?: boolean;
     onBeforePrint?: () => void | Promise<void>;
     onAfterPrint?: () => void;
 };
