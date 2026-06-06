@@ -3,6 +3,10 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Liste, { type ColumnConfig } from "./Liste";
 import type { EnfantDossierSanitaireLigneDto } from "../../types/api";
+import { buildPrintDocumentContext } from "../../print";
+import styles from "./ListeSanitaireDossiers.module.scss";
+
+const SANITAIRE_COL_GROUPES = "enjoy-sanitaire-col-groupes";
 
 /** Colonnes optionnelles affichables (hors prénom, nom, groupes). */
 export type SanitaireColonnesOptionnelles = {
@@ -25,8 +29,26 @@ export interface ListeSanitaireDossiersProps {
   listeKey?: string;
 }
 
+const LIBELLES_COLONNES_OPTIONNELLES: Record<keyof SanitaireColonnesOptionnelles, string> = {
+  allergies: "Allergies",
+  traitements: "Traitements",
+  contactsParents: "Contacts parents",
+  medical: "Infos médicales & PAI",
+  alimentation: "Alimentation",
+  autresInformations: "Autres infos",
+  aPrendreEnSortie: "À prendre en sortie",
+};
+
+function libelleColonnesOptionnellesActives(o: SanitaireColonnesOptionnelles): string {
+  const actives = (Object.keys(LIBELLES_COLONNES_OPTIONNELLES) as (keyof SanitaireColonnesOptionnelles)[])
+    .filter((k) => o[k])
+    .map((k) => LIBELLES_COLONNES_OPTIONNELLES[k]);
+  return actives.length > 0 ? actives.join(", ") : "Prénom, Nom, Groupe(s) uniquement";
+}
+
 /** Ligne aplati pour filtres Liste (valeurs brutes pour filtre texte). */
 export type SanitaireListeRow = {
+  id: number;
   enfantId: number;
   prenom: string;
   nom: string;
@@ -116,6 +138,7 @@ function lignesVersDonneesListe(lignes: EnfantDossierSanitaireLigneDto[]): Sanit
     const allergenesTxt = d?.allergenes?.map((r) => r.libelle).join(", ") ?? "";
     const regimesTxt = d?.regimesEtPreferences?.map((r) => r.libelle).join(", ") ?? "";
     return {
+      id: ligne.enfantId,
       enfantId: ligne.enfantId,
       prenom: ligne.prenom,
       nom: ligne.nom,
@@ -169,21 +192,33 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
       ...options,
     });
 
-    const texteCol = (key: keyof SanitaireListeRow, label: string) =>
+    const texteCol = (key: keyof SanitaireListeRow, label: string, extra?: Partial<ColumnConfig>) =>
       createColumn(key, label, "text", {
         render: (_v, item: SanitaireListeRow) => afficherOuTiret(item[key] as string),
+        printValue: (item: SanitaireListeRow) => afficherOuTiret(item[key] as string),
+        ...extra,
       });
 
     const cols: ColumnConfig[] = [
-      createColumn("prenom", "Prénom"),
-      createColumn("nom", "Nom"),
-      createColumn("groupes", "Groupe(s)"),
+      createColumn("prenom", "Prénom", "text", {
+        className: styles.colPrenom,
+        printNoWrap: true,
+        printValue: (item: SanitaireListeRow) => afficherOuTiret(item.prenom),
+      }),
+      createColumn("nom", "Nom", "text", {
+        printValue: (item: SanitaireListeRow) => afficherOuTiret(item.nom),
+      }),
+      createColumn("groupes", "Groupe(s)", "text", {
+        className: SANITAIRE_COL_GROUPES,
+        printValue: (item: SanitaireListeRow) => afficherOuTiret(item.groupes),
+      }),
     ];
 
     if (o.allergies) {
       cols.push(
         createColumn("allergenes", "Allergies", "text", {
           render: (_v, item: SanitaireListeRow) => afficherOuTiret(item.allergenes),
+          printValue: (item: SanitaireListeRow) => afficherOuTiret(item.allergenes),
         }),
       );
     }
@@ -199,10 +234,10 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
 
     if (o.contactsParents) {
       cols.push(
-        texteCol("emailParent1", "E-mail parent 1"),
-        texteCol("telephoneParent1", "Tél. parent 1"),
-        texteCol("emailParent2", "E-mail parent 2"),
-        texteCol("telephoneParent2", "Tél. parent 2"),
+        texteCol("emailParent1", "E-mail parent 1", { printNoWrap: true }),
+        texteCol("telephoneParent1", "Tél. parent 1", { printNoWrap: true }),
+        texteCol("emailParent2", "E-mail parent 2", { printNoWrap: true }),
+        texteCol("telephoneParent2", "Tél. parent 2", { printNoWrap: true }),
       );
     }
 
@@ -214,6 +249,7 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
       cols.push(
         createColumn("regimesEtPreferences", "Régimes & préférences", "text", {
           render: (_v, item: SanitaireListeRow) => afficherOuTiret(item.regimesEtPreferences),
+          printValue: (item: SanitaireListeRow) => afficherOuTiret(item.regimesEtPreferences),
         }),
         texteCol("informationsAlimentaires", "Infos alimentaires"),
       );
@@ -238,6 +274,21 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
 
   const titreListe = `Dossiers sanitaires (${data.length})`;
 
+  const printHeaderContext = useMemo(
+    () =>
+      buildPrintDocumentContext("Dossiers sanitaires", [
+        {
+          label: "Colonnes optionnelles",
+          value: libelleColonnesOptionnellesActives(o),
+        },
+        {
+          label: "Effectif séjour",
+          value: String(lignes.length),
+        },
+      ]),
+    [o, lignes.length],
+  );
+
   return (
     <Liste<SanitaireListeRow>
       key={listeKey}
@@ -252,6 +303,10 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
       canDossier
       onDossier={ouvrirDossier}
       errorMessage={errorMessage ?? null}
+      canPrint
+      printDocumentTitle="Dossiers sanitaires"
+      printHeaderContext={printHeaderContext}
+      tableTopMargin
     />
   );
 };

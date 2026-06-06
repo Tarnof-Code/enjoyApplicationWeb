@@ -217,6 +217,7 @@ export function buildPrintPageStyle(options?: {
             hyphens: auto;
             max-width: none !important;
             min-width: 0 !important;
+            vertical-align: middle;
         }
         .${c.listePrintTable} thead th {
             background: #f4f6f8;
@@ -429,6 +430,11 @@ export const PRINT_STYLE_PRESETS = {
     listeTable: `
         .enjoy-no-print { display: none !important; }
         .enjoy-liste-filter-row { display: none !important; }
+        .enjoy-liste-print-table .enjoy-sanitaire-col-groupes {
+            width: 5.5rem !important;
+            min-width: 4.5rem !important;
+            max-width: 6rem !important;
+        }
         .enjoy-liste-print-table thead tr > th:empty,
         .enjoy-liste-print-table tbody tr > td:empty {
             display: none !important;
