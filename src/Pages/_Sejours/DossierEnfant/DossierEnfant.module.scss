@@ -146,6 +146,23 @@
     text-align: center;
 }
 
+.printTrigger {
+    margin-left: auto;
+}
+
+@media print {
+    .pageContainer {
+        padding: 0;
+        max-width: none;
+    }
+
+    .section {
+        box-shadow: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
 @media (max-width: 768px) {
     .pageContainer {
         padding: 1.5rem;

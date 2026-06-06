@@ -15,6 +15,11 @@ export type UsePrintContentOptions = {
     format?: PrintPageFormat;
     /** Titre répété en marge haute à l'impression — ex. « Liste des enfants — 1/3 » */
     runningHeaderLabel?: string;
+    /**
+     * Mise en page de l'en-tête répété.
+     * `title-page-split` : titre à gauche, numéro de page à droite (dossier enfant).
+     */
+    runningHeaderLayout?: "default" | "title-page-split";
     /** Règles CSS additionnelles injectées dans la fenêtre d'impression */
     extraPageStyle?: string;
     /** N'injecte que `pageStyle` (évite les largeurs de colonnes héritées du tableau écran) */

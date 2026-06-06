@@ -9,6 +9,7 @@ export const PRINT_PAGE_MARGIN_BOTTOM = "20mm";
 export const PRINT_RUNNING_HEADER_HEIGHT = "12mm";
 
 export type RunningHeaderMode = "margin-box" | "fixed";
+export type RunningHeaderLayout = "default" | "title-page-split";
 
 /** Bloque les en-têtes/pieds navigateur (URL, date…) tout en conservant les marges @page */
 function buildBrowserMarginBoxReset(): string {
@@ -30,6 +31,7 @@ function buildPageRules(
     format: PrintPageFormat | undefined,
     runningHeaderLabel?: string,
     runningHeaderMode?: RunningHeaderMode,
+    runningHeaderLayout: RunningHeaderLayout = "default",
 ): string {
     /** Sans `size` explicite : le dialogue d'impression (portrait / paysage) reste effectif. */
     const sizeDecl =
@@ -62,6 +64,36 @@ function buildPageRules(
     }
 
     const title = escapeCssContent(runningHeaderLabel);
+
+    if (runningHeaderLayout === "title-page-split") {
+        const runningHeaderMarginBox = `
+                font-family: system-ui, -apple-system, sans-serif;
+                font-size: 13pt;
+                font-weight: 700;
+                color: #1a1a1a;
+                vertical-align: bottom;
+                padding-top: 3mm;
+                padding-bottom: 2mm;
+                border-bottom: 0.5pt solid #ccc;
+        `;
+        return `
+        @page {
+            ${sizeDecl}
+            margin: 16mm 12mm ${bottom} 12mm;
+            @top-left {
+                content: "${title}";
+                ${runningHeaderMarginBox}
+            }
+            ${buildBrowserMarginBoxReset()}
+            @top-right {
+                content: counter(page) " / " counter(pages);
+                ${runningHeaderMarginBox}
+                text-align: right;
+            }
+        }
+        `;
+    }
+
     return `
         @page {
             ${sizeDecl}
@@ -81,7 +113,8 @@ function buildPageRules(
     `;
 }
 
-function buildFixedRunningHeaderStyles(): string {
+function buildFixedRunningHeaderStyles(runningHeaderLayout: RunningHeaderLayout = "default"): string {
+    const splitLayout = runningHeaderLayout === "title-page-split";
     return `
         .${c.withRunningHeader} {
             padding: calc(${PRINT_RUNNING_HEADER_HEIGHT} + 4mm) ${PRINT_CONTENT_PADDING} 0 ${PRINT_CONTENT_PADDING} !important;
@@ -92,7 +125,8 @@ function buildFixedRunningHeaderStyles(): string {
             left: 0;
             right: 0;
             z-index: 1000;
-            padding: 2.5mm ${PRINT_CONTENT_PADDING} 2mm;
+            ${splitLayout ? "display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;" : ""}
+            padding: ${splitLayout ? "4mm" : "2.5mm"} ${PRINT_CONTENT_PADDING} 2mm;
             font-size: 13pt;
             line-height: 1.3;
             font-weight: 700;
@@ -117,14 +151,16 @@ export function buildPrintPageStyle(options?: {
     runningHeaderLabel?: string;
     /** `margin-box` (Chromium / Safari) ou `fixed` (Firefox) */
     runningHeaderMode?: RunningHeaderMode;
+    runningHeaderLayout?: RunningHeaderLayout;
 }): string {
     const hasRunningHeader =
         options?.runningHeaderLabel != null && options.runningHeaderLabel !== "";
     const fixedRunningHeader = options?.runningHeaderMode === "fixed";
+    const runningHeaderLayout = options?.runningHeaderLayout ?? "default";
 
     return `
-        ${buildPageRules(options?.format, options?.runningHeaderLabel, options?.runningHeaderMode)}
-        ${fixedRunningHeader ? buildFixedRunningHeaderStyles() : ""}
+        ${buildPageRules(options?.format, options?.runningHeaderLabel, options?.runningHeaderMode, runningHeaderLayout)}
+        ${fixedRunningHeader ? buildFixedRunningHeaderStyles(runningHeaderLayout) : ""}
         html, body {
             margin: 0 !important;
             padding: 0 !important;

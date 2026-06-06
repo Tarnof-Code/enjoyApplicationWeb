@@ -19,6 +19,7 @@ export function usePrintContent({
     documentTitle,
     format,
     runningHeaderLabel,
+    runningHeaderLayout = "default",
     extraPageStyle,
     ignoreGlobalStyles,
     onBeforePrint,
@@ -35,8 +36,9 @@ export function usePrintContent({
                 extra: extraPageStyle,
                 runningHeaderLabel,
                 runningHeaderMode,
+                runningHeaderLayout,
             }),
-        [format, extraPageStyle, runningHeaderLabel, runningHeaderMode],
+        [format, extraPageStyle, runningHeaderLabel, runningHeaderMode, runningHeaderLayout],
     );
 
     const print = useReactToPrint({

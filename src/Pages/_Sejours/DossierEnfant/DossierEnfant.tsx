@@ -10,6 +10,15 @@ import { DossierEnfantDto, EnfantDto, ReferenceAlimentaireDto, SejourDTO } from 
 import DossierEnfantForm from "../../../components/Forms/DossierEnfantForm";
 import { accountService } from "../../../services/account.service";
 import { peutModifierDossierEnfant } from "../../../helpers/peutModifierDossierEnfant";
+import formaterDate from "../../../helpers/formaterDate";
+import {
+    buildPrintDocumentContext,
+    PRINT_GLOBAL_CLASS,
+    PrintContentRoot,
+    PrintDocumentHeader,
+    PrintTrigger,
+    usePrintContent,
+} from "../../../print";
 
 export async function dossierEnfantLoader({ params }: LoaderFunctionArgs) {
     const sejourId = params.id;
@@ -125,6 +134,26 @@ const DossierEnfant: React.FC = () => {
 
     const { dossier, enfant } = loaderData;
     const enfantNom = enfant ? `${enfant.prenom} ${enfant.nom}` : `Enfant #${dossier.enfantId}`;
+    const sejour = sejourDetailLoader?.sejour;
+
+    const printDocumentLabel = `Dossier sanitaire — ${enfantNom}`;
+
+    const printHeaderContext = useMemo(() => {
+        const meta: { label: string; value: string }[] = [];
+        if (sejour) {
+            const debut = formaterDate(sejour.dateDebut);
+            const fin = formaterDate(sejour.dateFin);
+            const periode = debut && fin ? ` (${debut} – ${fin})` : "";
+            meta.push({ label: "Séjour", value: `${sejour.nom}${periode}` });
+        }
+        return buildPrintDocumentContext(printDocumentLabel, meta.length > 0 ? meta : undefined);
+    }, [printDocumentLabel, sejour]);
+
+    const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+        documentTitle: printDocumentLabel,
+        runningHeaderLabel: printDocumentLabel,
+        runningHeaderLayout: "title-page-split",
+    });
 
     const handleOpenEditModal = (section: SectionType) => {
         setEditingSection(section);
@@ -139,15 +168,28 @@ const DossierEnfant: React.FC = () => {
     return (
         <div className={styles.pageContainer}>
             <div className={styles.pageHeader}>
-                <button onClick={handleRetour} className={styles.backButton}>
+                <button
+                    type="button"
+                    onClick={handleRetour}
+                    className={`${styles.backButton} ${PRINT_GLOBAL_CLASS.noPrint}`}
+                >
                     ← Retour
                 </button>
-                <h1 className={styles.pageTitle}>
+                <h1 className={`${styles.pageTitle} ${PRINT_GLOBAL_CLASS.noPrint}`}>
                     Dossier de <span className={styles.enfantNameBadge}>{enfantNom}</span>
                 </h1>
+                <PrintTrigger
+                    variant="button"
+                    onPrint={print}
+                    label="Imprimer le dossier sanitaire"
+                    buttonText="Imprimer"
+                    className={`${styles.printTrigger} ${PRINT_GLOBAL_CLASS.noPrint}`}
+                />
             </div>
 
-            <div className={styles.dossierContent}>
+            <PrintContentRoot contentRef={contentRef} fixedRunningHeaderLabel={fixedRunningHeaderLabel}>
+                <PrintDocumentHeader context={printHeaderContext} />
+                <div className={styles.dossierContent}>
                 <section className={styles.section}>
                     <div className={styles.sectionHeader}>
                         <h2 className={styles.sectionTitle}>Contacts parents</h2>
@@ -156,7 +198,7 @@ const DossierEnfant: React.FC = () => {
                                 color="primary"
                                 size="sm"
                                 onClick={() => handleOpenEditModal('contacts')}
-                                className={styles.sectionEditButton}
+                                className={`${styles.sectionEditButton} ${PRINT_GLOBAL_CLASS.noPrint}`}
                             >
                                 <FontAwesomeIcon icon={faPencilAlt} />
                             </Button>
@@ -190,7 +232,7 @@ const DossierEnfant: React.FC = () => {
                                 color="primary"
                                 size="sm"
                                 onClick={() => handleOpenEditModal('medical')}
-                                className={styles.sectionEditButton}
+                                className={`${styles.sectionEditButton} ${PRINT_GLOBAL_CLASS.noPrint}`}
                             >
                                 <FontAwesomeIcon icon={faPencilAlt} />
                             </Button>
@@ -228,7 +270,7 @@ const DossierEnfant: React.FC = () => {
                                 color="primary"
                                 size="sm"
                                 onClick={() => handleOpenEditModal('traitements')}
-                                className={styles.sectionEditButton}
+                                className={`${styles.sectionEditButton} ${PRINT_GLOBAL_CLASS.noPrint}`}
                             >
                                 <FontAwesomeIcon icon={faPencilAlt} />
                             </Button>
@@ -262,7 +304,7 @@ const DossierEnfant: React.FC = () => {
                                 color="primary"
                                 size="sm"
                                 onClick={() => handleOpenEditModal('autres')}
-                                className={styles.sectionEditButton}
+                                className={`${styles.sectionEditButton} ${PRINT_GLOBAL_CLASS.noPrint}`}
                             >
                                 <FontAwesomeIcon icon={faPencilAlt} />
                             </Button>
@@ -279,7 +321,8 @@ const DossierEnfant: React.FC = () => {
                         </div>
                     </div>
                 </section>
-            </div>
+                </div>
+            </PrintContentRoot>
 
             <Modal isOpen={peutModifierDossier && showEditModal} toggle={handleCloseEditModal} size="lg">
                 <ModalHeader toggle={handleCloseEditModal}>
