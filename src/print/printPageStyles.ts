@@ -181,6 +181,127 @@ export const PRINT_STYLE_PRESETS = {
     planningGrid: `
         .planning-print-grid { width: 100%; }
     `,
+    /** Grille menus séjour (calendrier repas × jours, vue liste) */
+    menusGrid: `
+        .enjoy-menus-print-grid { width: 100%; }
+        .enjoy-menus-print-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #c8d0da;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 8.5pt;
+            line-height: 1.35;
+            table-layout: fixed;
+        }
+        .enjoy-menus-print-table th,
+        .enjoy-menus-print-table td {
+            border: 1px solid #e2e8ef;
+            padding: 0.4rem 0.5rem;
+            vertical-align: top;
+        }
+        .enjoy-menus-print-th-jour {
+            background: #e8eef5 !important;
+            text-align: center;
+            font-weight: 700;
+            font-size: 8pt;
+            color: #1a3550;
+            padding: 0.45rem 0.35rem !important;
+        }
+        .enjoy-menus-print-th-hors-sejour {
+            background: #e4e4e4 !important;
+            color: #777 !important;
+        }
+        .enjoy-menus-print-hors-sejour-hint {
+            display: block;
+            font-size: 7pt;
+            font-weight: 500;
+            color: #888;
+            margin-top: 0.15rem;
+        }
+        .enjoy-menus-print-th-repas {
+            background: #f6f8fb !important;
+            font-weight: 700;
+            font-size: 8pt;
+            color: #2c3e50;
+            width: 6.75rem;
+            white-space: nowrap;
+        }
+        .enjoy-menus-print-cell {
+            text-align: center;
+            vertical-align: middle;
+            background: #fff !important;
+        }
+        .enjoy-menus-print-cell-inner {
+            text-align: center;
+        }
+        .enjoy-menus-print-ligne {
+            margin: 0.08rem 0;
+            text-align: center;
+        }
+        .enjoy-menus-print-ligne-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 7.5pt;
+            display: block;
+            text-align: center;
+        }
+        .enjoy-menus-print-ligne-valeur {
+            color: #1a1a1a;
+            display: block;
+            margin-bottom: 0.12rem;
+            word-break: break-word;
+            text-align: center;
+        }
+        .enjoy-menus-print-meta {
+            display: block;
+            margin-top: 0.2rem;
+            padding-top: 0.2rem;
+            border-top: 1px dashed #b8c4d0;
+            font-size: 7pt;
+            color: #5a6570;
+            font-style: italic;
+            line-height: 1.3;
+            text-align: center;
+        }
+        .enjoy-menus-print-cell-empty {
+            background: #f4f6f8 !important;
+            color: #b0b8c0;
+            text-align: center;
+            font-style: italic;
+            vertical-align: middle !important;
+        }
+        .enjoy-menus-print-cell-hors-sejour {
+            background: #ececec !important;
+            color: #999;
+            text-align: center;
+            vertical-align: middle !important;
+        }
+        .enjoy-menus-print-repas-badge {
+            display: inline-block;
+            padding: 0.12rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 8pt;
+            color: #1a1a1a;
+            background: transparent !important;
+            border: 1px solid #c8d0da;
+        }
+        .enjoy-menus-print-liste-table .enjoy-menus-print-liste-date {
+            font-weight: 600;
+            background: #e8eef5 !important;
+            white-space: nowrap;
+            width: 6.5rem;
+            vertical-align: top;
+        }
+        .enjoy-menus-print-liste-row-alt .enjoy-menus-print-liste-date {
+            background: #eef2f6 !important;
+        }
+        .enjoy-menus-print-liste-row-alt .enjoy-menus-print-cell {
+            background: #fff !important;
+        }
+    `,
     /** Tableau Liste : masque le tableau écran ; styles du tableau print dédié */
     listeTable: `
         .enjoy-no-print { display: none !important; }

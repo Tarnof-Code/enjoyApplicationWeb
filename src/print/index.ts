@@ -11,8 +11,8 @@
  *    Liste pleine page, vue dédiée `/impression`.
  *    Marquer filtres / boutons avec `PRINT_GLOBAL_CLASS.noPrint`.
  *
- * Plannings / tableaux larges : `format: "landscape-a4"` pour forcer le paysage en CSS
- * (+ `PRINT_STYLE_PRESETS.wideTable`). Sinon, portrait / paysage via le dialogue d'impression.
+ * Plannings / tableaux larges : `PRINT_STYLE_PRESETS.wideTable` recommandé ; orientation
+ * portrait / paysage via le dialogue d'impression (`format: "landscape-a4"` seulement si besoin explicite).
  */
 
 export { PRINT_GLOBAL_CLASS } from "./printGlobalClasses";

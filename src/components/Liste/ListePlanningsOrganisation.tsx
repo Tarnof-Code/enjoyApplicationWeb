@@ -1817,7 +1817,6 @@ function ListePlanningsOrganisation({
 
     const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
         documentTitle: planningTitreImpression,
-        format: "landscape-a4",
         runningHeaderLabel: planningTitreImpression,
         extraPageStyle: `${PRINT_STYLE_PRESETS.wideTable}\n${PRINT_STYLE_PRESETS.planningGrid}`,
     });

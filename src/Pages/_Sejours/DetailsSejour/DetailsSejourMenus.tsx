@@ -19,6 +19,7 @@ import {
     TYPES_REPAS,
     LABELS_TYPE_REPAS,
     couleurFondCarteMenuPourTypeRepas,
+    type LigneCompositionMenuAffichage,
     indexerMenusParJourEtType,
     jourISOdepuisDateRepasApi,
     fusionnerRefsPourFormulaire,
@@ -39,8 +40,55 @@ import { accountService } from "../../../services/account.service";
 import { navigateToRouteError } from "../../../helpers/routeError";
 import type { MenusLoaderData } from "./detailsSejourMenusLoader";
 import { normaliserMenusRepas, paramsListerMenusPourSejour } from "./menusSejourUtils";
+import {
+    PRINT_GLOBAL_CLASS,
+    PRINT_STYLE_PRESETS,
+    PrintContentRoot,
+    PrintDocumentHeader,
+    PrintTrigger,
+    buildPrintDocumentContext,
+    usePrintContent,
+} from "../../../print";
 
 type LoaderOk = { sejour: SejourDTO };
+
+function lignesMenuPourImpression(
+    menu: MenuRepasDto | undefined,
+    champsVisibles: ResumeMenuCourtChampsVisibles | null,
+): { lignes: LigneCompositionMenuAffichage[]; meta: string | null } {
+    if (!menu) {
+        return { lignes: [], meta: null };
+    }
+    const lignes = lignesCompositionMenuPourAffichage(menu, champsVisibles).filter(
+        (l) => l.valeur.trim().length > 0 && l.valeur !== "—",
+    );
+    const meta = ligneMetaAllergenesRegimesCalendrier(menu);
+    return { lignes, meta: meta || null };
+}
+
+function MenuPrintCellContent({
+    lignes,
+    meta,
+}: {
+    lignes: LigneCompositionMenuAffichage[];
+    meta: string | null;
+}) {
+    const c = PRINT_GLOBAL_CLASS;
+    if (lignes.length === 0) {
+        return <>—</>;
+    }
+    return (
+        <div className={c.menusPrintCellInner}>
+            {lignes.map((l) => (
+                <div key={l.key} className={c.menusPrintLigne}>
+                    <span className={c.menusPrintLigneLabel}>{l.label}</span>
+                    <span className={c.menusPrintLigneValeur}>{l.valeur}</span>
+                </div>
+            ))}
+            {meta ? <span className={c.menusPrintMeta}>{meta}</span> : null}
+        </div>
+    );
+}
 
 const DetailsSejourMenus: React.FC = () => {
     const menusLoaderData = useLoaderData() as MenusLoaderData;
@@ -172,6 +220,152 @@ const DetailsSejourMenus: React.FC = () => {
     }, [sejour, navigate]);
 
     const menusParJourEtType = useMemo(() => indexerMenusParJourEtType(menus), [menus]);
+
+    const menusTitreImpression = "Menus du séjour";
+
+    const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+        documentTitle: menusTitreImpression,
+        runningHeaderLabel: menusTitreImpression,
+        extraPageStyle: PRINT_STYLE_PRESETS.menusGrid,
+    });
+
+    const printHeaderContext = useMemo(() => {
+        const meta: { label: string; value: string }[] = [];
+        if (libellePlageMenus) {
+            meta.push({ label: "Période affichée", value: libellePlageMenus });
+        }
+        meta.push({
+            label: "Vue",
+            value: menusNombreJoursVue === 1 ? "1 jour" : `${menusNombreJoursVue} jours`,
+        });
+        meta.push({
+            label: "Mode",
+            value: vueMenus === "calendrier" ? "Calendrier" : "Liste",
+        });
+        return buildPrintDocumentContext(menusTitreImpression, meta);
+    }, [libellePlageMenus, menusNombreJoursVue, vueMenus]);
+
+    const peutImprimerMenus = joursFenetreMenus.length > 0 && !loading;
+
+    const renderMenusPrintCalendrier = () => {
+        const c = PRINT_GLOBAL_CLASS;
+        return (
+            <table className={c.menusPrintTable}>
+                <thead>
+                    <tr>
+                        <th scope="col" className={c.menusPrintThRepas} aria-label="Type de repas" />
+                        {joursFenetreMenus.map((col) => {
+                            const d = parseYmdVersDateLocale(col.ymd);
+                            const libelle = d ? libelleJourCourtPourBouton(d) : col.ymd;
+                            return (
+                                <th
+                                    key={col.ymd}
+                                    scope="col"
+                                    className={`${c.menusPrintThJour} ${!col.dansSejour ? c.menusPrintThHorsSejour : ""}`}
+                                >
+                                    {libelle}
+                                    {!col.dansSejour ? (
+                                        <span className={c.menusPrintHorsSejourHint}>Hors séjour</span>
+                                    ) : null}
+                                </th>
+                            );
+                        })}
+                    </tr>
+                </thead>
+                <tbody>
+                    {typesRepasPourAffichageMenus.map((type) => (
+                        <tr key={type}>
+                            <th scope="row" className={c.menusPrintThRepas}>
+                                {LABELS_TYPE_REPAS[type]}
+                            </th>
+                            {joursFenetreMenus.map((col) => {
+                                if (!col.dansSejour) {
+                                    return (
+                                        <td
+                                            key={`${col.ymd}-${type}`}
+                                            className={`${c.menusPrintCell} ${c.menusPrintCellHorsSejour}`}
+                                        >
+                                            —
+                                        </td>
+                                    );
+                                }
+                                const menu = menusParJourEtType.get(col.ymd)?.get(type);
+                                const { lignes, meta } = lignesMenuPourImpression(
+                                    menu,
+                                    champsComposeMenusVisibles,
+                                );
+                                const celluleVide = lignes.length === 0;
+                                return (
+                                    <td
+                                        key={`${col.ymd}-${type}`}
+                                        className={`${c.menusPrintCell} ${celluleVide ? c.menusPrintCellEmpty : ""}`}
+                                    >
+                                        <MenuPrintCellContent lignes={lignes} meta={meta} />
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
+    };
+
+    const renderMenusPrintListe = () => {
+        const c = PRINT_GLOBAL_CLASS;
+        return (
+            <table className={`${c.menusPrintTable} ${c.menusPrintListeTable}`}>
+                <thead>
+                    <tr>
+                        <th scope="col" className={c.menusPrintListeDate}>
+                            Date
+                        </th>
+                        <th scope="col" style={{ width: "7.5rem" }}>
+                            Repas
+                        </th>
+                        <th scope="col">Menu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {datesListe.flatMap((dayISO, dayIdx) =>
+                        typesRepasPourAffichageMenus.map((type, typeIdx) => {
+                            const menu = menusParJourEtType.get(dayISO)?.get(type);
+                            const { lignes, meta } = lignesMenuPourImpression(
+                                menu,
+                                champsComposeMenusVisibles,
+                            );
+                            const celluleVide = lignes.length === 0;
+                            return (
+                                <tr
+                                    key={`${dayISO}-${type}`}
+                                    className={dayIdx % 2 === 1 ? c.menusPrintListeRowAlt : undefined}
+                                >
+                                    {typeIdx === 0 ? (
+                                        <td
+                                            rowSpan={typesRepasPourAffichageMenus.length}
+                                            className={c.menusPrintListeDate}
+                                        >
+                                            {formaterDate(`${dayISO}T12:00:00`)}
+                                        </td>
+                                    ) : null}
+                                    <td>
+                                        <span className={c.menusPrintRepasBadge}>
+                                            {LABELS_TYPE_REPAS[type]}
+                                        </span>
+                                    </td>
+                                    <td
+                                        className={celluleVide ? c.menusPrintCellEmpty : c.menusPrintCell}
+                                    >
+                                        <MenuPrintCellContent lignes={lignes} meta={meta} />
+                                    </td>
+                                </tr>
+                            );
+                        }),
+                    )}
+                </tbody>
+            </table>
+        );
+    };
 
     const typeRepasCourant = editingMenu?.typeRepas ?? creatingType;
     /** À la création, champs compacts sur une ligne ; à l’édition, hauteur plus confortable. */
@@ -351,6 +545,21 @@ const DetailsSejourMenus: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
+            {peutImprimerMenus ? (
+                <div className={PRINT_GLOBAL_CLASS.only}>
+                    <PrintContentRoot
+                        contentRef={contentRef}
+                        fixedRunningHeaderLabel={fixedRunningHeaderLabel}
+                    >
+                        <PrintDocumentHeader context={printHeaderContext} />
+                        <div className={PRINT_GLOBAL_CLASS.menusPrintGrid}>
+                            {vueMenus === "calendrier"
+                                ? renderMenusPrintCalendrier()
+                                : renderMenusPrintListe()}
+                        </div>
+                    </PrintContentRoot>
+                </div>
+            ) : null}
             <header className={menuStyles.menusPageHeader}>
                 <h1 className={`${styles.overviewSectionTitle} ${menuStyles.menusPageTitle}`}>Menus du séjour</h1>
                 {joursDuSejourMenus.length > 0 && joursFenetreMenus.length > 0 ? (
@@ -395,6 +604,14 @@ const DetailsSejourMenus: React.FC = () => {
                                     />
                                 </div>
                             </div>
+                            {peutImprimerMenus ? (
+                                <PrintTrigger
+                                    variant="button"
+                                    onPrint={() => print()}
+                                    label="Imprimer la période affichée"
+                                    buttonText="Imprimer"
+                                />
+                            ) : null}
                         </div>
                     </div>
                 ) : null}

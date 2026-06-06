@@ -18,4 +18,23 @@ export const PRINT_GLOBAL_CLASS = {
     withRunningHeader: "enjoy-print-with-running-header",
     /** Tableau liste dédié à l'impression (pagination multi-pages) */
     listePrintTable: "enjoy-liste-print-table",
+    /** Grille menus (calendrier / liste) — styles dans `PRINT_STYLE_PRESETS.menusGrid` */
+    menusPrintGrid: "enjoy-menus-print-grid",
+    menusPrintTable: "enjoy-menus-print-table",
+    menusPrintThJour: "enjoy-menus-print-th-jour",
+    menusPrintThRepas: "enjoy-menus-print-th-repas",
+    menusPrintThHorsSejour: "enjoy-menus-print-th-hors-sejour",
+    menusPrintHorsSejourHint: "enjoy-menus-print-hors-sejour-hint",
+    menusPrintCell: "enjoy-menus-print-cell",
+    menusPrintCellInner: "enjoy-menus-print-cell-inner",
+    menusPrintLigne: "enjoy-menus-print-ligne",
+    menusPrintLigneLabel: "enjoy-menus-print-ligne-label",
+    menusPrintLigneValeur: "enjoy-menus-print-ligne-valeur",
+    menusPrintMeta: "enjoy-menus-print-meta",
+    menusPrintCellEmpty: "enjoy-menus-print-cell-empty",
+    menusPrintCellHorsSejour: "enjoy-menus-print-cell-hors-sejour",
+    menusPrintRepasBadge: "enjoy-menus-print-repas-badge",
+    menusPrintListeDate: "enjoy-menus-print-liste-date",
+    menusPrintListeTable: "enjoy-menus-print-liste-table",
+    menusPrintListeRowAlt: "enjoy-menus-print-liste-row-alt",
 } as const;
