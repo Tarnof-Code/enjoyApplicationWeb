@@ -816,6 +816,18 @@
     gap: 0.75rem;
 }
 
+.planningEditorHeaderActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.planningPrintGrid {
+    width: 100%;
+    font-size: 9pt;
+}
+
 .planningEditorTitle {
     margin: 0;
     font-size: 1.35rem;

@@ -37,9 +37,9 @@ function buildPageRules(
             @top-left {
                 content: "${title} — " counter(page) " / " counter(pages);
                 font-family: system-ui, -apple-system, sans-serif;
-                font-size: 9pt;
-                font-weight: 600;
-                color: #333;
+                font-size: 13pt;
+                font-weight: 700;
+                color: #1a1a1a;
                 vertical-align: bottom;
                 padding-bottom: 2mm;
                 border-bottom: 0.5pt solid #ccc;
@@ -65,12 +65,16 @@ function buildFixedRunningHeaderStyles(): string {
             right: 0;
             z-index: 1000;
             padding: 2.5mm ${PRINT_CONTENT_PADDING} 2mm;
-            font-size: 9pt;
+            font-size: 13pt;
             line-height: 1.3;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            color: #1a1a1a;
             background: #fff;
             border-bottom: 1px solid #ccc;
+        }
+        .${c.runningHeaderTitle} {
+            font-size: 13pt;
+            font-weight: 700;
         }
     `;
 }
@@ -117,9 +121,11 @@ export function buildPrintPageStyle(options?: {
             border-bottom: none;
         }
         .${c.documentLabel} {
-            margin: 0 0 0.5rem;
-            font-size: 1.05rem;
-            font-weight: 600;
+            margin: 0 0 0.65rem;
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: #1a1a1a;
         }
         .${c.documentMeta} {
             margin: 0.5rem 0 0;

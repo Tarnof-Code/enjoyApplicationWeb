@@ -45,6 +45,15 @@ import { GroupesSelectOptions, SelectionGroupesParType } from "./SelectionGroupe
 import { libelleJourCourtPourBouton, parseYmdVersDateLocale } from "./listeActivitesUtils";
 import { CalendrierNavigationPeriode } from "./ListeActivitesCalendrier";
 import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
+import {
+    PRINT_GLOBAL_CLASS,
+    PRINT_STYLE_PRESETS,
+    PrintContentRoot,
+    PrintDocumentHeader,
+    PrintTrigger,
+    buildPrintDocumentContext,
+    usePrintContent,
+} from "../../print";
 import styles from "./ListePlanningsOrganisation.module.scss";
 
 /** Même libellé de jour que le calendrier des activités (ex. « Lun 15 juil. »). */
@@ -1804,6 +1813,129 @@ function ListePlanningsOrganisation({
         detail != null ? grilleAfficheColonneRegroupement(detail.lignes) : false;
     const afficherColonneLibelleLigne = detail != null ? grilleAfficheColonneLibelleLigne(detail) : false;
 
+    const planningTitreImpression = detail?.titre?.trim() || "Planning";
+
+    const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+        documentTitle: planningTitreImpression,
+        format: "landscape-a4",
+        runningHeaderLabel: planningTitreImpression,
+        extraPageStyle: `${PRINT_STYLE_PRESETS.wideTable}\n${PRINT_STYLE_PRESETS.planningGrid}`,
+    });
+
+    const printHeaderContext = useMemo(() => {
+        const meta: { label: string; value: string }[] = [];
+        if (planningLibellePlage) {
+            meta.push({ label: "Période affichée", value: planningLibellePlage });
+        }
+        meta.push({
+            label: "Vue",
+            value: planningNombreJoursVue === 1 ? "1 jour" : `${planningNombreJoursVue} jours`,
+        });
+        if (detail?.consigneGlobale?.trim()) {
+            meta.push({ label: "Consigne", value: detail.consigneGlobale.trim() });
+        }
+        return buildPrintDocumentContext(planningTitreImpression, meta);
+    }, [
+        detail?.consigneGlobale,
+        planningLibellePlage,
+        planningNombreJoursVue,
+        planningTitreImpression,
+    ]);
+
+    const editorPlanningVisible = (editorOpen || isEmbeddedEditor) && !editorLoading && detail != null;
+    const peutImprimerPlanning = editorPlanningVisible && joursFenetre.length > 0;
+
+    const renderPlanningPrintGrid = () => {
+        if (!detail) return null;
+        return (
+            <table className={`${styles.gridTable} ${styles.planningPrintGrid}`}>
+                <thead>
+                    <tr>
+                        {afficherColonneRegroupement ? (
+                            <th className={styles.regroupementColHead} scope="col">
+                                Section
+                            </th>
+                        ) : null}
+                        {afficherColonneLibelleLigne ? (
+                            <th className={styles.rowLabelHead} scope="col">
+                                Ligne
+                            </th>
+                        ) : null}
+                        {joursFenetre.map(({ ymd, label }) => (
+                            <th key={ymd} className={styles.planningGridHead} scope="col">
+                                {label}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {lignesTri.map((ligne, idx) => {
+                        const indent = depths.get(ligne.id) ?? 0;
+                        const libelleCol = libelleLignePourAffichage(
+                            ligne,
+                            sourceLibelleApiDetail,
+                            groupes,
+                            lieuxPourPlannings,
+                            horaires,
+                            moments,
+                            membresPourCellulesModal
+                        );
+                        const rgInfo = regroupementCellInfos[idx]!;
+                        return (
+                            <tr key={ligne.id}>
+                                {afficherColonneRegroupement && rgInfo.showLeadingCell ? (
+                                    <td
+                                        rowSpan={rgInfo.rowspan}
+                                        className={styles.regroupementCellVertical}
+                                    >
+                                        {rgInfo.libelleRegroupement ?? ""}
+                                    </td>
+                                ) : null}
+                                {afficherColonneLibelleLigne ? (
+                                    <td className={styles.rowLabel}>
+                                        <span
+                                            className={styles.rowLabelInner}
+                                            style={{ paddingLeft: `${indent * 12}px` }}
+                                        >
+                                            {libelleCol.trim() !== "" ? (
+                                                libelleCol
+                                            ) : (
+                                                <span className={styles.cellMuted}>—</span>
+                                            )}
+                                        </span>
+                                    </td>
+                                ) : null}
+                                {joursFenetre.map(({ ymd: j }) => {
+                                    const c = cellulePourJour(ligne, j);
+                                    const texteCellule = resumeCellule(
+                                        c,
+                                        groupes,
+                                        lieuxPourPlannings,
+                                        horaires,
+                                        moments,
+                                        membresPourCellulesModal
+                                    );
+                                    return (
+                                        <td key={j} className={styles.planningGridCell}>
+                                            <span
+                                                className={
+                                                    texteCellule === "—" ? styles.cellMuted : undefined
+                                                }
+                                                style={{ whiteSpace: "pre-line" }}
+                                            >
+                                                {texteCellule}
+                                            </span>
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        );
+    };
+
     const renderLineDragHandle = (ligne: PlanningLigneDto, className: string) =>
         peutGererPlanningStructure ? (
             <div
@@ -2268,13 +2400,34 @@ function ListePlanningsOrganisation({
 
     return (
         <div>
+            {editorPlanningVisible ? (
+                <div className={PRINT_GLOBAL_CLASS.only}>
+                    <PrintContentRoot
+                        contentRef={contentRef}
+                        fixedRunningHeaderLabel={fixedRunningHeaderLabel}
+                    >
+                        <PrintDocumentHeader context={printHeaderContext} />
+                        <div className="planning-print-grid">{renderPlanningPrintGrid()}</div>
+                    </PrintContentRoot>
+                </div>
+            ) : null}
             {isEmbeddedEditor && (
                 <div className={styles.planningEditorPage}>
                     <div className={styles.planningEditorHeader}>
                         <h1 className={styles.planningEditorTitle}>{detail?.titre ?? "Planning"}</h1>
-                        <Button color="secondary" type="button" onClick={() => onCloseEmbeddedEditor?.()}>
-                            Retour aux plannings
-                        </Button>
+                        <div className={styles.planningEditorHeaderActions}>
+                            {peutImprimerPlanning ? (
+                                <PrintTrigger
+                                    variant="button"
+                                    onPrint={() => print()}
+                                    label="Imprimer la période affichée"
+                                    buttonText="Imprimer"
+                                />
+                            ) : null}
+                            <Button color="secondary" type="button" onClick={() => onCloseEmbeddedEditor?.()}>
+                                Retour aux plannings
+                            </Button>
+                        </div>
                     </div>
                     <div className={styles.planningEditorBody}>{renderEditorSurface()}</div>
                 </div>
@@ -2488,6 +2641,14 @@ function ListePlanningsOrganisation({
                 </ModalHeader>
                 <ModalBody>{renderEditorSurface()}</ModalBody>
                 <ModalFooter>
+                    {peutImprimerPlanning ? (
+                        <PrintTrigger
+                            variant="button"
+                            onPrint={() => print()}
+                            label="Imprimer la période affichée"
+                            buttonText="Imprimer"
+                        />
+                    ) : null}
                     <Button color="secondary" onClick={() => setEditorOpen(false)}>
                         Fermer
                     </Button>

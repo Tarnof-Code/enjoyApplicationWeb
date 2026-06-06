@@ -2,7 +2,7 @@ import type { FC } from "react";
 import { PRINT_GLOBAL_CLASS as c } from "./printGlobalClasses";
 import type { PrintDocumentContext } from "./types";
 
-/** Métadonnées d'impression (effectifs, filtres…) — première page uniquement */
+/** Métadonnées d'impression (effectifs, filtres…) — première page uniquement ; le titre est dans l'en-tête répété */
 export const PrintDocumentHeader: FC<{ context: PrintDocumentContext }> = ({ context }) => {
     const { meta } = context;
     if (meta == null || meta.length === 0) return null;
