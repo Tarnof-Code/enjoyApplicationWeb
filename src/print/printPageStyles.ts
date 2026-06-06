@@ -431,9 +431,7 @@ export const PRINT_STYLE_PRESETS = {
         .enjoy-no-print { display: none !important; }
         .enjoy-liste-filter-row { display: none !important; }
         .enjoy-liste-print-table .enjoy-sanitaire-col-groupes {
-            width: 5.5rem !important;
-            min-width: 4.5rem !important;
-            max-width: 6rem !important;
+            min-width: 11rem !important;
         }
         .enjoy-liste-print-table thead tr > th:empty,
         .enjoy-liste-print-table tbody tr > td:empty {
