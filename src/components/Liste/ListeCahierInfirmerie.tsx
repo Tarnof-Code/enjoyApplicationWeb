@@ -12,7 +12,7 @@ import {
   peutSupprimerEntreeCahierInfirmerie,
 } from "../../helpers/droitsCahierInfirmerie";
 import { getApiErrorMessage } from "../../helpers/axiosError";
-import { parseDate } from "../../helpers/formaterDate";
+import formaterDate, { parseDate } from "../../helpers/formaterDate";
 import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import {
   formatDateHeureHistorique,
@@ -25,7 +25,51 @@ import {
   HistoriqueModificationListeModal,
   type HistoriqueModificationListeModalLigne,
 } from "../common/HistoriqueModificationListeModal";
+import {
+  buildListePrintExtraStyle,
+  buildPrintDocumentContext,
+  PRINT_GLOBAL_CLASS,
+  PrintContentRoot,
+  PrintDocumentHeader,
+  PrintTrigger,
+  usePrintContent,
+} from "../../print";
+import type { ColumnConfig } from "./Liste";
+import { ListePrintTable } from "./ListePrintTable";
 import listeStyles from "./Liste.module.scss";
+
+const CAHIER_PRINT_CELL_CENTER = "enjoy-cahier-print-cell-center";
+
+function libelleTitreImpressionCahier(sejour: SejourDTO): string {
+  const debut = formaterDate(sejour.dateDebut);
+  const fin = formaterDate(sejour.dateFin);
+  const periode = debut && fin ? ` (${debut} – ${fin})` : "";
+  return `Cahier d'infirmerie — ${sejour.nom}${periode}`;
+}
+
+const CAHIER_PRINT_EXTRA_STYLE = `${buildListePrintExtraStyle(7)}
+        .enjoy-liste-print-table thead th {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .${CAHIER_PRINT_CELL_CENTER} {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .enjoy-liste-print-table th:last-child,
+        .enjoy-liste-print-table td:last-child {
+            width: 9rem;
+            min-width: 9rem;
+        }
+        .enjoy-liste-print-table tbody tr > td:last-child,
+        .enjoy-liste-print-table tbody tr > td:last-child:empty {
+            display: table-cell !important;
+            width: 9rem !important;
+            min-width: 9rem !important;
+            height: 3rem;
+            padding: 0.35rem 0.5rem !important;
+            border: 1px solid #e2e8ef !important;
+        }`;
 
 function formaterTemperatureListe(celsius: number): string {
   return `${celsius.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })} °C`;
@@ -201,6 +245,93 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
     });
   }, [entrees, filtreNorm, jourFiltre]);
 
+  const printColumns = useMemo((): ColumnConfig[] => {
+    return [
+      {
+        key: "dateHeure",
+        label: "Date / heure",
+        type: "text",
+        className: CAHIER_PRINT_CELL_CENTER,
+        printValue: (e: CahierInfirmerieEntreeDto) => formatDateHeureHistorique(e.dateHeure),
+      },
+      {
+        key: "enfant",
+        label: "Enfant",
+        type: "text",
+        className: CAHIER_PRINT_CELL_CENTER,
+        printValue: (e: CahierInfirmerieEntreeDto) => `${e.enfantPrenom} ${e.enfantNom}`.trim(),
+      },
+      {
+        key: "description",
+        label: "Description",
+        type: "text",
+        printValue: (e: CahierInfirmerieEntreeDto) => e.description ?? "",
+      },
+      {
+        key: "soins",
+        label: "Soins",
+        type: "text",
+        printValue: libelleSoins,
+      },
+      {
+        key: "appels",
+        label: "Appels",
+        type: "text",
+        className: CAHIER_PRINT_CELL_CENTER,
+        printValue: libelleAppels,
+      },
+      {
+        key: "soigneur",
+        label: "Soigneur",
+        type: "text",
+        className: CAHIER_PRINT_CELL_CENTER,
+        printValue: libelleSoigneurEntree,
+      },
+      {
+        key: "signatureDirection",
+        label: "Signature de la direction",
+        type: "text",
+        printValue: () => "",
+      },
+    ];
+  }, []);
+
+  const printTitre = useMemo(
+    () => libelleTitreImpressionCahier(sejour),
+    [sejour],
+  );
+
+  const printHeaderContext = useMemo(() => {
+    const meta: { label: string; value: string }[] = [
+      {
+        label: "Résultats affichés",
+        value: `${lignesFiltrees.length} sur ${entrees.length}`,
+      },
+    ];
+    if (jourFiltre) {
+      const jour = joursSejourOptions.find((j) => j.ymd === jourFiltre);
+      meta.push({ label: "Jour du séjour", value: jour?.label ?? jourFiltre });
+    }
+    if (filtreNorm) {
+      meta.push({ label: "Recherche", value: filtre.trim() });
+    }
+    return buildPrintDocumentContext(printTitre, meta);
+  }, [printTitre, lignesFiltrees.length, entrees.length, jourFiltre, joursSejourOptions, filtreNorm, filtre]);
+
+  const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+    documentTitle: printTitre,
+    extraPageStyle: CAHIER_PRINT_EXTRA_STYLE,
+    ignoreGlobalStyles: true,
+    runningHeaderLabel: printTitre,
+  });
+
+  const renderPrintCell = (column: ColumnConfig, item: CahierInfirmerieEntreeDto): string => {
+    if (column.printValue) {
+      return column.printValue(item);
+    }
+    return "";
+  };
+
   const ouvrirCreation = () => {
     setEntreeEdition(null);
     setModalFormOuvert(true);
@@ -265,11 +396,11 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
     <div className="page-main">
       {messageErreur ? <p className="errorMessage">{messageErreur}</p> : null}
 
-      <Row className="mb-3 align-items-end gy-2">
-        <Col xs="12" lg="4">
+      <Row className={`mb-3 align-items-end gy-2 ${PRINT_GLOBAL_CLASS.noPrint}`}>
+        <Col xs="12" lg="3">
           <h1 className="page-title mb-0">Cahier d'infirmerie</h1>
         </Col>
-        <Col xs="12" sm="6" md="4" lg="3">
+        <Col xs="12" sm="6" lg="3">
           <label htmlFor="cahier-filtre-jour" className="form-label small text-muted mb-1">
             Jour du séjour
           </label>
@@ -288,7 +419,7 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
             ))}
           </Input>
         </Col>
-        <Col xs="12" sm="6" md="8" lg="3">
+        <Col xs="12" sm="6" lg="3">
           <label htmlFor="cahier-filtre-texte" className="form-label small text-muted mb-1 d-none d-sm-block">
             Recherche
           </label>
@@ -302,15 +433,41 @@ const ListeCahierInfirmerie: React.FC<ListeCahierInfirmerieProps> = ({
             className="w-100"
           />
         </Col>
-        <Col xs="12" lg="2" className="d-flex justify-content-lg-end align-items-end">
-          <Button color="success" onClick={ouvrirCreation} className="w-100 w-lg-auto">
+        <Col
+          xs="12"
+          lg="3"
+          className="d-flex flex-column flex-sm-row justify-content-lg-end align-items-stretch align-items-sm-end gap-2"
+        >
+          <PrintTrigger
+            variant="button"
+            onPrint={print}
+            label="Imprimer le cahier d'infirmerie"
+            buttonText="Imprimer"
+            className="text-nowrap flex-shrink-0"
+          />
+          <Button color="success" onClick={ouvrirCreation} className="text-nowrap flex-shrink-0">
             <FontAwesomeIcon icon={faPlus} className="me-2" />
             Nouvelle entrée
           </Button>
         </Col>
       </Row>
 
-      <div className={listeStyles.table_container}>
+      <PrintContentRoot contentRef={contentRef} fixedRunningHeaderLabel={fixedRunningHeaderLabel}>
+        <PrintDocumentHeader context={printHeaderContext} />
+        <ListePrintTable
+          visibleColumns={printColumns}
+          rows={lignesFiltrees}
+          getRowKey={(item) => item.id}
+          renderPrintCell={renderPrintCell}
+          emptyMessage={
+            entrees.length === 0
+              ? "Aucune entrée pour ce séjour."
+              : "Aucune entrée ne correspond à ce jour ou à cette recherche."
+          }
+        />
+      </PrintContentRoot>
+
+      <div className={`${listeStyles.table_container} ${PRINT_GLOBAL_CLASS.noPrint}`}>
         <table className="table align-middle">
           <thead className={listeStyles.enTete}>
             <tr className="align-middle">

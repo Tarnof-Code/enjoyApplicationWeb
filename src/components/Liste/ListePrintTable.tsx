@@ -17,7 +17,9 @@ export function ListePrintTable<T>({
     emptyMessage,
 }: ListePrintTableProps<T>) {
     const cellClassName = (column: ColumnConfig) =>
-        column.printNoWrap ? PRINT_GLOBAL_CLASS.listePrintNoWrap : undefined;
+        [column.printNoWrap ? PRINT_GLOBAL_CLASS.listePrintNoWrap : undefined, column.className]
+            .filter(Boolean)
+            .join(" ") || undefined;
 
     return (
         <div className={PRINT_GLOBAL_CLASS.listePrintWrap}>
