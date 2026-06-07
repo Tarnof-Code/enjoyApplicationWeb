@@ -54,7 +54,7 @@ export function libelleMomentIndenté(moment: Pick<MomentAplat, "nom" | "profond
 }
 
 /** Ids du sous-arbre (nœud + descendants), en parcours profondeur d'abord. */
-export function idsSousArbreMoment(moments: MomentDto[], racineId: number): number[] {
+export function idsSousArbreMoment(moments: readonly MomentDto[], racineId: number): number[] {
     const ids = [racineId];
     const enfants = moments.filter((m) => m.parentId === racineId).sort(trierMomentsParOrdre);
     for (const e of enfants) {
@@ -64,7 +64,7 @@ export function idsSousArbreMoment(moments: MomentDto[], racineId: number): numb
 }
 
 /** Ancêtres directs et indirects d'un moment (ids des parents remontés). */
-export function ancetresMomentIds(moments: MomentDto[], momentId: number): number[] {
+export function ancetresMomentIds(moments: readonly MomentDto[], momentId: number): number[] {
     const ids: number[] = [];
     let courant = moments.find((m) => m.id === momentId);
     while (courant?.parentId != null) {
@@ -80,7 +80,7 @@ export function ancetresMomentIds(moments: MomentDto[], momentId: number): numbe
  * Utilisé pour la règle : un animateur ne peut pas être affecté à deux activités
  * le même jour si leurs moments se chevauchent dans la hiérarchie.
  */
-export function idsEnConflit(momentId: number, moments: MomentDto[]): Set<number> {
+export function idsEnConflit(momentId: number, moments: readonly MomentDto[]): Set<number> {
     const ids = new Set<number>();
     for (const id of idsSousArbreMoment(moments, momentId)) ids.add(id);
     for (const id of ancetresMomentIds(moments, momentId)) ids.add(id);

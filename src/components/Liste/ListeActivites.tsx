@@ -21,6 +21,7 @@ import {
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import {
     aplatirMomentsHierarchiquement,
+    idsEnConflit,
     libelleMomentIndenté,
 } from "../../helpers/construireArbreMoments";
 import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
@@ -67,11 +68,13 @@ import {
     equipeAvecTokenEnTete,
     groupeIdsReferentsPourToken,
     enumererJoursDuSejour,
+    premierConflitAnimateurActiviteInterne,
     resumePartageLieu,
     sejourDebutToInputDate,
     tokensEquipePourFiltreGroupesCalendrier,
     trierLieuxParNom,
     trierTypesParLibelle,
+    verifierDisponibiliteLieuActivite,
 } from "./listeActivitesUtils";
 import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
 import {
@@ -420,6 +423,36 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
     const lieuxTriés = trierLieuxParNom(lieuxFiltrésParEmplacement);
     const lieuSélectionnéForm = formLieuId !== "" ? lieux.find((l) => l.id === formLieuId) : undefined;
+
+    const libelleMembreEquipePourConflit = useCallback(
+        (tokenId: string) => {
+            const m = equipe.find((e) => (e.tokenId ?? "").trim() === tokenId.trim());
+            return m ? { prenom: m.prenom, nom: m.nom } : { prenom: "", nom: "" };
+        },
+        [equipe],
+    );
+
+    const disponibiliteLieuFormulaire = useMemo(() => {
+        if (formLieuId === "" || formMomentId === "" || !formDate.trim() || !lieuSélectionnéForm) {
+            return null;
+        }
+        return verifierDisponibiliteLieuActivite(
+            activites,
+            lieuSélectionnéForm,
+            formDate.trim(),
+            formMomentId as number,
+            momentsTriés,
+            editingActiviteId,
+        );
+    }, [
+        activites,
+        editingActiviteId,
+        formDate,
+        formLieuId,
+        formMomentId,
+        lieuSélectionnéForm,
+        momentsTriés,
+    ]);
 
     useEffect(() => {
         if (formLieuId === "") return;
@@ -781,6 +814,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                 tid,
                 ymd,
                 moment.id,
+                idsEnConflit(moment.id, momentsTriés),
             );
             if (activiteConflit) {
                 await sejourActiviteService.supprimerActivite(sejour.id, activiteConflit.id);
@@ -1067,6 +1101,40 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             moments.length > 0 && formMomentId !== "" ? (formMomentId as number) : 0;
         if (momentId > 0) {
             payload.momentId = momentId;
+        }
+
+        if (momentId > 0) {
+            const conflitAnimateur = premierConflitAnimateurActiviteInterne(
+                activites,
+                idsMembres,
+                formDate.trim(),
+                momentId,
+                momentsTriés,
+                libelleMembreEquipePourConflit,
+                editingActiviteId,
+            );
+            if (conflitAnimateur) {
+                setErrorMessage(conflitAnimateur);
+                return;
+            }
+        }
+
+        if (formLieuId !== "" && momentId > 0) {
+            const lieu = lieux.find((l) => l.id === formLieuId);
+            if (lieu) {
+                const dispoLieu = verifierDisponibiliteLieuActivite(
+                    activites,
+                    lieu,
+                    formDate.trim(),
+                    momentId,
+                    momentsTriés,
+                    editingActiviteId,
+                );
+                if (!dispoLieu.ok) {
+                    setErrorMessage(dispoLieu.message);
+                    return;
+                }
+            }
         }
 
         const membreTokenIds = [...idsMembres];
@@ -1879,7 +1947,17 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                                 emplacements » ou un autre type.
                             </p>
                         ) : lieuSélectionnéForm ? (
-                            <p className={styles.lieuHint}>{resumePartageLieu(lieuSélectionnéForm)}</p>
+                            <>
+                                <p className={styles.lieuHint}>{resumePartageLieu(lieuSélectionnéForm)}</p>
+                                {disponibiliteLieuFormulaire && !disponibiliteLieuFormulaire.ok ? (
+                                    <p className={styles.lieuHintErreur}>{disponibiliteLieuFormulaire.message}</p>
+                                ) : disponibiliteLieuFormulaire?.ok &&
+                                  disponibiliteLieuFormulaire.avertissement ? (
+                                    <p className={styles.lieuHintAvertissement}>
+                                        {disponibiliteLieuFormulaire.avertissement}
+                                    </p>
+                                ) : null}
+                            </>
                         ) : null}
                     </FormGroup>
                     <FormGroup className={styles.modalField}>

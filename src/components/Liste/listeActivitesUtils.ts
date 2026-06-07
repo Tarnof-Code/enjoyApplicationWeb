@@ -1,4 +1,5 @@
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
+import { idsEnConflit } from "../../helpers/construireArbreMoments";
 import type { ActiviteDto, GroupeDto, LieuDto, MomentDto, SejourDTO, TypeActiviteDto } from "../../types/api";
 
 export const JOURS_COURTS_FR: readonly string[] = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -173,6 +174,161 @@ export function resumePartageLieu(l: LieuDto): string {
         return `Jusqu'à ${l.nombreMaxActivitesSimultanees} activités.`;
     }
     return "Une seule activité à la fois.";
+}
+
+function formaterDateYmdPourMessage(ymd: string): string {
+    const d = parseYmdVersDateLocale(ymd.trim());
+    return d ? formaterDate(d) : ymd.trim();
+}
+
+/** Prénom nom + activité / créneau réel pour les messages de conflit lieu. */
+function libelleOccupantsLieuPourMessage(activites: readonly ActiviteDto[]): string {
+    const parts: string[] = [];
+    for (const a of activites) {
+        const animateurs = (a.membres ?? [])
+            .map((m) => `${m.prenom} ${m.nom}`.trim())
+            .filter((x) => x !== "");
+        const momentNom = a.moment?.nom?.trim();
+        const activiteNom = a.nom.trim();
+
+        if (animateurs.length > 0) {
+            const qui = animateurs.join(", ");
+            if (activiteNom && momentNom) {
+                parts.push(`${qui} (activité « ${activiteNom} », ${momentNom})`);
+            } else if (activiteNom) {
+                parts.push(`${qui} (activité « ${activiteNom} »)`);
+            } else if (momentNom) {
+                parts.push(`${qui} (${momentNom})`);
+            } else {
+                parts.push(qui);
+            }
+        } else if (activiteNom) {
+            parts.push(
+                momentNom ? `activité « ${activiteNom} » (${momentNom})` : `activité « ${activiteNom} »`,
+            );
+        }
+    }
+    return parts.join(" ; ");
+}
+
+export type ResultatDisponibiliteLieuActivite =
+    | { ok: true; avertissement?: string }
+    | { ok: false; message: string };
+
+/**
+ * Occupation d’un lieu le même jour : chevauchement hiérarchique des moments
+ * (aligné sur ActiviteServiceImpl.verifierDisponibiliteLieuPourActivite).
+ */
+export function verifierDisponibiliteLieuActivite(
+    activites: readonly ActiviteDto[],
+    lieu: LieuDto,
+    dateYmd: string,
+    momentId: number,
+    moments: readonly MomentDto[],
+    excludeActiviteId?: number | null,
+): ResultatDisponibiliteLieuActivite {
+    const ymd = dateYmd.trim();
+    if (!ymd || momentId <= 0) return { ok: true };
+
+    const conflictIds = idsEnConflit(momentId, moments);
+    const momentNom = moments.find((m) => m.id === momentId)?.nom ?? "—";
+    const dateLabel = formaterDateYmdPourMessage(ymd);
+
+    const autres = activites.filter((a) => {
+        if (excludeActiviteId != null && a.id === excludeActiviteId) return false;
+        if (activiteDateToFilterKey(a.date) !== ymd) return false;
+        if (a.lieu?.id !== lieu.id) return false;
+        const aMomentId = a.moment?.id;
+        if (aMomentId == null || !conflictIds.has(aMomentId)) return false;
+        return true;
+    });
+
+    if (autres.length === 0) return { ok: true };
+
+    const occupantLabel = libelleOccupantsLieuPourMessage(autres);
+    const detailOccupant = occupantLabel ? ` Occupé par : ${occupantLabel}.` : "";
+
+    if (!lieu.partageableEntreAnimateurs) {
+        return {
+            ok: false,
+            message:
+                `Ce lieu est déjà utilisé par une autre activité le ${dateLabel} ` +
+                `pour le moment « ${momentNom} ».${detailOccupant} ` +
+                `Il n’est pas configuré pour être partagé entre animateurs.`,
+        };
+    }
+
+    const max = lieu.nombreMaxActivitesSimultanees;
+    if (max == null) {
+        return {
+            ok: false,
+            message:
+                "Lieu partageable sans nombre maximal d’activités simultanées : configuration invalide.",
+        };
+    }
+
+    if (autres.length >= max) {
+        return {
+            ok: false,
+            message:
+                `Vous ne pouvez pas utiliser ce lieu le ${dateLabel} pour le moment « ${momentNom} » : ` +
+                `la limite de partage (${max} activité(s) au maximum) est déjà atteinte.${detailOccupant}`,
+        };
+    }
+
+    return {
+        ok: true,
+        avertissement:
+            `Ce lieu est déjà affecté à ${autres.length} autre(s) activité(s) le ${dateLabel} ` +
+            `pour le moment « ${momentNom} ».${detailOccupant} L’affectation est acceptée car le lieu autorise le partage ` +
+            `et la limite n’est pas encore atteinte.`,
+    };
+}
+
+/** Premier conflit animateur ↔ activité interne (hiérarchie des moments incluse). */
+export function premierConflitAnimateurActiviteInterne(
+    activites: readonly ActiviteDto[],
+    membreTokenIds: Iterable<string>,
+    dateYmd: string,
+    momentId: number,
+    moments: readonly MomentDto[],
+    libelleMembre: (tokenId: string) => { prenom: string; nom: string },
+    excludeActiviteId?: number | null,
+): string | null {
+    const ymd = dateYmd.trim();
+    if (!ymd || momentId <= 0) return null;
+
+    const conflictIds = idsEnConflit(momentId, moments);
+    const momentDemandeNom = moments.find((m) => m.id === momentId)?.nom ?? "—";
+    const dateLabel = formaterDateYmdPourMessage(ymd);
+
+    for (const raw of membreTokenIds) {
+        const tokenId = raw.trim();
+        if (!tokenId) continue;
+
+        const activite = activites.find((a) => {
+            if (excludeActiviteId != null && a.id === excludeActiviteId) return false;
+            if (activiteDateToFilterKey(a.date) !== ymd) return false;
+            const aMomentId = a.moment?.id;
+            if (aMomentId == null || !conflictIds.has(aMomentId)) return false;
+            return (a.membres ?? []).some((m) => (m.tokenId ?? "").trim() === tokenId);
+        });
+        if (!activite) continue;
+
+        const momentOccupe = activite.moment?.nom ?? "—";
+        const chevauchement =
+            momentOccupe === momentDemandeNom
+                ? ""
+                : ` (en chevauchement avec « ${momentDemandeNom} »)`;
+        const { prenom, nom } = libelleMembre(tokenId);
+        const prenomOuNom = prenom.trim() || nom.trim() || "Animateur";
+        return (
+            `${prenomOuNom} encadre déjà une autre activité le ${dateLabel} ` +
+            `au moment « ${momentOccupe} »${chevauchement}.`
+        );
+    }
+
+    return null;
 }
 
 export function activiteDateToFilterKey(value: ActiviteDto["date"]): string {
