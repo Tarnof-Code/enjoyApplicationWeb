@@ -31,6 +31,10 @@ export const PRINT_GLOBAL_CLASS = {
     planningPrintThJour: "enjoy-planning-print-th-jour",
     planningPrintTdJour: "enjoy-planning-print-td-jour",
     planningPrintCellMuted: "enjoy-planning-print-cell-muted",
+    /** Bloc d’un planning dans une impression multiple */
+    planningPrintSection: "enjoy-planning-print-section",
+    planningPrintSectionTitle: "enjoy-planning-print-section-title",
+    planningPrintSectionConsigne: "enjoy-planning-print-section-consigne",
     /** Grille menus (calendrier / liste) — styles dans `PRINT_STYLE_PRESETS.menusGrid` */
     menusPrintGrid: "enjoy-menus-print-grid",
     menusPrintTable: "enjoy-menus-print-table",

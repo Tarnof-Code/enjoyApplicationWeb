@@ -165,6 +165,10 @@ export function buildPrintPageStyle(options?: {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -178,12 +182,19 @@ export function buildPrintPageStyle(options?: {
             box-sizing: border-box;
             width: 100% !important;
             max-width: 100%;
-            overflow: visible;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
             padding: ${hasRunningHeader
                 ? "0"
                 : `${PRINT_CONTENT_PADDING} ${PRINT_CONTENT_PADDING} 0 ${PRINT_CONTENT_PADDING}`};
         }
-        .${c.only} { display: block !important; }
+        .${c.only} {
+            display: block !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
         .${c.noPrint} { display: none !important; }
         .${c.documentHeader} {
             margin-bottom: 0.75rem;
@@ -339,6 +350,48 @@ export const PRINT_STYLE_PRESETS = {
             .enjoy-planning-print-th-jour {
                 font-size: 6pt;
             }
+        }
+        .enjoy-planning-print-section {
+            display: block;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .enjoy-planning-print-section:first-child {
+            margin-top: 0.75rem;
+        }
+        .enjoy-planning-print-section:not(:first-child) {
+            margin-top: 1.25rem;
+            padding-top: 0.75rem;
+        }
+        .enjoy-planning-print-section-title,
+        .enjoy-planning-print-section-consigne {
+            break-after: avoid;
+            page-break-after: avoid;
+        }
+        .enjoy-planning-print-grid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .enjoy-planning-print-table {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .enjoy-planning-print-table thead {
+            display: table-header-group;
+        }
+        .enjoy-planning-print-section-title {
+            font-size: 13pt;
+            font-weight: 600;
+            margin: 0 0 0.4rem;
+            break-after: avoid;
+            page-break-after: avoid;
+        }
+        .enjoy-planning-print-section-consigne {
+            font-size: 9pt;
+            margin: 0 0 0.65rem;
+            line-height: 1.35;
+            break-after: avoid;
+            page-break-after: avoid;
         }
     `,
     /** Grille menus séjour (calendrier repas × jours, vue liste) */

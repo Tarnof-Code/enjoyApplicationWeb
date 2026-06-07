@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRevalidator } from "react-router-dom";
-import { FaEdit, FaGripVertical, FaHistory, FaTrashAlt } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaEdit, FaGripVertical, FaHistory, FaTrashAlt } from "react-icons/fa";
 import {
     Button,
     FormGroup,
@@ -48,7 +48,7 @@ import {
 import { GroupesSelectOptions, SelectionGroupesParType } from "./SelectionGroupesParType";
 import { libelleJourCourtPourBouton, parseYmdVersDateLocale } from "./listeActivitesUtils";
 import { CalendrierNavigationPeriode } from "./ListeActivitesCalendrier";
-import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
+import { useCalendrierFenetreJours, type JourFenetreCalendrier } from "./useCalendrierFenetreJours";
 import {
     PRINT_GLOBAL_CLASS,
     PRINT_STYLE_PRESETS,
@@ -59,6 +59,7 @@ import {
     usePrintContent,
 } from "../../print";
 import styles from "./ListePlanningsOrganisation.module.scss";
+import listeSharedStyles from "./Liste.module.scss";
 
 /** Même libellé de jour que le calendrier des activités (ex. « Lun 15 juil. »). */
 function libelleJourCommeCalendrierActivites(ymd: string): string {
@@ -592,6 +593,112 @@ function libelleLignePourAffichage(
     return "";
 }
 
+type PlanningGrillePrintTableProps = {
+    detail: PlanningGrilleDetailDto;
+    joursFenetre: JourFenetreCalendrier[];
+    groupes: GroupeDto[];
+    lieuxPourPlannings: LieuDto[];
+    horaires: HoraireDto[];
+    moments: MomentDto[];
+    membresPourCellulesModal: LigneEquipePourAffichage[];
+};
+
+function PlanningGrillePrintTable({
+    detail,
+    joursFenetre,
+    groupes,
+    lieuxPourPlannings,
+    horaires,
+    moments,
+    membresPourCellulesModal,
+}: PlanningGrillePrintTableProps) {
+    const c = PRINT_GLOBAL_CLASS;
+    const lignesTri = lignesTriPourAffichageGrille(detail.lignes);
+    const depths = computeLineDepths(detail.lignes);
+    const sourceLibelleApiDetail = sourceLibellePourApi(detail);
+    const afficherColonneRegroupement = grilleAfficheColonneRegroupement(detail.lignes);
+    const afficherColonneLibelleLigne = grilleAfficheColonneLibelleLigne(detail);
+    const regroupementCellInfos = infosRegroupementParLigne(lignesTri);
+
+    return (
+        <table className={c.planningPrintTable}>
+            <thead>
+                <tr>
+                    {afficherColonneRegroupement ? (
+                        <th className={c.planningPrintThSection} scope="col" aria-hidden="true" />
+                    ) : null}
+                    {afficherColonneLibelleLigne ? (
+                        <th className={c.planningPrintThLigne} scope="col" aria-hidden="true" />
+                    ) : null}
+                    {joursFenetre.map(({ ymd, label }) => (
+                        <th key={ymd} className={c.planningPrintThJour} scope="col">
+                            {label}
+                        </th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {lignesTri.map((ligne, idx) => {
+                    const indent = depths.get(ligne.id) ?? 0;
+                    const libelleCol = libelleLignePourAffichage(
+                        ligne,
+                        sourceLibelleApiDetail,
+                        groupes,
+                        lieuxPourPlannings,
+                        horaires,
+                        moments,
+                        membresPourCellulesModal
+                    );
+                    const rgInfo = regroupementCellInfos[idx]!;
+                    return (
+                        <tr key={ligne.id}>
+                            {afficherColonneRegroupement && rgInfo.showLeadingCell ? (
+                                <td rowSpan={rgInfo.rowspan} className={c.planningPrintTdSection}>
+                                    {rgInfo.libelleRegroupement ?? ""}
+                                </td>
+                            ) : null}
+                            {afficherColonneLibelleLigne ? (
+                                <td className={c.planningPrintTdLigne}>
+                                    <span style={{ paddingLeft: `${indent * 8}px` }}>
+                                        {libelleCol.trim() !== "" ? (
+                                            libelleCol
+                                        ) : (
+                                            <span className={c.planningPrintCellMuted}>—</span>
+                                        )}
+                                    </span>
+                                </td>
+                            ) : null}
+                            {joursFenetre.map(({ ymd: j }) => {
+                                const cellule = cellulePourJour(ligne, j);
+                                const texteCellule = resumeCellule(
+                                    cellule,
+                                    groupes,
+                                    lieuxPourPlannings,
+                                    horaires,
+                                    moments,
+                                    membresPourCellulesModal
+                                );
+                                return (
+                                    <td key={j} className={c.planningPrintTdJour}>
+                                        <span
+                                            className={
+                                                texteCellule === "—" ? c.planningPrintCellMuted : undefined
+                                            }
+                                            style={{ whiteSpace: "pre-line" }}
+                                        >
+                                            {texteCellule}
+                                        </span>
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    );
+}
+
 function validateLineForm(
     form: PlanningLigneFormState,
     sourceLibelle: PlanningLigneLibelleSource
@@ -926,6 +1033,11 @@ function ListePlanningsOrganisation({
         [grilles]
     );
 
+    const grillesParId = useMemo(
+        () => new Map(grillesTriAlphabetique.map((g) => [g.id, g])),
+        [grillesTriAlphabetique]
+    );
+
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successModalOpen, setSuccessModalOpen] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
@@ -969,6 +1081,15 @@ function ListePlanningsOrganisation({
     const [deletingLine, setDeletingLine] = useState(false);
     const [deleteLineModalOpen, setDeleteLineModalOpen] = useState(false);
     const [pendingDeleteLineId, setPendingDeleteLineId] = useState<number | null>(null);
+
+    const [multiPrintModalOpen, setMultiPrintModalOpen] = useState(false);
+    const [multiPrintOrderedIds, setMultiPrintOrderedIds] = useState<number[]>([]);
+    const [multiPrintSelectedIds, setMultiPrintSelectedIds] = useState<Set<number>>(new Set());
+    const [multiPrintDetails, setMultiPrintDetails] = useState<PlanningGrilleDetailDto[]>([]);
+    const [multiPrintLoading, setMultiPrintLoading] = useState(false);
+    const [multiPrintError, setMultiPrintError] = useState<string | null>(null);
+    const [multiPrintRequestId, setMultiPrintRequestId] = useState(0);
+    const multiPrintFnRef = useRef<(() => void) | null>(null);
 
     const [cellModalOpen, setCellModalOpen] = useState(false);
     const [cellSubmitting, setCellSubmitting] = useState(false);
@@ -1595,6 +1716,49 @@ function ListePlanningsOrganisation({
         }
     };
 
+    const openMultiPrintModal = () => {
+        const ids = grillesTriAlphabetique.map((g) => g.id);
+        setMultiPrintOrderedIds(ids);
+        setMultiPrintSelectedIds(new Set(ids));
+        setMultiPrintError(null);
+        setMultiPrintModalOpen(true);
+    };
+
+    const fermerMultiPrintModal = () => {
+        if (multiPrintLoading) return;
+        setMultiPrintModalOpen(false);
+        setMultiPrintError(null);
+    };
+
+    const toggleMultiPrintSelection = (grilleId: number) => {
+        setMultiPrintSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(grilleId)) next.delete(grilleId);
+            else next.add(grilleId);
+            return next;
+        });
+    };
+
+    const selectAllMultiPrint = () => {
+        setMultiPrintSelectedIds(new Set(multiPrintOrderedIds));
+    };
+
+    const deselectAllMultiPrint = () => {
+        setMultiPrintSelectedIds(new Set());
+    };
+
+    const deplacerMultiPrintOrdre = (grilleId: number, delta: -1 | 1) => {
+        setMultiPrintOrderedIds((prev) => {
+            const idx = prev.indexOf(grilleId);
+            if (idx < 0) return prev;
+            const cible = idx + delta;
+            if (cible < 0 || cible >= prev.length) return prev;
+            const suivant = [...prev];
+            [suivant[idx], suivant[cible]] = [suivant[cible], suivant[idx]];
+            return suivant;
+        });
+    };
+
     const openCellModal = (ligneId: number, jour: string) => {
         if (!detail) return;
         const peutModifierCetteCellule =
@@ -1854,105 +2018,98 @@ function ListePlanningsOrganisation({
         extraPageStyle: PRINT_STYLE_PRESETS.planningGrid,
     });
 
-    const printHeaderContext = useMemo(() => {
-        const meta: { label: string; value: string }[] = [];
-        if (detail?.consigneGlobale?.trim()) {
-            meta.push({ label: "Consigne", value: detail.consigneGlobale.trim() });
+    const multiPrintDocumentTitle = useMemo(() => {
+        if (multiPrintDetails.length === 1) {
+            return multiPrintDetails[0].titre.trim() || "Planning";
         }
-        return buildPrintDocumentContext(planningTitreImpression, meta);
-    }, [detail?.consigneGlobale, planningTitreImpression]);
+        if (multiPrintDetails.length > 1) {
+            return `Plannings organisation (${multiPrintDetails.length})`;
+        }
+        return "Plannings organisation";
+    }, [multiPrintDetails]);
+
+    const {
+        contentRef: multiPrintContentRef,
+        print: multiPrint,
+        fixedRunningHeaderLabel: multiPrintFixedRunningHeaderLabel,
+    } = usePrintContent({
+        documentTitle: multiPrintDocumentTitle,
+        runningHeaderLabel: multiPrintDocumentTitle,
+        extraPageStyle: PRINT_STYLE_PRESETS.planningGrid,
+    });
+
+    multiPrintFnRef.current = multiPrint;
+
+    useEffect(() => {
+        if (multiPrintRequestId === 0) return;
+        let cancelled = false;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (!cancelled) multiPrintFnRef.current?.();
+            });
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [multiPrintRequestId]);
+
+    const multiPrintHeaderContext = useMemo(
+        () => buildPrintDocumentContext("Plannings organisation", []),
+        []
+    );
+
+    const confirmMultiPrint = async () => {
+        const selectedIds = multiPrintOrderedIds.filter((id) => multiPrintSelectedIds.has(id));
+        if (selectedIds.length === 0 || joursFenetre.length === 0) return;
+        setMultiPrintLoading(true);
+        setMultiPrintError(null);
+        try {
+            const fetched = await Promise.all(
+                selectedIds.map((id) => sejourPlanningGrilleService.getGrilleDetail(sejourId, id))
+            );
+            const detailsById = new Map(fetched.map((d) => [d.id, d]));
+            const orderedDetails = selectedIds
+                .map((id) => detailsById.get(id))
+                .filter((d): d is PlanningGrilleDetailDto => d != null);
+            if (orderedDetails.length !== selectedIds.length) {
+                setMultiPrintError(
+                    `Seuls ${orderedDetails.length} planning(s) sur ${selectedIds.length} ont pu être chargés.`
+                );
+                return;
+            }
+            setMultiPrintDetails(orderedDetails);
+            setMultiPrintModalOpen(false);
+            setMultiPrintRequestId((n) => n + 1);
+        } catch (e: unknown) {
+            setMultiPrintError(e instanceof Error ? e.message : "Impossible de charger les plannings");
+        } finally {
+            setMultiPrintLoading(false);
+        }
+    };
+
+    const peutImprimerPlanningsMultiples =
+        !isEmbeddedEditor && grilles.length > 0 && joursFenetre.length > 0;
+
+    const printHeaderContext = useMemo(
+        () => buildPrintDocumentContext(planningTitreImpression, []),
+        [planningTitreImpression]
+    );
 
     const editorPlanningVisible = (editorOpen || isEmbeddedEditor) && !editorLoading && detail != null;
     const peutImprimerPlanning = editorPlanningVisible && joursFenetre.length > 0;
 
     const renderPlanningPrintGrid = () => {
         if (!detail) return null;
-        const c = PRINT_GLOBAL_CLASS;
         return (
-            <table className={c.planningPrintTable}>
-                <thead>
-                    <tr>
-                        {afficherColonneRegroupement ? (
-                            <th className={c.planningPrintThSection} scope="col">
-                                Section
-                            </th>
-                        ) : null}
-                        {afficherColonneLibelleLigne ? (
-                            <th className={c.planningPrintThLigne} scope="col">
-                                Ligne
-                            </th>
-                        ) : null}
-                        {joursFenetre.map(({ ymd, label }) => (
-                            <th key={ymd} className={c.planningPrintThJour} scope="col">
-                                {label}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {lignesTri.map((ligne, idx) => {
-                        const indent = depths.get(ligne.id) ?? 0;
-                        const libelleCol = libelleLignePourAffichage(
-                            ligne,
-                            sourceLibelleApiDetail,
-                            groupes,
-                            lieuxPourPlannings,
-                            horaires,
-                            moments,
-                            membresPourCellulesModal
-                        );
-                        const rgInfo = regroupementCellInfos[idx]!;
-                        return (
-                            <tr key={ligne.id}>
-                                {afficherColonneRegroupement && rgInfo.showLeadingCell ? (
-                                    <td
-                                        rowSpan={rgInfo.rowspan}
-                                        className={c.planningPrintTdSection}
-                                    >
-                                        {rgInfo.libelleRegroupement ?? ""}
-                                    </td>
-                                ) : null}
-                                {afficherColonneLibelleLigne ? (
-                                    <td className={c.planningPrintTdLigne}>
-                                        <span style={{ paddingLeft: `${indent * 8}px` }}>
-                                            {libelleCol.trim() !== "" ? (
-                                                libelleCol
-                                            ) : (
-                                                <span className={c.planningPrintCellMuted}>—</span>
-                                            )}
-                                        </span>
-                                    </td>
-                                ) : null}
-                                {joursFenetre.map(({ ymd: j }) => {
-                                    const cellule = cellulePourJour(ligne, j);
-                                    const texteCellule = resumeCellule(
-                                        cellule,
-                                        groupes,
-                                        lieuxPourPlannings,
-                                        horaires,
-                                        moments,
-                                        membresPourCellulesModal
-                                    );
-                                    return (
-                                        <td key={j} className={c.planningPrintTdJour}>
-                                            <span
-                                                className={
-                                                    texteCellule === "—"
-                                                        ? c.planningPrintCellMuted
-                                                        : undefined
-                                                }
-                                                style={{ whiteSpace: "pre-line" }}
-                                            >
-                                                {texteCellule}
-                                            </span>
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+            <PlanningGrillePrintTable
+                detail={detail}
+                joursFenetre={joursFenetre}
+                groupes={groupes}
+                lieuxPourPlannings={lieuxPourPlannings}
+                horaires={horaires}
+                moments={moments}
+                membresPourCellulesModal={membresPourCellulesModal}
+            />
         );
     };
 
@@ -2418,6 +2575,36 @@ function ListePlanningsOrganisation({
 
     return (
         <div>
+            {multiPrintDetails.length > 0 ? (
+                <div className={PRINT_GLOBAL_CLASS.only}>
+                    <PrintContentRoot
+                        contentRef={multiPrintContentRef}
+                        fixedRunningHeaderLabel={multiPrintFixedRunningHeaderLabel}
+                    >
+                        <PrintDocumentHeader context={multiPrintHeaderContext} />
+                        {multiPrintDetails.map((planningDetail) => {
+                            const c = PRINT_GLOBAL_CLASS;
+                            const titre = planningDetail.titre.trim() || "Planning";
+                            return (
+                                <section key={planningDetail.id} className={c.planningPrintSection}>
+                                    <h2 className={c.planningPrintSectionTitle}>{titre}</h2>
+                                    <div className={c.planningPrintGrid}>
+                                        <PlanningGrillePrintTable
+                                            detail={planningDetail}
+                                            joursFenetre={joursFenetre}
+                                            groupes={groupes}
+                                            lieuxPourPlannings={lieuxPourPlannings}
+                                            horaires={horaires}
+                                            moments={moments}
+                                            membresPourCellulesModal={membresPourCellulesModal}
+                                        />
+                                    </div>
+                                </section>
+                            );
+                        })}
+                    </PrintContentRoot>
+                </div>
+            ) : null}
             {editorPlanningVisible ? (
                 <div className={PRINT_GLOBAL_CLASS.only}>
                     <PrintContentRoot
@@ -2425,9 +2612,11 @@ function ListePlanningsOrganisation({
                         fixedRunningHeaderLabel={fixedRunningHeaderLabel}
                     >
                         <PrintDocumentHeader context={printHeaderContext} />
-                        <div className={PRINT_GLOBAL_CLASS.planningPrintGrid}>
-                            {renderPlanningPrintGrid()}
-                        </div>
+                        <section className={PRINT_GLOBAL_CLASS.planningPrintSection}>
+                            <div className={PRINT_GLOBAL_CLASS.planningPrintGrid}>
+                                {renderPlanningPrintGrid()}
+                            </div>
+                        </section>
                     </PrintContentRoot>
                 </div>
             ) : null}
@@ -2455,11 +2644,22 @@ function ListePlanningsOrganisation({
             {!isEmbeddedEditor && (
                 <>
                     <div className={styles.actionsContainer}>
-                        <h1 className="page-title">Organisation</h1>
-                        {peutGererPlanningStructure ? (
-                            <Button color="success" onClick={openCreateMeta}>
-                                Créer un planning
-                            </Button>
+                        <div className={styles.actionsContainerLeft}>
+                            <h1 className="page-title">Organisation</h1>
+                            {peutGererPlanningStructure ? (
+                                <Button color="success" onClick={openCreateMeta}>
+                                    Créer un planning
+                                </Button>
+                            ) : null}
+                        </div>
+                        {peutImprimerPlanningsMultiples ? (
+                            <PrintTrigger
+                                variant="button"
+                                onPrint={openMultiPrintModal}
+                                label="Impression multiple de plannings"
+                                buttonText="Impression multiple"
+                                className={styles.printTriggerRight}
+                            />
                         ) : null}
                     </div>
             {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
@@ -2688,6 +2888,114 @@ function ListePlanningsOrganisation({
                     </Button>
                     <Button color="danger" onClick={() => void confirmDeleteLine()} disabled={deletingLine}>
                         {deletingLine ? "Suppression…" : "Confirmer la suppression"}
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            <Modal isOpen={multiPrintModalOpen} toggle={fermerMultiPrintModal} size="lg">
+                <ModalHeader toggle={fermerMultiPrintModal}>Impression multiple</ModalHeader>
+                <ModalBody>
+                    {multiPrintError ? (
+                        <div className={styles.errorMessage}>{multiPrintError}</div>
+                    ) : null}
+                    <p className={styles.multiPrintIntro}>
+                        Choisissez les plannings à imprimer, leur ordre et la période affichée dans chaque
+                        grille.
+                    </p>
+                    {joursFenetre.length > 0 ? (
+                        <div className={styles.multiPrintPeriode}>
+                            <CalendrierNavigationPeriode
+                                libellePlage={planningLibellePlage}
+                                peutReculer={planningPeutReculer}
+                                peutAvancer={planningPeutAvancer}
+                                onReculer={() => planningDecalage(-1)}
+                                onAvancer={() => planningDecalage(1)}
+                                nombreJoursVue={planningNombreJoursVue}
+                                onNombreJoursVueChange={setPlanningNombreJoursVue}
+                                debutFenetreYmd={planningDebutFenetreYmd}
+                                minDebutFenetreYmd={planningMinDebutFenetreYmd}
+                                maxDebutFenetreYmd={planningMaxDebutFenetreYmd}
+                                onChangerDebutFenetre={definirDebutFenetrePlanning}
+                            />
+                        </div>
+                    ) : null}
+                    <div className={listeSharedStyles.customPrintSelectionToolbar}>
+                        <span className={listeSharedStyles.customPrintSelectionCount}>
+                            {multiPrintSelectedIds.size} / {grillesTriAlphabetique.length} sélectionné(s)
+                        </span>
+                        <div className={listeSharedStyles.customPrintSelectionActions}>
+                            <Button color="link" size="sm" type="button" onClick={selectAllMultiPrint}>
+                                Tout sélectionner
+                            </Button>
+                            <Button color="link" size="sm" type="button" onClick={deselectAllMultiPrint}>
+                                Tout désélectionner
+                            </Button>
+                        </div>
+                    </div>
+                    <div
+                        className={styles.multiPrintRowList}
+                        role="group"
+                        aria-label="Plannings à imprimer"
+                    >
+                        {multiPrintOrderedIds.map((grilleId, idx) => {
+                            const g = grillesParId.get(grilleId);
+                            if (!g) return null;
+                            return (
+                                <div key={g.id} className={styles.multiPrintRow}>
+                                    <label className={styles.multiPrintRowLabel}>
+                                        <input
+                                            type="checkbox"
+                                            checked={multiPrintSelectedIds.has(g.id)}
+                                            onChange={() => toggleMultiPrintSelection(g.id)}
+                                            disabled={multiPrintLoading}
+                                        />
+                                        <span>{g.titre}</span>
+                                    </label>
+                                    <div className={styles.multiPrintRowOrder}>
+                                        <button
+                                            type="button"
+                                            className={styles.multiPrintOrderBtn}
+                                            aria-label={`Monter ${g.titre}`}
+                                            title="Monter"
+                                            disabled={multiPrintLoading || idx === 0}
+                                            onClick={() => deplacerMultiPrintOrdre(g.id, -1)}
+                                        >
+                                            <FaChevronUp aria-hidden size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={styles.multiPrintOrderBtn}
+                                            aria-label={`Descendre ${g.titre}`}
+                                            title="Descendre"
+                                            disabled={
+                                                multiPrintLoading ||
+                                                idx === multiPrintOrderedIds.length - 1
+                                            }
+                                            onClick={() => deplacerMultiPrintOrdre(g.id, 1)}
+                                        >
+                                            <FaChevronDown aria-hidden size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" type="button" onClick={fermerMultiPrintModal} disabled={multiPrintLoading}>
+                        Annuler
+                    </Button>
+                    <Button
+                        color="primary"
+                        type="button"
+                        onClick={() => void confirmMultiPrint()}
+                        disabled={
+                            multiPrintLoading ||
+                            multiPrintSelectedIds.size === 0 ||
+                            joursFenetre.length === 0
+                        }
+                    >
+                        {multiPrintLoading ? "Préparation…" : "Imprimer"}
                     </Button>
                 </ModalFooter>
             </Modal>

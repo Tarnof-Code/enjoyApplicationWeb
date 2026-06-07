@@ -39,6 +39,8 @@
 - [x] **Impression listes séjour** : module **`src/print/`** — en-tête répété (margin boxes + fallback Firefox), **`ListeEnfants`** + **`TableauUtilisateurs`** (`canPrint`, colonnes **`toggleable`**, **`printValue`**)
 - [x] **Impression personnalisée liste enfants** : **`ListePrintActions`** (bouton unique → choix filtrée / personnalisée), **`ListeCustomPrintSelection`** (titre + cases lignes)
 - [x] **Impression plannings organisation** : **`ListePlanningsOrganisation`** — fenêtre **1 / 3 / 7 jours** affichée, paysage A4 ; en-tête titre **13pt gras** global **`printPageStyles`**
+- [x] **Impression multiple plannings organisation** : liste **`/organisation`** — sélection, ordre **↑↓**, **`PlanningGrillePrintTable`**, sections indivisibles, sans consignes à l’impression
+- [x] **Plannings organisation — confirmation suppression ligne** : modale avant **`supprimerLigne`** (gestionnaires)
 - [x] **Impression fiche dossier enfant** : **`DossierEnfant`** — **`PrintTrigger`** + 4 sections ; en-tête **`title-page-split`** (opt-in, sans impact listes)
 - [x] **Impression planning activités (calendrier)** : **`ListeActivites`** — modale **Noir et blanc** / **Couleurs**, preset **`activitesCalendarGrid`**, paysage A4
 - [x] **Impression menus séjour** : **`DetailsSejourMenus`** — modale **Noir et blanc** / **Couleurs**, **`couleurFondCarteMenuPourTypeRepas`**, preset **`menusGrid`**
