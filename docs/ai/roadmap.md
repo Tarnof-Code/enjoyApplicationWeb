@@ -43,6 +43,7 @@
 - [x] **Impression planning activités (calendrier)** : **`ListeActivites`** — modale **Noir et blanc** / **Couleurs**, preset **`activitesCalendarGrid`**, paysage A4
 - [x] **Impression menus séjour** : **`DetailsSejourMenus`** — modale **Noir et blanc** / **Couleurs**, **`couleurFondCarteMenuPourTypeRepas`**, preset **`menusGrid`**
 - [x] **Impression — métadonnées allégées** : **`PrintDocumentHeader`** sans redondance (période/vue/rendu/mode/colonnes) sur activités, plannings, menus, dossiers sanitaires
+- [x] **Impression chambres séjour** : **`ListeChambres`** — **`ListePrintTable`**, contenu = filtres barre (type, genre, groupes, recherche), styles **`CHAMBRES_PRINT_EXTRA_STYLE`**, **`GenreChambrePrintLabels`**
 - [x] **Commande Cursor `/maj`** : `.cursor/commands/maj.md` — sync Memory Bank (`AI_MEMORY.md` + `docs/ai/`)
 - [x] **Auth — redirect 401 global** : intercepteur **`caller.service.ts`** (logout + **`/`** après échec refresh ; **`refreshAccessToken`** avec **`X-Skip-Token-Refresh`**)
 - [x] **Activités — pré-validation conflits modale** : **`verifierDisponibiliteLieuActivite`** + **`premierConflitAnimateurActiviteInterne`** (`listeActivitesUtils.ts`, **`idsEnConflit`**) ; hints lieu live ; messages **« Occupé par : … »**

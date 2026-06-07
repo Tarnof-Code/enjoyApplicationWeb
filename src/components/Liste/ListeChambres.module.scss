@@ -6,6 +6,11 @@
     align-items: center;
     margin-bottom: 1rem;
     flex-wrap: wrap;
+    width: 100%;
+}
+
+.printTriggerRight {
+    margin-left: auto;
 }
 
 .filtersBar {
@@ -18,6 +23,11 @@
     background: #f4f6f8;
     border: 1px solid #e2e6ea;
     border-radius: 8px;
+    /* Scroll dans Layout.layoutScroll (sous le header) → top: 0 = bas du menu fixe */
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .filterField {
@@ -191,6 +201,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding-bottom: 6rem;
 }
 
 .card {

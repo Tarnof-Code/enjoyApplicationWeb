@@ -15,3 +15,10 @@ export const GenreChambreBadgeLabels: Record<GenreChambreType, string> = {
   FEMININ: 'Filles',
   MIXTE: 'Mixte',
 };
+
+/** Libellés pour l'impression des chambres. */
+export const GenreChambrePrintLabels: Record<GenreChambreType, string> = {
+  MASCULIN: 'Garçons',
+  FEMININ: 'Filles',
+  MIXTE: 'Mixte',
+};

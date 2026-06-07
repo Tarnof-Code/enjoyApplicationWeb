@@ -25,7 +25,7 @@ import {
     type HistoriqueModificationListeModalLigne,
 } from "../common/HistoriqueModificationListeModal";
 import { TypeChambreLabels, TypeChambreValues } from "../../enums/TypeChambre";
-import { GenreChambreBadgeLabels, GenreChambreLabels, GenreChambreValues } from "../../enums/GenreChambre";
+import { GenreChambreBadgeLabels, GenreChambreLabels, GenreChambrePrintLabels, GenreChambreValues } from "../../enums/GenreChambre";
 import {
     libelleChambre,
     resumeLocalisation,
@@ -35,6 +35,7 @@ import {
     chambreCorrespondFiltreOccupant,
     chambreCorrespondFiltreEtage,
     chambreCorrespondFiltreIdentifiant,
+    libelleEtage,
 } from "../../helpers/libelleChambre";
 import {
     analyserModificationChambreIncompatible,
@@ -51,6 +52,16 @@ import {
 import { trierEnfantsParNom } from "../../helpers/trierUtilisateurs";
 import { trierGroupesParNom } from "../../helpers/groupesParType";
 import { GroupesFilterDropdownItems, GroupesSelectOptions } from "./SelectionGroupesParType";
+import type { ColumnConfig } from "./Liste";
+import { ListePrintTable } from "./ListePrintTable";
+import {
+    buildListePrintExtraStyle,
+    buildPrintDocumentContext,
+    PrintContentRoot,
+    PrintDocumentHeader,
+    PrintTrigger,
+    usePrintContent,
+} from "../../print";
 import styles from "./ListeChambres.module.scss";
 
 export interface ListeChambresProps {
@@ -62,6 +73,51 @@ export interface ListeChambresProps {
 }
 
 const FILTRE_TOUS = "" as const;
+
+const CHAMBRES_PRINT_COL_CHAMBRE = "enjoy-chambres-print-col-chambre";
+const CHAMBRES_PRINT_COL_GENRE = "enjoy-chambres-print-col-genre";
+const CHAMBRES_PRINT_COL_GROUPE = "enjoy-chambres-print-col-groupe";
+const CHAMBRES_PRINT_COL_LOCALISATION = "enjoy-chambres-print-col-localisation";
+const CHAMBRES_PRINT_COL_OCCUPANTS = "enjoy-chambres-print-col-occupants";
+const CHAMBRES_PRINT_COL_REFERENTS = "enjoy-chambres-print-col-referents";
+
+const CHAMBRES_PRINT_EXTRA_STYLE = `${buildListePrintExtraStyle(6)}
+        .enjoy-liste-print-table thead th {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_CHAMBRE},
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_GENRE},
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_GROUPE} {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_CHAMBRE} {
+            width: 5rem;
+            min-width: 4.5rem;
+        }
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_GENRE} {
+            width: 7rem;
+            min-width: 6.5rem;
+        }
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_GROUPE} {
+            width: 12rem;
+            min-width: 11rem;
+        }
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_LOCALISATION} {
+            white-space: pre-line;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_OCCUPANTS},
+        .enjoy-liste-print-table .${CHAMBRES_PRINT_COL_REFERENTS} {
+            width: 20%;
+            min-width: 12rem;
+            max-width: 18rem;
+            white-space: pre-line;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }`;
 
 type FiltreGroupesSelection = {
     sansGroupe: boolean;
@@ -163,6 +219,69 @@ function filtrerChambres(
         );
 
     return { résultat, filtresActifs };
+}
+
+function afficherOuTiret(value: string): string {
+    const t = value.trim();
+    return t ? t : "—";
+}
+
+function libelleOccupantsChambre(chambre: ChambreDto): string {
+    const occupants = chambre.occupants ?? [];
+    if (occupants.length === 0) return "—";
+    return occupants.map((o) => libelleOccupant(o)).join("\n");
+}
+
+function libelleLocalisationChambreImpression(chambre: ChambreDto): string {
+    const parts: string[] = [];
+    if (chambre.batiment?.trim()) parts.push(`Bât. ${chambre.batiment.trim()}`);
+    if (chambre.etage != null) parts.push(`Étage ${libelleEtage(chambre.etage)}`);
+    if (chambre.couloir?.trim()) parts.push(`Couloir ${chambre.couloir.trim()}`);
+    return parts.length > 0 ? parts.join("\n") : "—";
+}
+
+function libelleReferentsChambre(chambre: ChambreDto): string {
+    if (chambre.typeChambre !== "ENFANT") return "—";
+    const refs = chambre.referents ?? [];
+    if (refs.length === 0) return "—";
+    return refs.map((r) => `${r.prenom} ${r.nom}`.trim()).join("\n");
+}
+
+function libelleFiltresChambresImpression(
+    typeFiltre: typeof FILTRE_TOUS | TypeChambre,
+    genreFiltre: typeof FILTRE_TOUS | GenreChambre,
+    recherche: FiltresRechercheChambre,
+    selectionGroupes: FiltreGroupesSelection,
+    libelleResumeGroupes: string,
+): string | undefined {
+    const parties: string[] = [];
+
+    if (typeFiltre !== FILTRE_TOUS) {
+        parties.push(`Type : ${TypeChambreLabels[typeFiltre]}`);
+    }
+    if (genreFiltre !== FILTRE_TOUS) {
+        parties.push(`Genre : ${GenreChambreLabels[genreFiltre]}`);
+    }
+    if (filtresGroupesActifs(selectionGroupes)) {
+        parties.push(`Groupe(s) : ${libelleResumeGroupes}`);
+    }
+    if (recherche.identifiant.trim()) {
+        parties.push(`Chambre : ${recherche.identifiant.trim()}`);
+    }
+    if (recherche.batiment.trim()) {
+        parties.push(`Bâtiment : ${recherche.batiment.trim()}`);
+    }
+    if (recherche.etage.trim()) {
+        parties.push(`Étage : ${recherche.etage.trim()}`);
+    }
+    if (recherche.couloir.trim()) {
+        parties.push(`Couloir : ${recherche.couloir.trim()}`);
+    }
+    if (recherche.occupant.trim()) {
+        parties.push(`Occupant : ${recherche.occupant.trim()}`);
+    }
+
+    return parties.length > 0 ? parties.join(" · ") : undefined;
 }
 
 async function synchroniserReferents(
@@ -865,13 +984,133 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
 
     const modificationChambreInvalide = modificationChambreBloquee(erreursModificationChambre);
 
+    const printTitre = "Chambres du séjour";
+
+    const printColumns = useMemo((): ColumnConfig[] => {
+        return [
+            {
+                key: "chambre",
+                label: "Chambre",
+                type: "text",
+                className: CHAMBRES_PRINT_COL_CHAMBRE,
+                printNoWrap: true,
+                printValue: (c: ChambreDto) => afficherOuTiret(c.identifiant.trim()),
+            },
+            {
+                key: "genre",
+                label: "Genre",
+                type: "text",
+                className: CHAMBRES_PRINT_COL_GENRE,
+                printNoWrap: true,
+                printValue: (c: ChambreDto) => GenreChambrePrintLabels[c.genreAutorise],
+            },
+            {
+                key: "groupe",
+                label: "Groupe",
+                type: "text",
+                className: CHAMBRES_PRINT_COL_GROUPE,
+                printValue: (c: ChambreDto) =>
+                    c.typeChambre === "ENFANT" ? afficherOuTiret(c.groupe?.libelle?.trim() ?? "") : "—",
+            },
+            {
+                key: "localisation",
+                label: "Localisation",
+                type: "text",
+                className: CHAMBRES_PRINT_COL_LOCALISATION,
+                printValue: (c: ChambreDto) =>
+                    chambreALocalisationRenseignee(c) ? libelleLocalisationChambreImpression(c) : "—",
+            },
+            {
+                key: "occupants",
+                label: "Occupants",
+                type: "text",
+                className: CHAMBRES_PRINT_COL_OCCUPANTS,
+                printValue: libelleOccupantsChambre,
+            },
+            {
+                key: "referents",
+                label: "Référents",
+                type: "text",
+                className: CHAMBRES_PRINT_COL_REFERENTS,
+                printValue: libelleReferentsChambre,
+            },
+        ];
+    }, []);
+
+    const printHeaderContext = useMemo(() => {
+        const meta: { label: string; value: string }[] = [
+            {
+                label: "Résultats affichés",
+                value: `${chambresFiltrées.length} sur ${chambres.length}`,
+            },
+        ];
+        const filtresLibelle = libelleFiltresChambresImpression(
+            filterType,
+            filterGenre,
+            filtresRecherche,
+            selectionFiltreGroupes,
+            libelleResumeFiltreGroupes,
+        );
+        if (filtresLibelle) {
+            meta.push({ label: "Filtres", value: filtresLibelle });
+        }
+        return buildPrintDocumentContext(printTitre, meta);
+    }, [
+        chambresFiltrées.length,
+        chambres.length,
+        filterType,
+        filterGenre,
+        filtresRecherche,
+        selectionFiltreGroupes,
+        libelleResumeFiltreGroupes,
+    ]);
+
+    const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+        documentTitle: printTitre,
+        extraPageStyle: CHAMBRES_PRINT_EXTRA_STYLE,
+        ignoreGlobalStyles: true,
+        runningHeaderLabel: printTitre,
+    });
+
+    const renderPrintCell = (column: ColumnConfig, item: ChambreDto): string => {
+        if (column.printValue) {
+            return column.printValue(item);
+        }
+        return "";
+    };
+
     return (
         <div>
             <div className={styles.actionsContainer}>
                 <Button color="success" onClick={openModal}>
                     Ajouter une chambre
                 </Button>
+                {chambres.length > 0 ? (
+                    <PrintTrigger
+                        variant="button"
+                        onPrint={print}
+                        label="Imprimer les chambres"
+                        buttonText="Imprimer"
+                        disabled={chambresFiltrées.length === 0}
+                        className={styles.printTriggerRight}
+                    />
+                ) : null}
             </div>
+
+            <PrintContentRoot contentRef={contentRef} fixedRunningHeaderLabel={fixedRunningHeaderLabel}>
+                <PrintDocumentHeader context={printHeaderContext} />
+                <ListePrintTable
+                    visibleColumns={printColumns}
+                    rows={chambresFiltrées}
+                    getRowKey={(item) => item.id}
+                    renderPrintCell={renderPrintCell}
+                    emptyMessage={
+                        chambres.length === 0
+                            ? "Aucune chambre enregistrée pour ce séjour."
+                            : "Aucune chambre ne correspond aux filtres sélectionnés."
+                    }
+                />
+            </PrintContentRoot>
 
             {chambres.length > 0 ? (
                 <div className={styles.filtersBar}>
