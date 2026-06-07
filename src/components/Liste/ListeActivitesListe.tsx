@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { FaHistory } from "react-icons/fa";
+import { FaChild, FaHistory } from "react-icons/fa";
 import { Button, Input } from "reactstrap";
 import type { ActiviteDto, GroupeDto, LieuDto, TypeActiviteDto } from "../../types/api";
 import type { MembreEquipeSejour } from "./listeActivitesTypes";
-import { FILTRE_LISTE_LIEU_SANS, formatActiviteDateForDisplay, resumePartageLieu } from "./listeActivitesUtils";
+import { FILTRE_LISTE_LIEU_SANS, formatActiviteDateForDisplay, libelleEnfantsParticipants, resumePartageLieu } from "./listeActivitesUtils";
 import { GroupesSelectOptions } from "./SelectionGroupesParType";
 import styles from "./ListeActivites.module.scss";
 
@@ -226,6 +226,7 @@ export type ListeActivitesListeResultatProps = {
     peutGererToutesActivites?: boolean;
     tokenUtilisateurConnecte?: string | null;
     onOpenHistoriqueActivite?: (a: ActiviteDto) => void;
+    onOpenEnfantsActivite?: (a: ActiviteDto) => void;
 };
 
 export function ListeActivitesListeResultat({
@@ -238,6 +239,7 @@ export function ListeActivitesListeResultat({
     peutGererToutesActivites = true,
     tokenUtilisateurConnecte = null,
     onOpenHistoriqueActivite,
+    onOpenEnfantsActivite,
 }: ListeActivitesListeResultatProps) {
     if (activites.length === 0) {
         return <p className={styles.empty}>Aucune activité planifiée pour ce séjour.</p>;
@@ -262,6 +264,17 @@ export function ListeActivitesListeResultat({
                             <span className={styles.dateBadge}>{formatActiviteDateForDisplay(a.date)}</span>
                             <span className={styles.cardHeaderTitleRow}>
                                 <span className={styles.nom}>{a.nom}</span>
+                                {onOpenEnfantsActivite && peutModifierActiviteListe(a) ? (
+                                    <button
+                                        type="button"
+                                        className={styles.cardHistoriqueBtn}
+                                        aria-label={`Enfants participants pour l'activité « ${a.nom} »`}
+                                        title="Enfants participants"
+                                        onClick={() => onOpenEnfantsActivite(a)}
+                                    >
+                                        <FaChild aria-hidden size={14} />
+                                    </button>
+                                ) : null}
                                 {onOpenHistoriqueActivite ? (
                                     <button
                                         type="button"
@@ -314,6 +327,13 @@ export function ListeActivitesListeResultat({
                                     <strong>Type :</strong> {a.typeActivite?.libelle ?? "—"}
                                 </div>
                             </div>
+                            {(a.enfants?.length ?? 0) > 0 ? (
+                                <div className={styles.metaCell}>
+                                    <div className={styles.meta}>
+                                        <strong>Enfants :</strong> {libelleEnfantsParticipants(a.enfants)}
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                         {a.description ? <p className={styles.description}>{a.description}</p> : null}
                     </div>

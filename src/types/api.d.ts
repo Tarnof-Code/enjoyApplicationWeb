@@ -707,6 +707,15 @@ export interface ActiviteMembreEquipeInfo {
 }
 
 /**
+ * Correspond à ActiviteDto.EnfantParticipantInfo (record imbriqué)
+ */
+export interface EnfantParticipantInfo {
+  id: number;
+  nom: string;
+  prenom: string;
+}
+
+/**
  * Correspond à ActiviteDto.java
  */
 export interface ActiviteDto {
@@ -729,6 +738,8 @@ export interface ActiviteDto {
    * mais le partage entre animateurs le permet
    */
   avertissementLieu?: string | null;
+  /** Enfants inscrits participants à l'activité (triés par id côté API) */
+  enfants?: EnfantParticipantInfo[];
 }
 
 /**
@@ -754,6 +765,8 @@ export interface CreateActiviteRequest {
   lieuId?: number | null;
   momentId?: number | null;
   typeActiviteId: number;
+  /** IDs SQL des enfants inscrits au séjour ; [] ou omis = aucun enfant */
+  enfantIds?: number[];
 }
 
 /**
@@ -769,6 +782,8 @@ export interface UpdateActiviteRequest {
   lieuId?: number | null;
   momentId?: number | null;
   typeActiviteId: number;
+  /** Liste complète (remplacement, pas delta) ; [] = aucun enfant */
+  enfantIds?: number[];
 }
 
 // ============================================================================

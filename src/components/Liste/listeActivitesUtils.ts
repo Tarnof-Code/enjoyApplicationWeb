@@ -1,6 +1,16 @@
 import formaterDate, { parseDate } from "../../helpers/formaterDate";
 import { idsEnConflit } from "../../helpers/construireArbreMoments";
-import type { ActiviteDto, GroupeDto, LieuDto, MomentDto, SejourDTO, TypeActiviteDto } from "../../types/api";
+import { trierEnfantsParPrenom } from "../../helpers/trierUtilisateurs";
+import type {
+    ActiviteDto,
+    EnfantDto,
+    GroupeDto,
+    LieuDto,
+    MomentDto,
+    SejourDTO,
+    TypeActiviteDto,
+    UpdateActiviteRequest,
+} from "../../types/api";
 
 export const JOURS_COURTS_FR: readonly string[] = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -329,6 +339,85 @@ export function premierConflitAnimateurActiviteInterne(
     }
 
     return null;
+}
+
+/** Enfants déjà affectés à une autre activité sur le même jour et créneau (hiérarchie des moments incluse). */
+export function idsEnfantsDejaAffectesAutreActivite(
+    activites: readonly ActiviteDto[],
+    dateYmd: string,
+    momentId: number,
+    moments: readonly MomentDto[],
+    excludeActiviteId?: number | null,
+): Map<number, { activiteNom: string; momentNom: string }> {
+    const ymd = dateYmd.trim();
+    if (!ymd || momentId <= 0) return new Map();
+
+    const conflictIds = idsEnConflit(momentId, moments);
+    const result = new Map<number, { activiteNom: string; momentNom: string }>();
+
+    for (const a of activites) {
+        if (excludeActiviteId != null && a.id === excludeActiviteId) continue;
+        if (activiteDateToFilterKey(a.date) !== ymd) continue;
+        const aMomentId = a.moment?.id;
+        if (aMomentId == null || !conflictIds.has(aMomentId)) continue;
+        for (const e of a.enfants ?? []) {
+            result.set(e.id, {
+                activiteNom: a.nom,
+                momentNom: a.moment?.nom ?? "—",
+            });
+        }
+    }
+
+    return result;
+}
+
+/** Libellé « Prénom Nom » pour une liste d'enfants participants. */
+export function libelleEnfantsParticipants(
+    enfants: readonly { prenom: string; nom: string }[] | null | undefined,
+): string {
+    if (!enfants?.length) return "—";
+    return enfants.map((e) => `${e.prenom} ${e.nom}`.trim()).join(", ");
+}
+
+/** Enfants des groupes rattachés à une activité (dédupliqués, triés par prénom). */
+export function enfantsEligiblesPourGroupesActivite(
+    groupes: readonly GroupeDto[],
+    groupeIds: readonly number[],
+): EnfantDto[] {
+    const idsVu = new Set<number>();
+    const result: EnfantDto[] = [];
+    for (const gid of groupeIds) {
+        const g = groupes.find((x) => x.id === gid);
+        if (!g) continue;
+        for (const e of g.enfants ?? []) {
+            if (!idsVu.has(e.id)) {
+                idsVu.add(e.id);
+                result.push(e);
+            }
+        }
+    }
+    return trierEnfantsParPrenom(result);
+}
+
+/** Requête PUT complète à partir d'une activité existante (remplacement des champs fournis). */
+export function activiteVersUpdateRequest(
+    activite: ActiviteDto,
+    overrides?: Partial<UpdateActiviteRequest>,
+): UpdateActiviteRequest {
+    return {
+        date: activiteDateToInputDate(activite.date),
+        nom: activite.nom,
+        description: activite.description ?? null,
+        membreTokenIds: (activite.membres ?? [])
+            .map((m) => m.tokenId)
+            .filter((id): id is string => Boolean(id?.trim())),
+        groupeIds: [...(activite.groupeIds ?? [])].sort((a, b) => a - b),
+        typeActiviteId: activite.typeActivite.id,
+        lieuId: activite.lieu?.id ?? null,
+        momentId: activite.moment?.id ?? null,
+        enfantIds: (activite.enfants ?? []).map((e) => e.id).sort((a, b) => a - b),
+        ...overrides,
+    };
 }
 
 export function activiteDateToFilterKey(value: ActiviteDto["date"]): string {

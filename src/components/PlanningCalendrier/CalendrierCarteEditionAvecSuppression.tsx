@@ -1,4 +1,4 @@
-import { faClockRotateLeft, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faChild, faClockRotateLeft, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type React from "react";
 import styles from "./PlanningCalendrier.module.scss";
@@ -22,7 +22,82 @@ export type CalendrierCarteEditionAvecSuppressionProps = {
     /** Consulter l’historique des modifications (toujours hors du clic principal). */
     onHistoriqueClick?: () => void;
     historiqueAriaLabel?: string;
+    /** Gérer les enfants participants (toujours hors du clic principal). */
+    onEnfantsClick?: () => void;
+    enfantsAriaLabel?: string;
 };
+
+type CarteActionsSecondairesProps = {
+    onEnfantsClick?: () => void;
+    enfantsAriaLabel: string;
+    onHistoriqueClick?: () => void;
+    historiqueAriaLabel: string;
+    onDeleteClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+    deleteAriaLabel?: string;
+    deleteTitle?: string;
+    deleteDisabled?: boolean;
+};
+
+function CarteActionsSecondaires({
+    onEnfantsClick,
+    enfantsAriaLabel,
+    onHistoriqueClick,
+    historiqueAriaLabel,
+    onDeleteClick,
+    deleteAriaLabel,
+    deleteTitle = "Supprimer",
+    deleteDisabled,
+}: CarteActionsSecondairesProps) {
+    if (!onEnfantsClick && !onHistoriqueClick && !onDeleteClick) return null;
+
+    return (
+        <div className={styles.carteSideActions}>
+            {onEnfantsClick ? (
+                <button
+                    type="button"
+                    className={styles.carteIconBtn}
+                    aria-label={enfantsAriaLabel}
+                    title="Enfants participants"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEnfantsClick();
+                    }}
+                >
+                    <FontAwesomeIcon icon={faChild} />
+                </button>
+            ) : null}
+            {onHistoriqueClick ? (
+                <button
+                    type="button"
+                    className={styles.carteIconBtn}
+                    aria-label={historiqueAriaLabel}
+                    title="Historique"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onHistoriqueClick();
+                    }}
+                >
+                    <FontAwesomeIcon icon={faClockRotateLeft} />
+                </button>
+            ) : null}
+            {onDeleteClick ? (
+                <button
+                    className={`${styles.carteIconBtn} ${styles.carteIconBtnDanger}`}
+                    type="button"
+                    aria-label={deleteAriaLabel}
+                    title={deleteTitle}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteClick(e);
+                    }}
+                    disabled={deleteDisabled}
+                >
+                    <FontAwesomeIcon icon={faTrash} />
+                </button>
+            ) : null}
+        </div>
+    );
+}
 
 /** Carte cliquable + bouton suppression (pattern planning activités / menus). */
 export function CalendrierCarteEditionAvecSuppression({
@@ -39,34 +114,41 @@ export function CalendrierCarteEditionAvecSuppression({
     carteNonCliquable = false,
     onHistoriqueClick,
     historiqueAriaLabel = "Voir l'historique des modifications",
+    onEnfantsClick,
+    enfantsAriaLabel = "Gérer les enfants participants",
 }: CalendrierCarteEditionAvecSuppressionProps) {
     const boutonPrincipalClass = [
         styles.carteBtn,
         lectureSeule || carteNonCliquable ? styles.carteBtnLectureSeule : "",
-        (lectureSeule || carteNonCliquable) && onHistoriqueClick ? styles.carteBtnIcons : "",
-        !lectureSeule && !carteNonCliquable && onHistoriqueClick ? styles.carteBtnAvecHistorique : "",
+        (lectureSeule || carteNonCliquable) && (onHistoriqueClick || onEnfantsClick)
+            ? styles.carteBtnIcons
+            : "",
+        !lectureSeule &&
+        !carteNonCliquable &&
+        (onHistoriqueClick || onEnfantsClick)
+            ? styles.carteBtnAvecHistorique
+            : "",
     ]
         .filter(Boolean)
         .join(" ");
 
+    const actionsCommunes = {
+        onEnfantsClick,
+        enfantsAriaLabel,
+        onHistoriqueClick,
+        historiqueAriaLabel,
+    };
+
     if (carteNonCliquable && !lectureSeule) {
         return (
             <div className={styles.carteBloc}>
-                <div className={styles.carteSideActions}>
-                    <button
-                        className={`${styles.carteIconBtn} ${styles.carteIconBtnDanger}`}
-                        type="button"
-                        aria-label={deleteAriaLabel}
-                        title={deleteTitle}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteClick(e);
-                        }}
-                        disabled={deleteDisabled}
-                    >
-                        <FontAwesomeIcon icon={faTrash} />
-                    </button>
-                </div>
+                <CarteActionsSecondaires
+                    {...actionsCommunes}
+                    onDeleteClick={onDeleteClick}
+                    deleteAriaLabel={deleteAriaLabel}
+                    deleteTitle={deleteTitle}
+                    deleteDisabled={deleteDisabled}
+                />
                 <div
                     className={boutonPrincipalClass}
                     style={mainButtonStyle}
@@ -82,22 +164,7 @@ export function CalendrierCarteEditionAvecSuppression({
     if (lectureSeule) {
         return (
             <div className={styles.carteBloc}>
-                {onHistoriqueClick ? (
-                    <div className={styles.carteSideActions}>
-                        <button
-                            type="button"
-                            className={styles.carteIconBtn}
-                            aria-label={historiqueAriaLabel}
-                            title="Historique"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onHistoriqueClick();
-                            }}
-                        >
-                            <FontAwesomeIcon icon={faClockRotateLeft} />
-                        </button>
-                    </div>
-                ) : null}
+                <CarteActionsSecondaires {...actionsCommunes} />
                 <div
                     className={boutonPrincipalClass}
                     style={mainButtonStyle}
@@ -111,35 +178,13 @@ export function CalendrierCarteEditionAvecSuppression({
     }
     return (
         <div className={styles.carteBloc}>
-            <div className={styles.carteSideActions}>
-                {onHistoriqueClick ? (
-                    <button
-                        type="button"
-                        className={styles.carteIconBtn}
-                        aria-label={historiqueAriaLabel}
-                        title="Historique"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onHistoriqueClick();
-                        }}
-                    >
-                        <FontAwesomeIcon icon={faClockRotateLeft} />
-                    </button>
-                ) : null}
-                <button
-                    className={`${styles.carteIconBtn} ${styles.carteIconBtnDanger}`}
-                    type="button"
-                    aria-label={deleteAriaLabel}
-                    title={deleteTitle}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteClick(e);
-                    }}
-                    disabled={deleteDisabled}
-                >
-                    <FontAwesomeIcon icon={faTrash} />
-                </button>
-            </div>
+            <CarteActionsSecondaires
+                {...actionsCommunes}
+                onDeleteClick={onDeleteClick}
+                deleteAriaLabel={deleteAriaLabel}
+                deleteTitle={deleteTitle}
+                deleteDisabled={deleteDisabled}
+            />
             <button
                 type="button"
                 className={boutonPrincipalClass}

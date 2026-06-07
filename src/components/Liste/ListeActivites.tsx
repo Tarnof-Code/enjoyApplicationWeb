@@ -35,6 +35,7 @@ import {
     CalendrierPlanning,
 } from "./ListeActivitesCalendrier";
 import { ListeActivitesListeFiltres, ListeActivitesListeResultat } from "./ListeActivitesListe";
+import { ActiviteEnfantsParticipantsModal } from "./ActiviteEnfantsParticipantsModal";
 import {
     CALENDRIER_FILTRE_AUCUN_ANIMATEUR_TOKEN,
     CALENDRIER_FILTRE_AUCUN_GROUPE_ID,
@@ -64,9 +65,12 @@ import {
     FILTRE_LISTE_LIEU_SANS,
     activiteDateToFilterKey,
     activiteDateToInputDate,
+    activiteVersUpdateRequest,
     couleurFondCalendrierPourTypeActivite,
     equipeAvecTokenEnTete,
+    enfantsEligiblesPourGroupesActivite,
     groupeIdsReferentsPourToken,
+    idsEnfantsDejaAffectesAutreActivite,
     enumererJoursDuSejour,
     premierConflitAnimateurActiviteInterne,
     resumePartageLieu,
@@ -248,6 +252,13 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         HistoriqueModificationListeModalLigne[] | null
     >(null);
 
+    const [enfantsModalOpen, setEnfantsModalOpen] = useState(false);
+    const [activiteEnfantsCible, setActiviteEnfantsCible] = useState<ActiviteDto | null>(null);
+    const [enfantsSelection, setEnfantsSelection] = useState<Set<number>>(() => new Set());
+    const [enfantsModalChargement, setEnfantsModalChargement] = useState(false);
+    const [enfantsModalSubmitting, setEnfantsModalSubmitting] = useState(false);
+    const [enfantsModalError, setEnfantsModalError] = useState<string | null>(null);
+
     useEffect(() => {
         setPrestataires(activitesPrestataires.map(normaliserPrestataireDto));
     }, [activitesPrestataires]);
@@ -394,6 +405,113 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         },
         [sejour.id]
     );
+
+    const peutModifierActivite = useCallback(
+        (activite: ActiviteDto) => {
+            if (peutGererActivitesComplet) return true;
+            if (!tokenSelf) return false;
+            return activite.membres?.some((m) => (m.tokenId ?? "").trim() === tokenSelf);
+        },
+        [peutGererActivitesComplet, tokenSelf],
+    );
+
+    const resetModalEnfantsActivite = useCallback(() => {
+        setEnfantsModalOpen(false);
+        setActiviteEnfantsCible(null);
+        setEnfantsSelection(new Set());
+        setEnfantsModalError(null);
+        setEnfantsModalChargement(false);
+    }, []);
+
+    const fermerModalEnfantsActivite = useCallback(() => {
+        if (enfantsModalSubmitting) return;
+        resetModalEnfantsActivite();
+    }, [enfantsModalSubmitting, resetModalEnfantsActivite]);
+
+    const ouvrirModalEnfantsActivite = useCallback(
+        (activite: ActiviteDto) => {
+            if (!peutModifierActivite(activite)) return;
+            setEnfantsModalOpen(true);
+            setEnfantsModalError(null);
+            setEnfantsModalChargement(true);
+            setActiviteEnfantsCible(activite);
+            setEnfantsSelection(new Set());
+
+            void (async () => {
+                try {
+                    const fraiche = await sejourActiviteService.getActiviteById(sejour.id, activite.id);
+                    setActiviteEnfantsCible(fraiche);
+                    setEnfantsSelection(new Set((fraiche.enfants ?? []).map((e) => e.id)));
+                } catch (e: unknown) {
+                    setEnfantsModalError(
+                        e instanceof Error
+                            ? e.message
+                            : "Impossible de charger les enfants participants",
+                    );
+                } finally {
+                    setEnfantsModalChargement(false);
+                }
+            })();
+        },
+        [peutModifierActivite, sejour.id],
+    );
+
+    const toggleEnfantModal = (enfantId: number) => {
+        setEnfantsSelection((prev) => {
+            const next = new Set(prev);
+            if (next.has(enfantId)) next.delete(enfantId);
+            else next.add(enfantId);
+            return next;
+        });
+    };
+
+    const enregistrerEnfantsActivite = async () => {
+        if (!activiteEnfantsCible) return;
+        setEnfantsModalError(null);
+
+        const enfantIds = [...enfantsSelection].sort((a, y) => a - y);
+        const momentId = activiteEnfantsCible.moment?.id;
+        if (momentId != null) {
+            const conflits = idsEnfantsDejaAffectesAutreActivite(
+                activites,
+                activiteDateToInputDate(activiteEnfantsCible.date),
+                momentId,
+                momentsTriés,
+                activiteEnfantsCible.id,
+            );
+            for (const enfantId of enfantIds) {
+                const conflit = conflits.get(enfantId);
+                if (!conflit) continue;
+                const enfant = enfantsEligiblesPourGroupesActivite(
+                    groupes,
+                    activiteEnfantsCible.groupeIds ?? [],
+                ).find((e) => e.id === enfantId);
+                const prenom = enfant?.prenom?.trim() || "L'enfant";
+                setEnfantsModalError(
+                    `${prenom} participe déjà à l'activité « ${conflit.activiteNom} » le même jour au moment « ${conflit.momentNom} ».`,
+                );
+                return;
+            }
+        }
+
+        setEnfantsModalSubmitting(true);
+        try {
+            await sejourActiviteService.modifierActivite(
+                sejour.id,
+                activiteEnfantsCible.id,
+                activiteVersUpdateRequest(activiteEnfantsCible, { enfantIds }),
+            );
+            resetModalEnfantsActivite();
+            showSuccessModal("Liste des enfants participants enregistrée.");
+            revalidator.revalidate();
+        } catch (e: unknown) {
+            setEnfantsModalError(
+                e instanceof Error ? e.message : "Impossible d'enregistrer les enfants participants",
+            );
+        } finally {
+            setEnfantsModalSubmitting(false);
+        }
+    };
 
     const toggleToken = (tokenId: string) => {
         if (estAnimateurRestreintActivites && tokenSelf && (tokenId ?? "").trim() === tokenSelf) return;
@@ -1087,6 +1205,12 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
             membreTokenIds: [...idsMembres],
             groupeIds: [...selectedGroupeIds].sort((x, y) => x - y),
             typeActiviteId: formTypeActiviteId,
+            enfantIds:
+                editingActiviteId != null
+                    ? (activites.find((a) => a.id === editingActiviteId)?.enfants ?? []).map((e) => e.id).sort(
+                          (x, y) => x - y,
+                      )
+                    : [],
         };
         const desc = formDescription.trim();
         if (desc) payload.description = desc;
@@ -1682,6 +1806,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                         estAnimateurRestreintActivites && tokenSelf ? tokenSelf : null
                     }
                     onOpenHistoriqueActivite={ouvrirHistoriqueActivite}
+                    onOpenEnfantsActivite={ouvrirModalEnfantsActivite}
                     peutResoudreConflitsPrestataires={peutGererActivitesComplet}
                     onResoudreConflitPrestataire={resoudreConflitPrestataireCalendrier}
                     conflitResolutionEnCours={conflitResolutionEnCours}
@@ -1703,6 +1828,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     peutGererToutesActivites={peutGererActivitesComplet}
                     tokenUtilisateurConnecte={tokenSelf || null}
                     onOpenHistoriqueActivite={ouvrirHistoriqueActivite}
+                    onOpenEnfantsActivite={ouvrirModalEnfantsActivite}
                 />
             )}
 
@@ -2188,6 +2314,21 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     </Button>
                 </ModalFooter>
             </Modal>
+
+            <ActiviteEnfantsParticipantsModal
+                isOpen={enfantsModalOpen}
+                activite={activiteEnfantsCible}
+                groupes={groupes}
+                activites={activites}
+                moments={momentsTriés}
+                selectedEnfantIds={enfantsSelection}
+                chargement={enfantsModalChargement}
+                submitting={enfantsModalSubmitting}
+                errorMessage={enfantsModalError}
+                onToggleEnfant={toggleEnfantModal}
+                onClose={fermerModalEnfantsActivite}
+                onSubmit={() => void enregistrerEnfantsActivite()}
+            />
 
             <HistoriqueModificationListeModal
                 isOpen={historiqueActiviteModalOpen}

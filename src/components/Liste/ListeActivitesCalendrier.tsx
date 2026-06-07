@@ -425,6 +425,7 @@ export type CalendrierPlanningProps = {
      */
     tokenEditionCalendrierReserve?: string | null;
     onOpenHistoriqueActivite?: (a: ActiviteDto) => void;
+    onOpenEnfantsActivite?: (a: ActiviteDto) => void;
     peutResoudreConflitsPrestataires?: boolean;
     onResoudreConflitPrestataire?: (
         item: Extract<CalendrierCelluleItem, { kind: "conflit" }>,
@@ -459,6 +460,7 @@ export function CalendrierPlanning({
     deletingActiviteId,
     tokenEditionCalendrierReserve = null,
     onOpenHistoriqueActivite,
+    onOpenEnfantsActivite,
     peutResoudreConflitsPrestataires = false,
     onResoudreConflitPrestataire,
     conflitResolutionEnCours = null,
@@ -607,6 +609,13 @@ export function CalendrierPlanning({
                                                                                 : undefined
                                                                         }
                                                                         historiqueAriaLabel={`Historique de « ${a.nom} »`}
+                                                                        onEnfantsClick={
+                                                                            onOpenEnfantsActivite &&
+                                                                            ligneEditableCalendrier
+                                                                                ? () => onOpenEnfantsActivite(a)
+                                                                                : undefined
+                                                                        }
+                                                                        enfantsAriaLabel={`Enfants participants pour « ${a.nom} »`}
                                                                     >
                                                                         {a.moment ? (
                                                                             <span

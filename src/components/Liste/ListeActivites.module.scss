@@ -1258,9 +1258,33 @@ thead .calendrierColHead {
 
 .checkboxRow {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
     margin-bottom: 0.35rem;
+}
+
+.checkboxRowIndisponible {
+    cursor: default;
+
+    label,
+    label:hover {
+        cursor: default;
+    }
+
+    input[type="checkbox"]:disabled,
+    input[type="checkbox"]:disabled:hover {
+        cursor: default;
+    }
+}
+
+.enfantIndisponible {
+    color: #888;
+    cursor: default;
+}
+
+.enfantConflitHint {
+    font-size: 0.85rem;
+    font-style: italic;
 }
 
 .checkboxGroup {
@@ -1291,6 +1315,65 @@ thead .calendrierColHead {
     background: #f4f6f8;
     border-radius: 6px;
     line-height: 1.4;
+}
+
+.enfantsModalIntro {
+    font-size: 0.92rem;
+    color: #444;
+    margin-bottom: 0.75rem;
+    line-height: 1.45;
+}
+
+.enfantsModalListeActuelle {
+    margin: 0.35rem 0 0;
+    padding: 0.5rem 0.75rem 0.5rem 1.35rem;
+    background: #f4f6f8;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.45;
+    min-height: 10rem;
+    max-height: 22rem;
+    overflow-y: auto;
+
+    li + li {
+        margin-top: 0.2rem;
+    }
+}
+
+.enfantsModalActionsEdition {
+    margin-bottom: 0.5rem;
+}
+
+.enfantsModalModifierBtn {
+    padding-left: 0;
+    padding-right: 0;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+        text-decoration: underline;
+    }
+}
+
+.enfantsModalSelectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.35rem;
+}
+
+.enfantsModalSelectionLabel {
+    margin: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.enfantsModalRechercheInput {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
 }
 
 .lieuHintAvertissement {
