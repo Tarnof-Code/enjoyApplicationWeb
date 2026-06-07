@@ -1823,23 +1823,11 @@ function ListePlanningsOrganisation({
 
     const printHeaderContext = useMemo(() => {
         const meta: { label: string; value: string }[] = [];
-        if (planningLibellePlage) {
-            meta.push({ label: "Période affichée", value: planningLibellePlage });
-        }
-        meta.push({
-            label: "Vue",
-            value: planningNombreJoursVue === 1 ? "1 jour" : `${planningNombreJoursVue} jours`,
-        });
         if (detail?.consigneGlobale?.trim()) {
             meta.push({ label: "Consigne", value: detail.consigneGlobale.trim() });
         }
         return buildPrintDocumentContext(planningTitreImpression, meta);
-    }, [
-        detail?.consigneGlobale,
-        planningLibellePlage,
-        planningNombreJoursVue,
-        planningTitreImpression,
-    ]);
+    }, [detail?.consigneGlobale, planningTitreImpression]);
 
     const editorPlanningVisible = (editorOpen || isEmbeddedEditor) && !editorLoading && detail != null;
     const peutImprimerPlanning = editorPlanningVisible && joursFenetre.length > 0;

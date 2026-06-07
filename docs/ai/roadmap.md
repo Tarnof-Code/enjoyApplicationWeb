@@ -41,6 +41,8 @@
 - [x] **Impression plannings organisation** : **`ListePlanningsOrganisation`** — fenêtre **1 / 3 / 7 jours** affichée, paysage A4 ; en-tête titre **13pt gras** global **`printPageStyles`**
 - [x] **Impression fiche dossier enfant** : **`DossierEnfant`** — **`PrintTrigger`** + 4 sections ; en-tête **`title-page-split`** (opt-in, sans impact listes)
 - [x] **Impression planning activités (calendrier)** : **`ListeActivites`** — modale **Noir et blanc** / **Couleurs**, preset **`activitesCalendarGrid`**, paysage A4
+- [x] **Impression menus séjour** : **`DetailsSejourMenus`** — modale **Noir et blanc** / **Couleurs**, **`couleurFondCarteMenuPourTypeRepas`**, preset **`menusGrid`**
+- [x] **Impression — métadonnées allégées** : **`PrintDocumentHeader`** sans redondance (période/vue/rendu/mode/colonnes) sur activités, plannings, menus, dossiers sanitaires
 - [x] **Commande Cursor `/maj`** : `.cursor/commands/maj.md` — sync Memory Bank (`AI_MEMORY.md` + `docs/ai/`)
 - [x] **Auth — redirect 401 global** : intercepteur **`caller.service.ts`** (logout + **`/`** après échec refresh ; **`refreshAccessToken`** avec **`X-Skip-Token-Refresh`**)
 - [x] **Page Profil — refonte UX** : carte circulaire (photo + badge rôle), 3 accordéons (1er ouvert), champs compacts label/value

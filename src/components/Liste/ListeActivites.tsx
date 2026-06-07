@@ -556,17 +556,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const planningTitreImpression = `Planning d'activités — ${sejour.nom}`;
 
     const printHeaderContext = useMemo(() => {
-        const meta: { label: string; value: string }[] = [
-            { label: "Période affichée", value: libellePlageCalendrier },
-            {
-                label: "Vue",
-                value: calendrierNombreJoursVue === 1 ? "1 jour" : `${calendrierNombreJoursVue} jours`,
-            },
-            {
-                label: "Rendu",
-                value: modeImpressionPlanning === "couleurs" ? "Couleurs" : "Noir et blanc",
-            },
-        ];
+        const meta: { label: string; value: string }[] = [];
         if (filtreCalendrierTokens.size > 0) {
             meta.push({ label: "Animateurs", value: libelleResumeFiltreCalendrierAnim });
         }
@@ -575,13 +565,10 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         }
         return buildPrintDocumentContext(planningTitreImpression, meta);
     }, [
-        calendrierNombreJoursVue,
         filtreCalendrierGroupeIds.size,
         filtreCalendrierTokens.size,
-        libellePlageCalendrier,
         libelleResumeFiltreCalendrierAnim,
         libelleResumeFiltreCalendrierGroupes,
-        modeImpressionPlanning,
         planningTitreImpression,
     ]);
 

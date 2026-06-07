@@ -29,23 +29,6 @@ export interface ListeSanitaireDossiersProps {
   listeKey?: string;
 }
 
-const LIBELLES_COLONNES_OPTIONNELLES: Record<keyof SanitaireColonnesOptionnelles, string> = {
-  allergies: "Allergies",
-  traitements: "Traitements",
-  contactsParents: "Contacts parents",
-  medical: "Infos médicales & PAI",
-  alimentation: "Alimentation",
-  autresInformations: "Autres infos",
-  aPrendreEnSortie: "À prendre en sortie",
-};
-
-function libelleColonnesOptionnellesActives(o: SanitaireColonnesOptionnelles): string {
-  const actives = (Object.keys(LIBELLES_COLONNES_OPTIONNELLES) as (keyof SanitaireColonnesOptionnelles)[])
-    .filter((k) => o[k])
-    .map((k) => LIBELLES_COLONNES_OPTIONNELLES[k]);
-  return actives.length > 0 ? actives.join(", ") : "Prénom, Nom, Groupe(s) uniquement";
-}
-
 /** Ligne aplati pour filtres Liste (valeurs brutes pour filtre texte). */
 export type SanitaireListeRow = {
   id: number;
@@ -278,15 +261,11 @@ const ListeSanitaireDossiers: FC<ListeSanitaireDossiersProps> = ({
     () =>
       buildPrintDocumentContext("Dossiers sanitaires", [
         {
-          label: "Colonnes optionnelles",
-          value: libelleColonnesOptionnellesActives(o),
-        },
-        {
           label: "Effectif séjour",
           value: String(lignes.length),
         },
       ]),
-    [o, lignes.length],
+    [lignes.length],
   );
 
   return (

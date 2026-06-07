@@ -52,6 +52,8 @@ import {
 
 type LoaderOk = { sejour: SejourDTO };
 
+type ModeImpressionMenus = "noir-blanc" | "couleurs";
+
 function lignesMenuPourImpression(
     menu: MenuRepasDto | undefined,
     champsVisibles: ResumeMenuCourtChampsVisibles | null,
@@ -135,6 +137,9 @@ const DetailsSejourMenus: React.FC = () => {
 
     /** Affichage liste (cartes par jour) ou grille type planning (repas × jours). */
     const [vueMenus, setVueMenus] = useState<"liste" | "calendrier">("calendrier");
+
+    const [printChoiceModalOpen, setPrintChoiceModalOpen] = useState(false);
+    const [modeImpressionMenus, setModeImpressionMenus] = useState<ModeImpressionMenus>("noir-blanc");
 
     /** Relecture préférences depuis le stockage après changements (paramétrage, autre onglet). */
     const [preferencesMenusNonce, setPreferencesMenusNonce] = useState(0);
@@ -229,26 +234,22 @@ const DetailsSejourMenus: React.FC = () => {
         extraPageStyle: PRINT_STYLE_PRESETS.menusGrid,
     });
 
-    const printHeaderContext = useMemo(() => {
-        const meta: { label: string; value: string }[] = [];
-        if (libellePlageMenus) {
-            meta.push({ label: "Période affichée", value: libellePlageMenus });
-        }
-        meta.push({
-            label: "Vue",
-            value: menusNombreJoursVue === 1 ? "1 jour" : `${menusNombreJoursVue} jours`,
-        });
-        meta.push({
-            label: "Mode",
-            value: vueMenus === "calendrier" ? "Calendrier" : "Liste",
-        });
-        return buildPrintDocumentContext(menusTitreImpression, meta);
-    }, [libellePlageMenus, menusNombreJoursVue, vueMenus]);
+    const printHeaderContext = useMemo(
+        () => buildPrintDocumentContext(menusTitreImpression),
+        [menusTitreImpression],
+    );
 
     const peutImprimerMenus = joursFenetreMenus.length > 0 && !loading;
 
+    const imprimerMenus = (mode: ModeImpressionMenus) => {
+        setModeImpressionMenus(mode);
+        setPrintChoiceModalOpen(false);
+        window.setTimeout(() => print(), 0);
+    };
+
     const renderMenusPrintCalendrier = () => {
         const c = PRINT_GLOBAL_CLASS;
+        const carteCouleur = modeImpressionMenus === "couleurs";
         return (
             <table className={c.menusPrintTable}>
                 <thead>
@@ -295,10 +296,19 @@ const DetailsSejourMenus: React.FC = () => {
                                     champsComposeMenusVisibles,
                                 );
                                 const celluleVide = lignes.length === 0;
+                                const celluleCouleur = carteCouleur && !celluleVide;
                                 return (
                                     <td
                                         key={`${col.ymd}-${type}`}
-                                        className={`${c.menusPrintCell} ${celluleVide ? c.menusPrintCellEmpty : ""}`}
+                                        className={`${c.menusPrintCell} ${celluleVide ? c.menusPrintCellEmpty : ""} ${celluleCouleur ? c.menusPrintCellColor : ""}`}
+                                        style={
+                                            celluleCouleur
+                                                ? ({
+                                                      "--enjoy-menus-print-cell-bg":
+                                                          couleurFondCarteMenuPourTypeRepas(type),
+                                                  } as CSSProperties)
+                                                : undefined
+                                        }
                                     >
                                         <MenuPrintCellContent lignes={lignes} meta={meta} />
                                     </td>
@@ -313,6 +323,7 @@ const DetailsSejourMenus: React.FC = () => {
 
     const renderMenusPrintListe = () => {
         const c = PRINT_GLOBAL_CLASS;
+        const carteCouleur = modeImpressionMenus === "couleurs";
         return (
             <table className={`${c.menusPrintTable} ${c.menusPrintListeTable}`}>
                 <thead>
@@ -335,6 +346,12 @@ const DetailsSejourMenus: React.FC = () => {
                                 champsComposeMenusVisibles,
                             );
                             const celluleVide = lignes.length === 0;
+                            const celluleCouleur = carteCouleur && !celluleVide;
+                            const styleCouleurRepas = celluleCouleur
+                                ? ({
+                                      "--enjoy-menus-print-cell-bg": couleurFondCarteMenuPourTypeRepas(type),
+                                  } as CSSProperties)
+                                : undefined;
                             return (
                                 <tr
                                     key={`${dayISO}-${type}`}
@@ -349,12 +366,16 @@ const DetailsSejourMenus: React.FC = () => {
                                         </td>
                                     ) : null}
                                     <td>
-                                        <span className={c.menusPrintRepasBadge}>
+                                        <span
+                                            className={`${c.menusPrintRepasBadge} ${celluleCouleur ? c.menusPrintRepasBadgeColor : ""}`}
+                                            style={styleCouleurRepas}
+                                        >
                                             {LABELS_TYPE_REPAS[type]}
                                         </span>
                                     </td>
                                     <td
-                                        className={celluleVide ? c.menusPrintCellEmpty : c.menusPrintCell}
+                                        className={`${celluleVide ? c.menusPrintCellEmpty : c.menusPrintCell} ${celluleCouleur ? c.menusPrintCellColor : ""}`}
+                                        style={styleCouleurRepas}
                                     >
                                         <MenuPrintCellContent lignes={lignes} meta={meta} />
                                     </td>
@@ -607,7 +628,7 @@ const DetailsSejourMenus: React.FC = () => {
                             {peutImprimerMenus ? (
                                 <PrintTrigger
                                     variant="button"
-                                    onPrint={() => print()}
+                                    onPrint={() => setPrintChoiceModalOpen(true)}
                                     label="Imprimer la période affichée"
                                     buttonText="Imprimer"
                                 />
@@ -836,6 +857,44 @@ const DetailsSejourMenus: React.FC = () => {
                   })
                 : null}
             </div>
+
+            <Modal isOpen={printChoiceModalOpen} toggle={() => setPrintChoiceModalOpen(false)}>
+                <ModalHeader toggle={() => setPrintChoiceModalOpen(false)}>
+                    Imprimer les menus du séjour
+                </ModalHeader>
+                <ModalBody>
+                    <p className={menuStyles.printChoiceIntro}>Choisissez le rendu de l&apos;impression.</p>
+                    <div className={menuStyles.printChoiceOptions}>
+                        <Button
+                            color="outline-secondary"
+                            type="button"
+                            className={menuStyles.printChoiceOption}
+                            onClick={() => imprimerMenus("noir-blanc")}
+                        >
+                            <span className={menuStyles.printChoiceOptionTitle}>Noir et blanc</span>
+                            <span className={menuStyles.printChoiceOptionDesc}>
+                                Imprimer les menus avec des cases blanches.
+                            </span>
+                        </Button>
+                        <Button
+                            color="outline-secondary"
+                            type="button"
+                            className={menuStyles.printChoiceOption}
+                            onClick={() => imprimerMenus("couleurs")}
+                        >
+                            <span className={menuStyles.printChoiceOptionTitle}>Couleurs</span>
+                            <span className={menuStyles.printChoiceOptionDesc}>
+                                Reprendre les couleurs des cartes du calendrier des menus.
+                            </span>
+                        </Button>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" type="button" onClick={() => setPrintChoiceModalOpen(false)}>
+                        Annuler
+                    </Button>
+                </ModalFooter>
+            </Modal>
 
             <Modal isOpen={editorOpen} toggle={() => !submitting && setEditorOpen(false)} size="lg">
                 <ModalHeader toggle={() => !submitting && setEditorOpen(false)}>

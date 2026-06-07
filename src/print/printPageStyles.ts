@@ -387,11 +387,15 @@ export const PRINT_STYLE_PRESETS = {
             color: #2c3e50;
             width: 6.75rem;
             white-space: nowrap;
+            vertical-align: middle !important;
         }
         .enjoy-menus-print-cell {
             text-align: center;
             vertical-align: middle;
             background: #fff !important;
+        }
+        .enjoy-menus-print-cell-color {
+            background: var(--enjoy-menus-print-cell-bg, #fff) !important;
         }
         .enjoy-menus-print-cell-inner {
             text-align: center;
@@ -448,12 +452,20 @@ export const PRINT_STYLE_PRESETS = {
             background: transparent !important;
             border: 1px solid #c8d0da;
         }
+        .enjoy-menus-print-repas-badge-color {
+            background: var(--enjoy-menus-print-cell-bg, #fff) !important;
+            border-color: #aeb8c4;
+        }
         .enjoy-menus-print-liste-table .enjoy-menus-print-liste-date {
             font-weight: 600;
             background: #e8eef5 !important;
             white-space: nowrap;
             width: 6.5rem;
-            vertical-align: top;
+            vertical-align: middle;
+        }
+        .enjoy-menus-print-liste-table td:has(.enjoy-menus-print-repas-badge) {
+            vertical-align: middle;
+            text-align: center;
         }
         .enjoy-menus-print-liste-row-alt .enjoy-menus-print-liste-date {
             background: #eef2f6 !important;
