@@ -593,7 +593,8 @@ $cal-table-border-strong: #c4cad4;
 
 /**
  * Pas d’overflow ici : tout ancêtre avec overflow autre que visible casse le `position: sticky` des en-têtes
- * (le `top` est calculé pour le scroll de la fenêtre, pas pour un conteneur interne).
+ * Le scroll vertical est dans `Layout.layoutScroll` (déjà sous le header du site) : le `top` des <th> ne
+ * compte que la barre fixe `.topPinnedStack`, pas `--liste-act-site-header`.
  */
 .calendrierScroll {
     overflow: visible;
@@ -650,7 +651,7 @@ $cal-table-border-strong: #c4cad4;
 
 /** Case « Animateur » de l’en-tête : coin sticky haut + gauche au-dessus du corps du tableau. */
 thead .calendrierCorner {
-    top: calc(var(--liste-act-site-header) + var(--liste-act-top-pinned-height));
+    top: var(--liste-act-top-pinned-height);
     z-index: 6;
 }
 
@@ -668,10 +669,10 @@ thead .calendrierCorner {
     overflow-wrap: anywhere;
 }
 
-/** En-tête du calendrier : reste sous la barre « Ajouter une activité » + filtres au défilement vertical. */
+/** En-tête du calendrier : reste sous la barre fixe (boutons + filtres) au défilement dans layoutScroll. */
 thead .calendrierColHead {
     position: sticky;
-    top: calc(var(--liste-act-site-header) + var(--liste-act-top-pinned-height));
+    top: var(--liste-act-top-pinned-height);
     z-index: 5;
 }
 
