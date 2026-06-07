@@ -430,6 +430,16 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
     const groupesTriésFiltre = useMemo(() => trierGroupesParNom(groupes), [groupes]);
     const equipeTriéeFiltre = useMemo(() => trierParPrenomPuisNom(equipe), [equipe]);
+    /** Formulaire activité : l’utilisateur connecté en tête de la liste des animateurs. */
+    const equipePourSelectionModal = useMemo(
+        () => equipeAvecTokenEnTete(equipeTriéeFiltre, tokenSelf),
+        [equipeTriéeFiltre, tokenSelf],
+    );
+    /** Groupes modale : référents des animateurs cochés (ou utilisateur connecté) en tête de chaque section. */
+    const tokenIdsReferentsPrioritairesGroupesModal = useMemo(() => {
+        if (selectedTokens.size > 0) return [...selectedTokens];
+        return tokenSelf ? [tokenSelf] : [];
+    }, [selectedTokens, tokenSelf]);
 
     const toggleFiltreCalendrierToken = useCallback((tokenId: string) => {
         setFiltreCalendrierTokens((prev) => {
@@ -540,19 +550,18 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                 : equipeTriéeFiltre.filter((m) => filtreCalendrierTokens.has(m.tokenId));
 
         const idsGroupesEfficaces = new Set(
-            [...filtreCalendrierGroupeIds].filter((id) => id !== CALENDRIER_FILTRE_AUCUN_GROUPE_ID)
+            [...filtreCalendrierGroupeIds].filter((id) => id !== CALENDRIER_FILTRE_AUCUN_GROUPE_ID),
         );
-        if (idsGroupesEfficaces.size === 0) return lignes;
+        if (idsGroupesEfficaces.size > 0) {
+            const tokensDuFiltreGroupe = tokensEquipePourFiltreGroupesCalendrier(
+                groupes,
+                idsGroupesEfficaces,
+                activites,
+            );
+            lignes = lignes.filter((m) => tokensDuFiltreGroupe.has(m.tokenId));
+        }
 
-        const tokensDuFiltreGroupe = tokensEquipePourFiltreGroupesCalendrier(
-            groupes,
-            idsGroupesEfficaces,
-            activites
-        );
-        return equipeAvecTokenEnTete(
-            lignes.filter((m) => tokensDuFiltreGroupe.has(m.tokenId)),
-            tokenSelf,
-        );
+        return equipeAvecTokenEnTete(lignes, tokenSelf);
     }, [
         activites,
         equipeTriéeFiltre,
@@ -1891,6 +1900,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                                     disabled={submitting}
                                     idPrefix="grp"
                                     appearance="inline"
+                                    tokenIdsReferentsPrioritaires={tokenIdsReferentsPrioritairesGroupesModal}
                                 />
                             )}
                         </div>
@@ -1903,7 +1913,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             </span>
                         </Label>
                         <div className={styles.checkboxGroup}>
-                            {equipeTriéeFiltre.map((m) => (
+                            {equipePourSelectionModal.map((m) => (
                                 <div key={m.tokenId} className={styles.checkboxRow}>
                                     <Input
                                         type="checkbox"

@@ -10,6 +10,8 @@ export type SelectionGroupesParTypeProps = {
     disabled?: boolean;
     idPrefix?: string;
     emptyMessage?: string;
+    /** Groupes dont l’un de ces animateurs est référent en tête de chaque section. */
+    tokenIdsReferentsPrioritaires?: Iterable<string>;
     /** `picker` : liste encadrée ; `inline` : cases reactstrap ; `planning` : cases planning organisation */
     appearance?: "picker" | "inline" | "planning";
 };
@@ -21,9 +23,10 @@ export function SelectionGroupesParType({
     disabled = false,
     idPrefix = "grp",
     emptyMessage = "Aucun groupe sur ce séjour.",
+    tokenIdsReferentsPrioritaires,
     appearance = "picker",
 }: SelectionGroupesParTypeProps) {
-    const sections = groupesParSectionsType(groupes);
+    const sections = groupesParSectionsType(groupes, { tokenIdsReferentsPrioritaires });
     if (sections.length === 0) {
         return <p className={styles.empty}>{emptyMessage}</p>;
     }
