@@ -1,4 +1,5 @@
 import Header from "./Header/Header";
+import styles from "./Layout.module.scss";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
@@ -15,6 +16,7 @@ const Layout: React.FC = () => {
   const role = useSelector((state: RootState) => state.auth.role);
 
   const isErrorPage = pathname === "/erreur";
+  const showHeader = pathname !== "/" && !isErrorPage && role !== null;
 
   useEffect(() => {
     if (pathname === "/" || role === null || isErrorPage) {
@@ -41,9 +43,10 @@ const Layout: React.FC = () => {
 
   return (
     <>
-      {pathname !== "/" && !isErrorPage && role !== null && <Header />}
-      <Outlet />
-      {/* {pathname !== "/" && <Footer />} */}
+      {showHeader ? <Header /> : null}
+      <div className={showHeader ? styles.layoutScroll : styles.layoutScrollFull}>
+        <Outlet />
+      </div>
     </>
   );
 };

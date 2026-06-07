@@ -3,6 +3,8 @@
 
 html {
   --site-header-height: 4.5rem;
+  height: 100%;
+  overflow: hidden;
   overflow-x: clip;
 }
 
@@ -10,9 +12,11 @@ a {
   text-decoration: inherit;
 }
 body {
-  padding-top: var(--site-header-height);
+  height: 100%;
+  overflow: hidden;
   overflow-x: clip;
   max-width: 100%;
+  margin: 0;
 }
 
 body.no-padding-top {

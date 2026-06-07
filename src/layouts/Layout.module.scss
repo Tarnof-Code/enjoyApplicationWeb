@@ -1,0 +1,14 @@
+.layoutScroll {
+    margin-top: var(--site-header-height, 4.5rem);
+    height: calc(100vh - var(--site-header-height, 4.5rem));
+    overflow-y: auto;
+    overflow-x: clip;
+    -webkit-overflow-scrolling: touch;
+}
+
+.layoutScrollFull {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: clip;
+    -webkit-overflow-scrolling: touch;
+}

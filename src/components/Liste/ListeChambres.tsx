@@ -624,7 +624,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
         }
         const descTrim = formDescription.trim();
         if (descTrim.length > 2000) {
-            setErrorMessage("La description ne doit pas dépasser 2000 caractères.");
+            setErrorMessage("Les remarques ne doivent pas dépasser 2000 caractères.");
             return null;
         }
         const batTrim = formBatiment.trim();
@@ -1165,7 +1165,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                             ) : null}
                             {chambre.description?.trim() ? (
                                 <div className={styles.meta}>
-                                    <strong>Description :</strong> {chambre.description.trim()}
+                                    <strong>Remarques :</strong> {chambre.description.trim()}
                                 </div>
                             ) : null}
                             {chambre.typeChambre === "ENFANT" && (chambre.referents?.length ?? 0) > 0 ? (
@@ -1418,7 +1418,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                 />
                             </FormGroup>
                             <FormGroup className={styles.modalField}>
-                                <Label for="chambre-description">Description (optionnel)</Label>
+                                <Label for="chambre-description">Remarques (optionnel)</Label>
                                 <Input
                                     id="chambre-description"
                                     type="textarea"
