@@ -42,6 +42,7 @@
 - [x] **Impression fiche dossier enfant** : **`DossierEnfant`** — **`PrintTrigger`** + 4 sections ; en-tête **`title-page-split`** (opt-in, sans impact listes)
 - [x] **Impression planning activités (calendrier)** : **`ListeActivites`** — modale **Noir et blanc** / **Couleurs**, preset **`activitesCalendarGrid`**, paysage A4
 - [x] **Commande Cursor `/maj`** : `.cursor/commands/maj.md` — sync Memory Bank (`AI_MEMORY.md` + `docs/ai/`)
+- [x] **Auth — redirect 401 global** : intercepteur **`caller.service.ts`** (logout + **`/`** après échec refresh ; **`refreshAccessToken`** avec **`X-Skip-Token-Refresh`**)
 - [x] **Page Profil — refonte UX** : carte circulaire (photo + badge rôle), 3 accordéons (1er ouvert), champs compacts label/value
 - [x] **Profil & Header — rôle contextuel** : **`libelleRoleSurSejour.ts`** — rôle sur le séjour sélectionné (**`headerSejourContext`**) ou rôle système ; **Admin** affiché **Admin**
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)

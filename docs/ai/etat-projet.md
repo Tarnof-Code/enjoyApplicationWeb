@@ -32,12 +32,12 @@
 - **caller.service.ts** : Instance Axios configurée avec intercepteurs
   - Base URL : `import.meta.env.VITE_API_URL` ou `http://localhost:8080/api/v1` par défaut
   - Intercepteur request : Ajoute automatiquement le token Bearer si l'utilisateur est connecté
-  - Intercepteur response : Gère le refresh token automatique sur 401 (sauf si header `X-Skip-Token-Refresh` présent)
+  - Intercepteur response : **401** → tentative refresh ; échec ou session invalide → mémorisation URL (**`cheminApresConnexion`**), logout, **`window.location.replace('/')`** (sauf échec login sur **`/`** avec **`X-Skip-Token-Refresh`**)
   - `withCredentials: true` activé par défaut pour les cookies
 - **account.service.ts** : Gestion de l'authentification
   - `login()` : Connexion avec header `X-Skip-Token-Refresh`
   - `addUser()` : Inscription avec header `X-Skip-Token-Refresh`
-  - `refreshAccessToken()` : Rafraîchissement du token d'accès
+  - `refreshAccessToken()` : Rafraîchissement du token d'accès (**`POST /auth/refresh-token`** avec **`X-Skip-Token-Refresh`**)
   - `getTokenInfo()` : Décodage du JWT pour récupérer les infos utilisateur
   - `saveAccessToken()` : Sauvegarde du token chiffré dans localStorage avec CryptoJS
   - `getToken()` : Récupération et déchiffrement du token depuis localStorage

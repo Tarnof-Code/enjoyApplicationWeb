@@ -72,7 +72,11 @@ let getTokenInfo = () => {
 
 let refreshAccessToken = async () => {
   localStorage.removeItem("access_token");
-  const response = await Axios.post("/auth/refresh-token");
+  const response = await Axios.post("/auth/refresh-token", undefined, {
+    headers: {
+      "X-Skip-Token-Refresh": true,
+    },
+  });
   return response;
 };
 
