@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserMinus } from "@fortawesome/free-solid-svg-icons";
+import { faUserMinus, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { Button, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import ReferentsSelector from "../Forms/ReferentsSelector";
 import type { MembreEquipePourChambre } from "../../helpers/chambreOccupantsUtils";
@@ -26,7 +26,16 @@ import {
 } from "../common/HistoriqueModificationListeModal";
 import { TypeChambreLabels, TypeChambreValues } from "../../enums/TypeChambre";
 import { GenreChambreBadgeLabels, GenreChambreLabels, GenreChambreValues } from "../../enums/GenreChambre";
-import { libelleChambre, resumeLocalisation, chambreALocalisationRenseignee, chambreCorrespondRechercheTexte } from "../../helpers/libelleChambre";
+import {
+    libelleChambre,
+    resumeLocalisation,
+    chambreALocalisationRenseignee,
+    chambreCorrespondFiltreBatiment,
+    chambreCorrespondFiltreCouloir,
+    chambreCorrespondFiltreOccupant,
+    chambreCorrespondFiltreEtage,
+    chambreCorrespondFiltreIdentifiant,
+} from "../../helpers/libelleChambre";
 import {
     analyserModificationChambreIncompatible,
     enfantsEligiblesPourChambre,
@@ -58,6 +67,24 @@ type FiltreGroupesSelection = {
     sansGroupe: boolean;
     groupeIds: Set<number>;
 };
+
+type FiltresRechercheChambre = {
+    identifiant: string;
+    batiment: string;
+    etage: string;
+    couloir: string;
+    occupant: string;
+};
+
+function filtresRechercheActifs(filtres: FiltresRechercheChambre): boolean {
+    return (
+        filtres.identifiant.trim() !== "" ||
+        filtres.batiment.trim() !== "" ||
+        filtres.etage.trim() !== "" ||
+        filtres.couloir.trim() !== "" ||
+        filtres.occupant.trim() !== ""
+    );
+}
 
 function filtresGroupesActifs(selection: FiltreGroupesSelection): boolean {
     return selection.sansGroupe || selection.groupeIds.size > 0;
@@ -110,23 +137,30 @@ function filtrerChambres(
     chambres: ChambreDto[],
     typeFiltre: typeof FILTRE_TOUS | TypeChambre,
     genreFiltre: typeof FILTRE_TOUS | GenreChambre,
-    rechercheTexte: string,
+    recherche: FiltresRechercheChambre,
     groupesFiltre: FiltreGroupesSelection
 ): { résultat: ChambreDto[]; filtresActifs: boolean } {
-    const recherche = rechercheTexte.trim();
     const filtresActifs =
         typeFiltre !== FILTRE_TOUS ||
         genreFiltre !== FILTRE_TOUS ||
-        recherche !== "" ||
+        filtresRechercheActifs(recherche) ||
         filtresGroupesActifs(groupesFiltre);
 
-    const résultat = chambres.filter((c) => {
-        if (typeFiltre !== FILTRE_TOUS && c.typeChambre !== typeFiltre) return false;
-        if (genreFiltre !== FILTRE_TOUS && c.genreAutorise !== genreFiltre) return false;
-        if (!chambreCorrespondRechercheTexte(c, recherche)) return false;
-        if (!chambreCorrespondFiltreGroupes(c, groupesFiltre)) return false;
-        return true;
-    });
+    const résultat = chambres
+        .filter((c) => {
+            if (typeFiltre !== FILTRE_TOUS && c.typeChambre !== typeFiltre) return false;
+            if (genreFiltre !== FILTRE_TOUS && c.genreAutorise !== genreFiltre) return false;
+            if (!chambreCorrespondFiltreIdentifiant(c, recherche.identifiant)) return false;
+            if (!chambreCorrespondFiltreBatiment(c, recherche.batiment)) return false;
+            if (!chambreCorrespondFiltreEtage(c, recherche.etage)) return false;
+            if (!chambreCorrespondFiltreCouloir(c, recherche.couloir)) return false;
+            if (!chambreCorrespondFiltreOccupant(c, recherche.occupant)) return false;
+            if (!chambreCorrespondFiltreGroupes(c, groupesFiltre)) return false;
+            return true;
+        })
+        .sort((a, b) =>
+            a.identifiant.trim().localeCompare(b.identifiant.trim(), "fr", { sensitivity: "base" })
+        );
 
     return { résultat, filtresActifs };
 }
@@ -217,7 +251,12 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
 
     const [filterType, setFilterType] = useState<typeof FILTRE_TOUS | TypeChambre>(FILTRE_TOUS);
     const [filterGenre, setFilterGenre] = useState<typeof FILTRE_TOUS | GenreChambre>(FILTRE_TOUS);
-    const [filterRecherche, setFilterRecherche] = useState("");
+    const [filterRechercheIdentifiant, setFilterRechercheIdentifiant] = useState("");
+    const [filterRechercheBatiment, setFilterRechercheBatiment] = useState("");
+    const [filterRechercheEtage, setFilterRechercheEtage] = useState("");
+    const [filterRechercheCouloir, setFilterRechercheCouloir] = useState("");
+    const [filterRechercheOccupant, setFilterRechercheOccupant] = useState("");
+    const [chambresDeplies, setChambresDeplies] = useState<Set<number>>(() => new Set());
     const [filterSansGroupe, setFilterSansGroupe] = useState(false);
     const [filterGroupeIds, setFilterGroupeIds] = useState<Set<number>>(() => new Set());
 
@@ -240,12 +279,50 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
         });
     };
 
+    const estChambreDeployee = (chambreId: number) => chambresDeplies.has(chambreId);
+
+    const toggleChambreDeployee = (chambreId: number) => {
+        setChambresDeplies((prev) => {
+            const next = new Set(prev);
+            if (next.has(chambreId)) next.delete(chambreId);
+            else next.add(chambreId);
+            return next;
+        });
+    };
+
     const reinitialiserFiltreGroupes = () => {
         setFilterSansGroupe(false);
         setFilterGroupeIds(new Set());
     };
 
     const groupesPourFiltre = useMemo(() => trierGroupesParNom(groupes), [groupes]);
+
+    const afficherFiltreBatiment = useMemo(
+        () => chambres.some((c) => !!c.batiment?.trim()),
+        [chambres]
+    );
+    const afficherFiltreEtage = useMemo(() => chambres.some((c) => c.etage != null), [chambres]);
+    const afficherFiltreCouloir = useMemo(
+        () => chambres.some((c) => !!c.couloir?.trim()),
+        [chambres]
+    );
+
+    const filtresRecherche = useMemo(
+        (): FiltresRechercheChambre => ({
+            identifiant: filterRechercheIdentifiant,
+            batiment: filterRechercheBatiment,
+            etage: filterRechercheEtage,
+            couloir: filterRechercheCouloir,
+            occupant: filterRechercheOccupant,
+        }),
+        [
+            filterRechercheIdentifiant,
+            filterRechercheBatiment,
+            filterRechercheEtage,
+            filterRechercheCouloir,
+            filterRechercheOccupant,
+        ]
+    );
 
     const [filtreGroupePanelOuvert, setFiltreGroupePanelOuvert] = useState(false);
     const filtreGroupeDropdownRef = useRef<HTMLDivElement>(null);
@@ -732,14 +809,18 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
         chambres,
         filterType,
         filterGenre,
-        filterRecherche,
+        filtresRecherche,
         selectionFiltreGroupes
     );
 
     const réinitialiserFiltres = () => {
         setFilterType(FILTRE_TOUS);
         setFilterGenre(FILTRE_TOUS);
-        setFilterRecherche("");
+        setFilterRechercheIdentifiant("");
+        setFilterRechercheBatiment("");
+        setFilterRechercheEtage("");
+        setFilterRechercheCouloir("");
+        setFilterRechercheOccupant("");
         reinitialiserFiltreGroupes();
     };
 
@@ -903,18 +984,80 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                             </div>
                         </div>
                     ) : null}
-                    <div className={`${styles.filterField} ${styles.filterFieldWide}`}>
-                        <Label for="filtre-recherche-chambre" className={styles.filterLabel}>
-                            Rechercher
+                    <div className={styles.filterField}>
+                        <Label for="filtre-recherche-identifiant-chambre" className={styles.filterLabel}>
+                            Chambre
                         </Label>
                         <Input
-                            id="filtre-recherche-chambre"
+                            id="filtre-recherche-identifiant-chambre"
                             type="search"
                             bsSize="sm"
                             className={styles.filterInput}
-                            value={filterRecherche}
-                            onChange={(e) => setFilterRecherche(e.target.value)}
-                            placeholder="Chambre, bâtiment, étage, couloir, occupant…"
+                            value={filterRechercheIdentifiant}
+                            onChange={(e) => setFilterRechercheIdentifiant(e.target.value)}
+                            placeholder="Identifiant ou nom…"
+                        />
+                    </div>
+                    {afficherFiltreBatiment ? (
+                        <div className={styles.filterField}>
+                            <Label for="filtre-recherche-batiment-chambre" className={styles.filterLabel}>
+                                Bâtiment
+                            </Label>
+                            <Input
+                                id="filtre-recherche-batiment-chambre"
+                                type="search"
+                                bsSize="sm"
+                                className={styles.filterInput}
+                                value={filterRechercheBatiment}
+                                onChange={(e) => setFilterRechercheBatiment(e.target.value)}
+                                placeholder="Bâtiment…"
+                            />
+                        </div>
+                    ) : null}
+                    {afficherFiltreEtage ? (
+                        <div className={styles.filterField}>
+                            <Label for="filtre-recherche-etage-chambre" className={styles.filterLabel}>
+                                Étage
+                            </Label>
+                            <Input
+                                id="filtre-recherche-etage-chambre"
+                                type="search"
+                                bsSize="sm"
+                                className={styles.filterInput}
+                                value={filterRechercheEtage}
+                                onChange={(e) => setFilterRechercheEtage(e.target.value)}
+                                placeholder="Étage ou RDC…"
+                            />
+                        </div>
+                    ) : null}
+                    {afficherFiltreCouloir ? (
+                        <div className={styles.filterField}>
+                            <Label for="filtre-recherche-couloir-chambre" className={styles.filterLabel}>
+                                Couloir
+                            </Label>
+                            <Input
+                                id="filtre-recherche-couloir-chambre"
+                                type="search"
+                                bsSize="sm"
+                                className={styles.filterInput}
+                                value={filterRechercheCouloir}
+                                onChange={(e) => setFilterRechercheCouloir(e.target.value)}
+                                placeholder="Couloir…"
+                            />
+                        </div>
+                    ) : null}
+                    <div className={styles.filterField}>
+                        <Label for="filtre-recherche-occupant-chambre" className={styles.filterLabel}>
+                            Occupant
+                        </Label>
+                        <Input
+                            id="filtre-recherche-occupant-chambre"
+                            type="search"
+                            bsSize="sm"
+                            className={styles.filterInput}
+                            value={filterRechercheOccupant}
+                            onChange={(e) => setFilterRechercheOccupant(e.target.value)}
+                            placeholder="Enfant ou adulte…"
                         />
                     </div>
                     {filtresActifs ? (
@@ -959,34 +1102,62 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
 
                         return (
                         <article key={chambre.id} className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <span className={styles.identifiant}>{libelleChambre(chambre)}</span>
-                                <span className={styles.typeBadge}>{TypeChambreLabels[chambre.typeChambre]}</span>
-                                {chambre.typeChambre === "ENFANT" && chambre.groupe?.libelle?.trim() ? (
-                                    <span className={styles.groupeBadge}>{chambre.groupe.libelle.trim()}</span>
-                                ) : null}
-                                <span className={styles.genreBadge}>
-                                    {GenreChambreBadgeLabels[chambre.genreAutorise]}
-                                </span>
-                            </div>
-                            <div
-                                className={styles.capacityGauge}
-                                role="meter"
-                                aria-valuenow={nbOccupants}
-                                aria-valuemin={0}
-                                aria-valuemax={chambre.capaciteMax}
-                                aria-label={`${nbOccupants} occupant(s) sur ${chambre.capaciteMax}`}
+                            <button
+                                type="button"
+                                className={styles.cardSummary}
+                                onClick={() => toggleChambreDeployee(chambre.id)}
+                                aria-expanded={estChambreDeployee(chambre.id)}
+                                aria-controls={`chambre-details-${chambre.id}`}
+                                aria-label={
+                                    estChambreDeployee(chambre.id)
+                                        ? `Masquer les détails de la chambre ${chambre.identifiant.trim()}`
+                                        : `Afficher les détails de la chambre ${chambre.identifiant.trim()}`
+                                }
                             >
-                                <div className={styles.capacityGaugeTrack}>
-                                    <div
-                                        className={`${styles.capacityGaugeFill} ${chambrePleine ? styles.capacityGaugeFillFull : ""}`}
-                                        style={{ width: `${ratioOccupation}%` }}
-                                    />
+                                <div className={styles.cardSummaryContent}>
+                                    <div className={styles.cardTitleRow}>
+                                        <span className={styles.identifiant}>{chambre.identifiant.trim()}</span>
+                                        {chambre.nom?.trim() ? (
+                                            <span className={styles.nomChambre}>{chambre.nom.trim()}</span>
+                                        ) : null}
+                                    </div>
+                                    <div className={styles.cardBadgesRow}>
+                                        <span className={styles.typeBadge}>{TypeChambreLabels[chambre.typeChambre]}</span>
+                                        {chambre.typeChambre === "ENFANT" && chambre.groupe?.libelle?.trim() ? (
+                                            <span className={styles.groupeBadge}>{chambre.groupe.libelle.trim()}</span>
+                                        ) : null}
+                                        <span className={styles.genreBadge}>
+                                            {GenreChambreBadgeLabels[chambre.genreAutorise]}
+                                        </span>
+                                        <div
+                                            className={`${styles.capacityGauge} ${styles.capacityGaugeHeader}`}
+                                            role="meter"
+                                            aria-valuenow={nbOccupants}
+                                            aria-valuemin={0}
+                                            aria-valuemax={chambre.capaciteMax}
+                                            aria-label={`${nbOccupants} occupant(s) sur ${chambre.capaciteMax}`}
+                                        >
+                                            <div className={styles.capacityGaugeTrack}>
+                                                <div
+                                                    className={`${styles.capacityGaugeFill} ${chambrePleine ? styles.capacityGaugeFillFull : ""}`}
+                                                    style={{ width: `${ratioOccupation}%` }}
+                                                />
+                                            </div>
+                                            <span className={styles.capacityGaugeLabel}>
+                                                {nbOccupants} / {chambre.capaciteMax}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span className={styles.capacityGaugeLabel}>
-                                    {nbOccupants} / {chambre.capaciteMax}
+                                <span className={styles.cardExpandControl} aria-hidden>
+                                    <FontAwesomeIcon
+                                        icon={estChambreDeployee(chambre.id) ? faChevronDown : faChevronRight}
+                                        className={styles.cardExpandIcon}
+                                    />
                                 </span>
-                            </div>
+                            </button>
+                            {estChambreDeployee(chambre.id) ? (
+                            <div id={`chambre-details-${chambre.id}`} className={styles.cardBody}>
                             {chambreALocalisationRenseignee(chambre) ? (
                                 <div className={styles.meta}>
                                     <strong>Localisation :</strong> {resumeLocalisation(chambre)}
@@ -1017,11 +1188,12 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                         </Button>
                                     ) : null}
                                 </div>
-                                {(chambre.occupants?.length ?? 0) === 0 ? null : (
+                                {(chambre.occupants?.length ?? 0) === 0 ? (
+                                    <p className={styles.occupantsEmpty}>Aucun occupant affecté.</p>
+                                ) : (
                                     <ul className={styles.occupantsList}>
                                         {(chambre.occupants ?? []).map((occupant) => (
                                             <li key={occupant.id} className={styles.occupantItem}>
-                                                <span>{libelleOccupant(occupant)}</span>
                                                 <Button
                                                     color="danger"
                                                     size="sm"
@@ -1039,6 +1211,7 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                                 >
                                                     <FontAwesomeIcon icon={faUserMinus} aria-hidden />
                                                 </Button>
+                                                <span>{libelleOccupant(occupant)}</span>
                                             </li>
                                         ))}
                                     </ul>
@@ -1071,6 +1244,8 @@ function ListeChambres({ chambres: chambresLoader, sejourId, enfants = [], group
                                     {deletingChambreId === chambre.id ? "Suppression…" : "Supprimer"}
                                 </Button>
                             </div>
+                            </div>
+                            ) : null}
                         </article>
                         );
                     })}

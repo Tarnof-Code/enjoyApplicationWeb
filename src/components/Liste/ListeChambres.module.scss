@@ -188,23 +188,113 @@
 }
 
 .list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
-    gap: 0.75rem;
-    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .card {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    min-height: 13rem;
-    height: 100%;
     border: 1px solid #e8e8e8;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
+    border-radius: 8px;
     background: #fafbfc;
     box-sizing: border-box;
+    overflow: hidden;
+}
+
+.cardSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.7rem 0.85rem 0.7rem 1rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: #f0f3f6;
+
+        .cardExpandControl {
+            border-color: $bleu_principal;
+            background: rgba($bleu_principal, 0.08);
+            color: $bleu_principal;
+        }
+    }
+
+    &:focus-visible {
+        outline: 2px solid $bleu_principal;
+        outline-offset: -2px;
+    }
+
+    &[aria-expanded="true"] {
+        background: #f4f6f8;
+
+        .cardExpandControl {
+            border-color: $bleu_principal;
+            background: rgba($bleu_principal, 0.12);
+            color: $bleu_principal;
+        }
+    }
+}
+
+.cardSummaryContent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.cardTitleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.65rem;
+}
+
+.cardBadgesRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+}
+
+.cardExpandControl {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 999px;
+    border: 1px solid #d0d7de;
+    background: #fff;
+    color: #5c6670;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.cardExpandIcon {
+    width: 0.72rem;
+    height: 0.72rem;
+}
+
+.cardBody {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid #e8e8e8;
 }
 
 .cardHeader {
@@ -219,7 +309,11 @@
     font-weight: 600;
     font-size: 1.05rem;
     color: #1a1a1a;
-    margin-right: 0.25rem;
+}
+
+.nomChambre {
+    font-size: 0.95rem;
+    color: #555;
 }
 
 .typeBadge {
@@ -258,7 +352,14 @@
     display: flex;
     align-items: center;
     gap: 0.65rem;
-    margin: 0.45rem 0 0.35rem;
+    margin: 0 0 0.35rem;
+}
+
+.capacityGaugeHeader {
+    flex: 1 1 5.5rem;
+    min-width: 5rem;
+    max-width: 9.5rem;
+    margin: 0;
 }
 
 .capacityGaugeTrack {
@@ -316,8 +417,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: auto;
-    padding-top: 0.8rem;
+    margin-top: 0.8rem;
 }
 
 .empty {
@@ -367,8 +467,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.35rem 0.75rem;
+    gap: 0.45rem;
     font-size: 0.9rem;
     color: #444;
 }

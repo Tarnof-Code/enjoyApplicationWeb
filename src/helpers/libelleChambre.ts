@@ -40,50 +40,127 @@ export function normaliserPourRechercheTexte(value: string): string {
 
 const PREFIXES_RECHERCHE_BATIMENT = ["batiment", "bat", "bat."] as const;
 
-/** Index textuel pour le filtre chambres (valeurs brutes + libellés affichés + synonymes localisation). */
-export function textesRechercheChambre(chambre: ChambreDto): string[] {
-  const segments: string[] = [
-    chambre.identifiant,
-    chambre.nom ?? "",
-    libelleChambre(chambre),
-    chambre.batiment ?? "",
-    chambre.couloir ?? "",
-    chambre.description ?? "",
-    resumeLocalisation(chambre),
-    chambre.groupe?.libelle ?? "",
-  ];
+function correspondRechercheTexte(search: string, segments: string[]): boolean {
+  const query = normaliserPourRechercheTexte(search);
+  if (!query) return true;
+  return segments.some((segment) => normaliserPourRechercheTexte(segment).includes(query));
+}
 
-  const batiment = chambre.batiment?.trim();
-  if (batiment) {
-    for (const prefix of PREFIXES_RECHERCHE_BATIMENT) {
-      segments.push(prefix, `${prefix} ${batiment}`);
+/** Variantes de saisie après retrait des préfixes « bâtiment / bat / bat. » en tête de requête. */
+export function variantesQueryBatiment(search: string): string[] {
+  const normalized = normaliserPourRechercheTexte(search);
+  if (!normalized) return [""];
+  const variants = new Set<string>([normalized]);
+  for (const prefix of PREFIXES_RECHERCHE_BATIMENT) {
+    const prefixNorm = normaliserPourRechercheTexte(prefix);
+    if (normalized.startsWith(`${prefixNorm} `)) {
+      const rest = normalized.slice(prefixNorm.length + 1).trim();
+      if (rest) variants.add(rest);
     }
   }
+  return [...variants];
+}
 
+/** Segments indexés pour le filtre identifiant / nom de chambre. */
+export function textesRechercheIdentifiantChambre(chambre: ChambreDto): string[] {
+  return [chambre.identifiant, chambre.nom ?? "", libelleChambre(chambre)].filter(
+    (segment) => segment.trim() !== "",
+  );
+}
+
+/** Segments indexés pour le filtre bâtiment. */
+export function textesRechercheBatimentChambre(chambre: ChambreDto): string[] {
+  const batiment = chambre.batiment?.trim();
+  if (!batiment) return [];
+
+  const segments: string[] = [batiment, `Bât. ${batiment}`, resumeLocalisation(chambre)];
+  for (const prefix of PREFIXES_RECHERCHE_BATIMENT) {
+    segments.push(`${prefix} ${batiment}`);
+  }
+  return segments.filter((segment) => segment.trim() !== "");
+}
+
+/** Segments indexés pour le filtre étage (valeur brute, libellé affiché, synonymes). */
+export function textesRechercheEtageChambre(chambre: ChambreDto): string[] {
+  if (chambre.etage == null) return [];
+  const etageLibelle = libelleEtage(chambre.etage);
+  return [
+    String(chambre.etage),
+    etageLibelle,
+    "etage",
+    `etage ${etageLibelle}`,
+    resumeLocalisation(chambre),
+  ].filter((segment) => segment.trim() !== "");
+}
+
+/** Segments indexés pour le filtre couloir. */
+export function textesRechercheCouloirChambre(chambre: ChambreDto): string[] {
+  const segments: string[] = [chambre.couloir ?? ""];
   const couloir = chambre.couloir?.trim();
   if (couloir) {
     segments.push("couloir", `couloir ${couloir}`);
   }
-
-  if (chambre.etage != null) {
-    const etageLibelle = libelleEtage(chambre.etage);
-    segments.push(String(chambre.etage), etageLibelle, "etage", `etage ${etageLibelle}`);
-  }
-
-  for (const referent of chambre.referents ?? []) {
-    segments.push(referent.nom, referent.prenom, `${referent.prenom} ${referent.nom}`);
-  }
-  for (const occupant of chambre.occupants ?? []) {
-    segments.push(occupant.nom, occupant.prenom, `${occupant.prenom} ${occupant.nom}`);
-  }
-
   return segments.filter((segment) => segment.trim() !== "");
 }
 
-export function chambreCorrespondRechercheTexte(chambre: ChambreDto, search: string): boolean {
+/** Segments indexés pour le filtre occupant (enfant ou membre d'équipe, hors référents). */
+export function textesRechercheOccupantChambre(chambre: ChambreDto): string[] {
+  const segments: string[] = [];
+  for (const occupant of chambre.occupants ?? []) {
+    segments.push(occupant.nom, occupant.prenom, `${occupant.prenom} ${occupant.nom}`);
+  }
+  return segments.filter((segment) => segment.trim() !== "");
+}
+
+export function chambreCorrespondFiltreIdentifiant(chambre: ChambreDto, search: string): boolean {
+  return correspondRechercheTexte(search, textesRechercheIdentifiantChambre(chambre));
+}
+
+export function chambreCorrespondFiltreBatiment(chambre: ChambreDto, search: string): boolean {
+  const batiment = chambre.batiment?.trim();
   const query = normaliserPourRechercheTexte(search);
   if (!query) return true;
-  return textesRechercheChambre(chambre).some((segment) =>
-    normaliserPourRechercheTexte(segment).includes(query),
-  );
+  if (!batiment) return false;
+
+  const batimentNorm = normaliserPourRechercheTexte(batiment);
+  for (const variant of variantesQueryBatiment(search)) {
+    const variantNorm = normaliserPourRechercheTexte(variant);
+    if (variantNorm && batimentNorm.includes(variantNorm)) return true;
+  }
+
+  return false;
+}
+
+export function chambreCorrespondFiltreEtage(chambre: ChambreDto, search: string): boolean {
+  return correspondRechercheTexte(search, textesRechercheEtageChambre(chambre));
+}
+
+export function chambreCorrespondFiltreCouloir(chambre: ChambreDto, search: string): boolean {
+  return correspondRechercheTexte(search, textesRechercheCouloirChambre(chambre));
+}
+
+export function chambreCorrespondFiltreOccupant(chambre: ChambreDto, search: string): boolean {
+  return correspondRechercheTexte(search, textesRechercheOccupantChambre(chambre));
+}
+
+/** Index textuel pour le filtre chambres (valeurs brutes + libellés affichés + synonymes localisation). */
+export function textesRechercheChambre(chambre: ChambreDto): string[] {
+  return [
+    ...textesRechercheIdentifiantChambre(chambre),
+    ...textesRechercheBatimentChambre(chambre),
+    ...textesRechercheEtageChambre(chambre),
+    ...textesRechercheCouloirChambre(chambre),
+    chambre.description ?? "",
+    chambre.groupe?.libelle ?? "",
+    ...textesRechercheOccupantChambre(chambre),
+    ...(chambre.referents ?? []).flatMap((referent) => [
+      referent.nom,
+      referent.prenom,
+      `${referent.prenom} ${referent.nom}`,
+    ]),
+  ].filter((segment) => segment.trim() !== "");
+}
+
+export function chambreCorrespondRechercheTexte(chambre: ChambreDto, search: string): boolean {
+  return correspondRechercheTexte(search, textesRechercheChambre(chambre));
 }
