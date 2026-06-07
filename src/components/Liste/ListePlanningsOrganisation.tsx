@@ -967,6 +967,8 @@ function ListePlanningsOrganisation({
     const [reordonnancementSectionBusy, setReordonnancementSectionBusy] = useState(false);
 
     const [deletingLine, setDeletingLine] = useState(false);
+    const [deleteLineModalOpen, setDeleteLineModalOpen] = useState(false);
+    const [pendingDeleteLineId, setPendingDeleteLineId] = useState<number | null>(null);
 
     const [cellModalOpen, setCellModalOpen] = useState(false);
     const [cellSubmitting, setCellSubmitting] = useState(false);
@@ -1568,13 +1570,22 @@ function ListePlanningsOrganisation({
         }
     };
 
-    const handleDeleteLine = async (ligneId: number) => {
+    const requestDeleteLine = (ligneId: number) => {
         if (!peutGererPlanningStructure) return;
-        if (editorGrilleId == null) return;
+        setPendingDeleteLineId(ligneId);
+        setDeleteLineModalOpen(true);
+    };
+
+    const confirmDeleteLine = async () => {
+        if (!peutGererPlanningStructure) return;
+        if (editorGrilleId == null || pendingDeleteLineId == null) return;
+        const ligneId = pendingDeleteLineId;
         setEditorError(null);
         setDeletingLine(true);
         try {
             await sejourPlanningGrilleService.supprimerLigne(sejourId, editorGrilleId, ligneId);
+            setDeleteLineModalOpen(false);
+            setPendingDeleteLineId(null);
             await reloadDetail();
             refreshAfterMutation();
         } catch (e: unknown) {
@@ -1819,6 +1830,21 @@ function ListePlanningsOrganisation({
     const afficherColonneRegroupement =
         detail != null ? grilleAfficheColonneRegroupement(detail.lignes) : false;
     const afficherColonneLibelleLigne = detail != null ? grilleAfficheColonneLibelleLigne(detail) : false;
+    const pendingDeleteLineLibelle = (() => {
+        if (pendingDeleteLineId == null || !detail) return "cette ligne";
+        const ligne = detail.lignes.find((l) => l.id === pendingDeleteLineId);
+        if (!ligne) return "cette ligne";
+        const libelle = libelleLignePourAffichage(
+            ligne,
+            sourceLibellePourApi(detail),
+            groupes,
+            lieuxPourPlannings,
+            horaires,
+            moments,
+            membresPourCellulesModal
+        ).trim();
+        return libelle !== "" ? libelle : `Ligne ${ligne.id}`;
+    })();
 
     const planningTitreImpression = detail?.titre?.trim() || "Planning";
 
@@ -2363,9 +2389,7 @@ function ListePlanningsOrganisation({
                                                     <button
                                                         type="button"
                                                         className={`${styles.lineActionIconHit} ${styles.lineActionIconHitDanger}`}
-                                                        onClick={() => {
-                                                            void handleDeleteLine(ligne.id);
-                                                        }}
+                                                        onClick={() => requestDeleteLine(ligne.id)}
                                                         disabled={deletingLine}
                                                         aria-label="Supprimer la ligne"
                                                         title="Supprimer"
@@ -2626,6 +2650,44 @@ function ListePlanningsOrganisation({
                     </Button>
                     <Button color="danger" onClick={confirmDeleteGrille} disabled={deletingGrille}>
                         {deletingGrille ? "Suppression…" : "Supprimer"}
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            <Modal
+                isOpen={deleteLineModalOpen && peutGererPlanningStructure}
+                toggle={() => {
+                    if (deletingLine) return;
+                    setDeleteLineModalOpen(false);
+                    setPendingDeleteLineId(null);
+                }}
+            >
+                <ModalHeader
+                    toggle={() => {
+                        if (deletingLine) return;
+                        setDeleteLineModalOpen(false);
+                        setPendingDeleteLineId(null);
+                    }}
+                >
+                    Confirmation de suppression
+                </ModalHeader>
+                <ModalBody>
+                    Supprimer la ligne « {pendingDeleteLineLibelle} » ? Toutes les cellules associées seront
+                    effacées.
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        color="secondary"
+                        onClick={() => {
+                            setDeleteLineModalOpen(false);
+                            setPendingDeleteLineId(null);
+                        }}
+                        disabled={deletingLine}
+                    >
+                        Annuler
+                    </Button>
+                    <Button color="danger" onClick={() => void confirmDeleteLine()} disabled={deletingLine}>
+                        {deletingLine ? "Suppression…" : "Confirmer la suppression"}
                     </Button>
                 </ModalFooter>
             </Modal>
