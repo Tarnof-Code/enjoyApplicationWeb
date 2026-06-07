@@ -41,6 +41,10 @@ import { enumererJoursSejour, normaliserJourPlanningPourCle } from "../../helper
 import formaterDate from "../../helpers/formaterDate";
 import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import { trierGroupesParNom } from "../../helpers/groupesParType";
+import {
+    aplatirMomentsHierarchiquement,
+    libelleMomentIndenté,
+} from "../../helpers/construireArbreMoments";
 import { GroupesSelectOptions, SelectionGroupesParType } from "./SelectionGroupesParType";
 import { libelleJourCourtPourBouton, parseYmdVersDateLocale } from "./listeActivitesUtils";
 import { CalendrierNavigationPeriode } from "./ListeActivitesCalendrier";
@@ -803,7 +807,10 @@ function optionsPourSource(
         case "HORAIRE":
             return horaires.map((h) => ({ id: String(h.id), label: h.libelle }));
         case "MOMENT":
-            return moments.map((m) => ({ id: String(m.id), label: m.nom }));
+            return aplatirMomentsHierarchiquement(moments).map((m) => ({
+                id: String(m.id),
+                label: libelleMomentIndenté(m),
+            }));
         case "MEMBRE_EQUIPE":
             return equipe.map((m) => ({
                 id: m.tokenId,

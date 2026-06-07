@@ -42,6 +42,10 @@ import {
 } from "../common/HistoriqueModificationListeModal";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import {
+    aplatirMomentsHierarchiquement,
+    libelleMomentIndenté,
+} from "../../helpers/construireArbreMoments";
+import {
     enumererJoursDuSejour,
     formatActiviteDateForDisplay,
     sejourDebutToInputDate,
@@ -173,6 +177,7 @@ function ListeActivitesPrestataires({
     const [filtreTexte, setFiltreTexte] = useState("");
 
     const momentsTriés = useMemo(() => trierMomentsChronologiquement(moments), [moments]);
+    const momentsAplat = useMemo(() => aplatirMomentsHierarchiquement(moments), [moments]);
     const joursDuSejour = useMemo(() => enumererJoursDuSejour(sejour), [sejour.dateDebut, sejour.dateFin]);
     const ymdSet = useMemo(() => new Set(joursDuSejour.map((j) => j.ymd)), [joursDuSejour]);
 
@@ -970,7 +975,7 @@ function ListeActivitesPrestataires({
                             {momentsTriés.length === 0 ? (
                                 <p className={styles.noGroupes}>Aucun moment sur ce séjour.</p>
                             ) : (
-                                momentsTriés.map((m) => (
+                                momentsAplat.map((m) => (
                                     <div key={m.id} className={styles.checkboxRow}>
                                         <Input
                                             type="checkbox"
@@ -980,7 +985,7 @@ function ListeActivitesPrestataires({
                                             disabled={submitting}
                                         />
                                         <Label for={`presta-moment-${m.id}`} className="mb-0">
-                                            {m.nom}
+                                            {libelleMomentIndenté(m)}
                                         </Label>
                                     </div>
                                 ))

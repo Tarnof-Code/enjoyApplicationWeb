@@ -625,8 +625,10 @@ export interface MomentDto {
   id: number;
   nom: string;
   sejourId: number;
-  /** Position dans la journée (tri chronologique) ; aligné backend COALESCE(ordre, id) */
+  /** Position d'affichage (0 = premier), global au séjour */
   ordre: number;
+  /** Id du moment parent, ou null si moment racine */
+  parentId: number | null;
 }
 
 /**
@@ -635,6 +637,8 @@ export interface MomentDto {
 export interface SaveMomentRequest {
   /** @NotBlank, @Size(max=200) */
   nom: string;
+  /** Optionnel : id du parent, ou null / absent pour un moment racine */
+  parentId?: number | null;
 }
 
 /**

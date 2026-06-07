@@ -19,6 +19,10 @@ import {
     libelleActionHistorique,
 } from "../../helpers/libelleHistoriqueModification";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
+import {
+    aplatirMomentsHierarchiquement,
+    libelleMomentIndenté,
+} from "../../helpers/construireArbreMoments";
 import { trierParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
 import { trierGroupesParNom } from "../../helpers/groupesParType";
 import { SelectionGroupesParType } from "./SelectionGroupesParType";
@@ -194,6 +198,7 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     }, [activitesPrestataires]);
 
     const momentsTriés = trierMomentsChronologiquement(moments);
+    const momentsAplat = aplatirMomentsHierarchiquement(moments);
     const typesPredefinisSelect = useMemo(
         () => typesActivite.filter((t) => t.predefini).sort(trierTypesParLibelle),
         [typesActivite]
@@ -1629,9 +1634,9 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                             required={momentsTriés.length > 0}
                         >
                             <option value="">— Choisir un moment —</option>
-                            {momentsTriés.map((m) => (
+                            {momentsAplat.map((m) => (
                                 <option key={m.id} value={m.id}>
-                                    {m.nom}
+                                    {libelleMomentIndenté(m)}
                                 </option>
                             ))}
                         </Input>

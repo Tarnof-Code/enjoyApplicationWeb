@@ -8,6 +8,7 @@ import type {
 } from "../../types/api";
 import { trierMomentsChronologiquement } from "../../helpers/trierMomentsChronologiquement";
 import { comparerParPrenomPuisNom } from "../../helpers/trierUtilisateurs";
+import { idsEnConflit } from "../../helpers/construireArbreMoments";
 import { activiteDateToFilterKey, formatActiviteDateForDisplay } from "./listeActivitesUtils";
 
 export type ConflitCalendrierPrestataire = {
@@ -139,11 +140,15 @@ export function activiteInternePourTokenMomentDate(
     tokenId: string,
     ymd: string,
     momentId: number,
+    /** Si fourni, considère en conflit tout moment de cet ensemble (hiérarchie comprise). */
+    conflictMomentIds?: Set<number>,
 ): ActiviteDto | undefined {
     const t = tokenId.trim();
     return activitesInternes.find((a) => {
         if (activiteDateToFilterKey(a.date) !== ymd) return false;
-        if (a.moment?.id !== momentId) return false;
+        const aMomentId = a.moment?.id;
+        if (aMomentId == null) return false;
+        if (conflictMomentIds != null ? !conflictMomentIds.has(aMomentId) : aMomentId !== momentId) return false;
         return (a.membres ?? []).some((m) => (m.tokenId ?? "").trim() === t);
     });
 }
@@ -171,6 +176,8 @@ export function sortieVisiblePourTokenMomentDate(
     tokenId: string,
     ymd: string,
     momentId: number,
+    /** Si fourni, considère en conflit tout moment de la sortie présent dans cet ensemble (hiérarchie comprise). */
+    conflictMomentIds?: Set<number>,
 ): ActivitePrestataireDto | undefined {
     const t = tokenId.trim();
     for (const sortie of prestataires) {
@@ -179,8 +186,11 @@ export function sortieVisiblePourTokenMomentDate(
         if (groupeIds.length === 0) continue;
         const concernes = tokensReferentsConcernesParGroupeIds(groupes, groupeIds);
         if (!concernes.has(t)) continue;
-        if (!(sortie.moments ?? []).some((m) => m.id === momentId)) continue;
-        if (estNonParticipation(sortie.nonParticipations, t, momentId)) continue;
+        // Vérifier qu au moins un moment de la sortie est en conflit et que le token y participe
+        const momentsConcernes = (sortie.moments ?? []).filter((m) =>
+            conflictMomentIds != null ? conflictMomentIds.has(m.id) : m.id === momentId,
+        );
+        if (!momentsConcernes.some((m) => !estNonParticipation(sortie.nonParticipations, t, m.id))) continue;
         return sortie;
     }
     return undefined;
@@ -200,6 +210,8 @@ export function listerConflitsActiviteInterneAvecSortie(
     const ymd = dateYmd.trim();
     if (!ymd || momentId <= 0) return [];
 
+    // Ensemble de conflit hiérarchique : le moment + ses ancêtres + ses descendants
+    const conflictIds = idsEnConflit(momentId, moments);
     const momentNom = moments.find((m) => m.id === momentId)?.nom ?? "—";
     const tokensVus = new Set<string>();
     const out: ConflitActiviteAvecSortie[] = [];
@@ -214,6 +226,7 @@ export function listerConflitsActiviteInterneAvecSortie(
             tokenId,
             ymd,
             momentId,
+            conflictIds,
         );
         if (activiteExistante && activiteExistante.id !== options?.exclureActiviteId) continue;
 
@@ -223,6 +236,7 @@ export function listerConflitsActiviteInterneAvecSortie(
             tokenId,
             ymd,
             momentId,
+            conflictIds,
         );
         if (!sortie) continue;
 
@@ -259,7 +273,9 @@ export function listerConflitsCalendrierPrestataire(
     for (const tokenId of concernes) {
         for (const momentId of payload.momentIds) {
             if (estNonParticipation(nonParts, tokenId, momentId)) continue;
-            const activite = activiteInternePourTokenMomentDate(activitesInternes, tokenId, ymd, momentId);
+            // Détection hiérarchique : conflit si l activité est sur un moment ancêtre/descendant
+            const conflictIds = idsEnConflit(momentId, moments);
+            const activite = activiteInternePourTokenMomentDate(activitesInternes, tokenId, ymd, momentId, conflictIds);
             if (!activite) continue;
             const { nom, prenom } = libelleAnimateur(groupes, tokenId);
             out.push({
