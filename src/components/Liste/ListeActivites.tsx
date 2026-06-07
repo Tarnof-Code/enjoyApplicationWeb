@@ -35,6 +35,7 @@ import {
     CALENDRIER_FILTRE_AUCUN_GROUPE_ID,
     type ChoixResolutionConflitPrestataire,
     type ListeActivitesProps,
+    type MembreEquipeSejour,
 } from "./listeActivitesTypes";
 import {
     activiteInternePourTokenMomentDate,
@@ -46,6 +47,7 @@ import {
     datePrestataireVersYmd,
     estNonParticipation,
     fusionnerNonParticipationsApresChoix,
+    libellePlageHorairePrestataire,
     listerConflitsActiviteInterneAvecSortie,
     sortieVersSaveRequest,
     type CalendrierCelluleItem,
@@ -57,6 +59,7 @@ import {
     FILTRE_LISTE_LIEU_SANS,
     activiteDateToFilterKey,
     activiteDateToInputDate,
+    couleurFondCalendrierPourTypeActivite,
     equipeAvecTokenEnTete,
     groupeIdsReferentsPourToken,
     enumererJoursDuSejour,
@@ -67,10 +70,20 @@ import {
     trierTypesParLibelle,
 } from "./listeActivitesUtils";
 import { useCalendrierFenetreJours } from "./useCalendrierFenetreJours";
+import {
+    PRINT_GLOBAL_CLASS,
+    PRINT_STYLE_PRESETS,
+    PrintContentRoot,
+    PrintDocumentHeader,
+    PrintTrigger,
+    buildPrintDocumentContext,
+    usePrintContent,
+} from "../../print";
 
 export type { ListeActivitesProps, MembreEquipeSejour } from "./listeActivitesTypes";
 
 type VueActivites = "liste" | "calendrier";
+type ModeImpressionPlanningActivites = "noir-blanc" | "couleurs";
 
 function normaliserPrestataireDto(p: ActivitePrestataireDto): ActivitePrestataireDto {
     return {
@@ -79,6 +92,17 @@ function normaliserPrestataireDto(p: ActivitePrestataireDto): ActivitePrestatair
         moments: p.moments ?? [],
         nonParticipations: p.nonParticipations ?? [],
     };
+}
+
+function itemPasseFiltreGroupeCalendrierPrint(
+    item: CalendrierCelluleItem,
+    filtreCalendrierGroupeIds: Set<number>,
+): boolean {
+    if (filtreCalendrierGroupeIds.size === 0) return true;
+    if (item.kind === "activite") {
+        return (item.activite.groupeIds ?? []).some((id) => filtreCalendrierGroupeIds.has(id));
+    }
+    return (item.sortie.groupeIds ?? []).some((id) => filtreCalendrierGroupeIds.has(id));
 }
 
 const ListeActivites: React.FC<ListeActivitesProps> = ({
@@ -150,6 +174,9 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     const [filtreListeAnimateur, setFiltreListeAnimateur] = useState("");
     const [filtreListeType, setFiltreListeType] = useState("");
     const [vueActivites, setVueActivites] = useState<VueActivites>("calendrier");
+    const [printChoiceModalOpen, setPrintChoiceModalOpen] = useState(false);
+    const [modeImpressionPlanning, setModeImpressionPlanning] =
+        useState<ModeImpressionPlanningActivites>("noir-blanc");
     /** Filtres vue calendrier : ensemble vide = tout afficher (animateurs / groupes d’activité). */
     const [filtreCalendrierTokens, setFiltreCalendrierTokens] = useState<Set<string>>(() => new Set());
     const [filtreCalendrierGroupeIds, setFiltreCalendrierGroupeIds] = useState<Set<number>>(() => new Set());
@@ -525,6 +552,45 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         maxDebutFenetreYmd: calMaxDebutFenetreYmd,
         definirDebutFenetre: definirDebutFenetreCalendrier,
     } = useCalendrierFenetreJours(joursDuSejourPourFiltre);
+
+    const planningTitreImpression = `Planning d'activités — ${sejour.nom}`;
+
+    const printHeaderContext = useMemo(() => {
+        const meta: { label: string; value: string }[] = [
+            { label: "Période affichée", value: libellePlageCalendrier },
+            {
+                label: "Vue",
+                value: calendrierNombreJoursVue === 1 ? "1 jour" : `${calendrierNombreJoursVue} jours`,
+            },
+            {
+                label: "Rendu",
+                value: modeImpressionPlanning === "couleurs" ? "Couleurs" : "Noir et blanc",
+            },
+        ];
+        if (filtreCalendrierTokens.size > 0) {
+            meta.push({ label: "Animateurs", value: libelleResumeFiltreCalendrierAnim });
+        }
+        if (filtreCalendrierGroupeIds.size > 0) {
+            meta.push({ label: "Groupes", value: libelleResumeFiltreCalendrierGroupes });
+        }
+        return buildPrintDocumentContext(planningTitreImpression, meta);
+    }, [
+        calendrierNombreJoursVue,
+        filtreCalendrierGroupeIds.size,
+        filtreCalendrierTokens.size,
+        libellePlageCalendrier,
+        libelleResumeFiltreCalendrierAnim,
+        libelleResumeFiltreCalendrierGroupes,
+        modeImpressionPlanning,
+        planningTitreImpression,
+    ]);
+
+    const { contentRef, print, fixedRunningHeaderLabel } = usePrintContent({
+        documentTitle: planningTitreImpression,
+        runningHeaderLabel: planningTitreImpression,
+        format: "landscape-a4",
+        extraPageStyle: PRINT_STYLE_PRESETS.activitesCalendarGrid,
+    });
 
     useEffect(() => {
         setFiltreListeDate("");
@@ -1129,8 +1195,175 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         activites.length,
     ]);
 
+    const peutImprimerPlanningCalendrier =
+        vueActivites === "calendrier" &&
+        equipe.length > 0 &&
+        joursDuSejourPourFiltre.length > 0 &&
+        joursFenetreCalendrier.length > 0;
+
+    const imprimerPlanningCalendrier = (mode: ModeImpressionPlanningActivites) => {
+        setModeImpressionPlanning(mode);
+        setPrintChoiceModalOpen(false);
+        window.setTimeout(() => print(), 0);
+    };
+
+    const libelleGroupesActivite = (groupeIds: number[] | undefined): string => {
+        const noms = (groupeIds ?? [])
+            .map((id) => groupes.find((g) => g.id === id)?.nom)
+            .filter((nom): nom is string => Boolean(nom));
+        return noms.join(", ");
+    };
+
+    const renderPrintCalendrierItem = (item: CalendrierCelluleItem, membre: MembreEquipeSejour) => {
+        const c = PRINT_GLOBAL_CLASS;
+        const carteCouleur = modeImpressionPlanning === "couleurs";
+
+        if (item.kind === "activite") {
+            const a = item.activite;
+            const autresAnimateurs = (a.membres ?? []).filter((m) => m.tokenId !== membre.tokenId);
+            const groupesActivite = libelleGroupesActivite(a.groupeIds);
+            const cardStyle = carteCouleur
+                ? ({
+                      "--enjoy-activites-print-card-bg": couleurFondCalendrierPourTypeActivite(
+                          a.typeActivite?.id,
+                      ),
+                  } as React.CSSProperties)
+                : undefined;
+            return (
+                <div
+                    key={`act-${a.id}`}
+                    className={`${c.activitesPrintCard} ${carteCouleur ? c.activitesPrintCardColor : ""}`}
+                    style={cardStyle}
+                >
+                    {a.moment ? <span className={c.activitesPrintCardMoment}>{a.moment.nom}</span> : null}
+                    <span className={c.activitesPrintCardTitle}>{a.nom}</span>
+                    {a.lieu ? <span className={c.activitesPrintCardMeta}>Lieu : {a.lieu.nom}</span> : null}
+                    {autresAnimateurs.length > 0 ? (
+                        <span className={c.activitesPrintCardMeta}>
+                            Avec : {autresAnimateurs.map((m) => `${m.prenom} ${m.nom}`.trim()).join(", ")}
+                        </span>
+                    ) : null}
+                    {groupesActivite ? (
+                        <span className={c.activitesPrintCardMeta}>Groupes : {groupesActivite}</span>
+                    ) : null}
+                </div>
+            );
+        }
+
+        if (item.kind === "prestataire") {
+            const plage = libellePlageHorairePrestataire(item.sortie.heureDepart, item.sortie.heureRetour);
+            const groupesSortie = libelleGroupesActivite(item.sortie.groupeIds);
+            const cardStyle = carteCouleur
+                ? ({ "--enjoy-activites-print-card-bg": "rgba(13, 110, 92, 0.14)" } as React.CSSProperties)
+                : undefined;
+            return (
+                <div
+                    key={`presta-${item.sortie.id}-${item.moment.id}`}
+                    className={`${c.activitesPrintCard} ${carteCouleur ? c.activitesPrintCardColor : ""}`}
+                    style={cardStyle}
+                >
+                    <span className={c.activitesPrintCardMoment}>{item.moment.nom}</span>
+                    <span className={c.activitesPrintCardTitle}>{item.sortie.nom}</span>
+                    {plage ? <span className={c.activitesPrintCardMeta}>{plage}</span> : null}
+                    {groupesSortie ? (
+                        <span className={c.activitesPrintCardMeta}>Groupes : {groupesSortie}</span>
+                    ) : null}
+                </div>
+            );
+        }
+
+        const plage = libellePlageHorairePrestataire(item.sortie.heureDepart, item.sortie.heureRetour);
+        return (
+            <div
+                key={`conflit-${item.sortie.id}-${item.moment.id}-${membre.tokenId}`}
+                className={`${c.activitesPrintCard} ${c.activitesPrintConflict}`}
+            >
+                <span className={c.activitesPrintCardTitle}>Conflit — {item.moment.nom}</span>
+                <span className={c.activitesPrintCardMeta}>
+                    Sortie : {item.sortie.nom}
+                    {plage ? ` (${plage})` : ""}
+                </span>
+                <span className={c.activitesPrintCardMeta}>Activité : {item.activite.nom}</span>
+            </div>
+        );
+    };
+
+    const renderPlanningPrintCalendrier = () => {
+        const c = PRINT_GLOBAL_CLASS;
+        if (equipePourCalendrier.length === 0) {
+            return <p>Aucun animateur ne correspond aux filtres sélectionnés.</p>;
+        }
+        if (calendrierFiltreExclutTousLesGroupes) {
+            return <p>Aucun groupe ne fait partie du filtre.</p>;
+        }
+        return (
+            <table className={c.activitesPrintTable}>
+                <thead>
+                    <tr>
+                        <th scope="col" className={c.activitesPrintThAnimateur}>
+                            Animateur
+                        </th>
+                        {joursFenetreCalendrier.map((jour) => (
+                            <th key={jour.ymd} scope="col" className={c.activitesPrintThJour}>
+                                {jour.label}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {equipePourCalendrier.map((membre) => (
+                        <tr key={membre.tokenId}>
+                            <th scope="row" className={c.activitesPrintThAnimateur}>
+                                <span className={c.activitesPrintAnimateurName}>
+                                    {membre.prenom} {membre.nom}
+                                </span>
+                                {libellesGroupesReferentParToken.get(membre.tokenId) ? (
+                                    <span className={c.activitesPrintAnimateurGroupes}>
+                                        {libellesGroupesReferentParToken.get(membre.tokenId)}
+                                    </span>
+                                ) : null}
+                            </th>
+                            {joursFenetreCalendrier.map(({ ymd, dansSejour }) => {
+                                const items = (
+                                    cellulesParAnimateurEtDate.get(membre.tokenId)?.get(ymd) ?? []
+                                ).filter((item) =>
+                                    itemPasseFiltreGroupeCalendrierPrint(item, filtreCalendrierGroupeIds),
+                                );
+                                return (
+                                    <td
+                                        key={ymd}
+                                        className={`${c.activitesPrintCell} ${
+                                            !dansSejour ? c.activitesPrintCellHorsSejour : ""
+                                        }`}
+                                    >
+                                        {items.length > 0
+                                            ? items.map((item) => renderPrintCalendrierItem(item, membre))
+                                            : "—"}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
+    };
+
     return (
         <div ref={listeActivitesRootRef} className={styles.listeActivitesRoot}>
+            {peutImprimerPlanningCalendrier ? (
+                <div className={PRINT_GLOBAL_CLASS.only}>
+                    <PrintContentRoot
+                        contentRef={contentRef}
+                        fixedRunningHeaderLabel={fixedRunningHeaderLabel}
+                    >
+                        <PrintDocumentHeader context={printHeaderContext} />
+                        <div className={PRINT_GLOBAL_CLASS.activitesPrintGrid}>
+                            {renderPlanningPrintCalendrier()}
+                        </div>
+                    </PrintContentRoot>
+                </div>
+            ) : null}
             <div ref={topPinnedStackRef} className={styles.topPinnedStack}>
             <div className={styles.addActiviteRow}>
                 <div className={styles.addActiviteRowInner}>
@@ -1189,6 +1422,14 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                                 minDebutFenetreYmd={calMinDebutFenetreYmd}
                                 maxDebutFenetreYmd={calMaxDebutFenetreYmd}
                                 onChangerDebutFenetre={definirDebutFenetreCalendrier}
+                            />
+                        ) : null}
+                        {peutImprimerPlanningCalendrier ? (
+                            <PrintTrigger
+                                variant="button"
+                                onPrint={() => setPrintChoiceModalOpen(true)}
+                                label="Imprimer le planning d'activités"
+                                buttonText="Imprimer"
                             />
                         ) : null}
                     </div>
@@ -1314,6 +1555,44 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
                     onOpenHistoriqueActivite={ouvrirHistoriqueActivite}
                 />
             )}
+
+            <Modal isOpen={printChoiceModalOpen} toggle={() => setPrintChoiceModalOpen(false)}>
+                <ModalHeader toggle={() => setPrintChoiceModalOpen(false)}>
+                    Imprimer le planning d&apos;activités
+                </ModalHeader>
+                <ModalBody>
+                    <p className={styles.printChoiceIntro}>Choisissez le rendu de l&apos;impression.</p>
+                    <div className={styles.printChoiceOptions}>
+                        <Button
+                            color="outline-secondary"
+                            type="button"
+                            className={styles.printChoiceOption}
+                            onClick={() => imprimerPlanningCalendrier("noir-blanc")}
+                        >
+                            <span className={styles.printChoiceOptionTitle}>Noir et blanc</span>
+                            <span className={styles.printChoiceOptionDesc}>
+                                Imprimer le planning avec des cases blanches.
+                            </span>
+                        </Button>
+                        <Button
+                            color="outline-secondary"
+                            type="button"
+                            className={styles.printChoiceOption}
+                            onClick={() => imprimerPlanningCalendrier("couleurs")}
+                        >
+                            <span className={styles.printChoiceOptionTitle}>Couleurs</span>
+                            <span className={styles.printChoiceOptionDesc}>
+                                Reprendre les couleurs des cartes du tableau d&apos;activités.
+                            </span>
+                        </Button>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" type="button" onClick={() => setPrintChoiceModalOpen(false)}>
+                        Annuler
+                    </Button>
+                </ModalFooter>
+            </Modal>
 
             <Modal isOpen={modalOpen} toggle={fermerModalActivite} size="lg">
                 <ModalHeader toggle={fermerModalActivite}>

@@ -462,6 +462,112 @@ export const PRINT_STYLE_PRESETS = {
             background: #fff !important;
         }
     `,
+    /** Planning d'activités — vue calendrier */
+    activitesCalendarGrid: `
+        .enjoy-activites-print-grid {
+            width: 100%;
+            max-width: 100%;
+        }
+        .enjoy-activites-print-table {
+            width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            border: 1px solid #c8d0da;
+            font-size: 7.5pt;
+            line-height: 1.28;
+        }
+        .enjoy-activites-print-table th,
+        .enjoy-activites-print-table td {
+            border: 1px solid #d7dee8;
+            padding: 0.28rem 0.32rem;
+            vertical-align: top;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: normal;
+        }
+        .enjoy-activites-print-th-animateur {
+            width: 7.5rem;
+            background: #f6f8fb !important;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        .enjoy-activites-print-th-jour {
+            background: #e8eef5 !important;
+            color: #1a3550;
+            text-align: center;
+            font-weight: 700;
+        }
+        .enjoy-activites-print-cell {
+            background: #fff !important;
+            min-height: 2.8rem;
+        }
+        .enjoy-activites-print-cell-hors-sejour {
+            background: #f0f0f0 !important;
+            color: #999;
+        }
+        .enjoy-activites-print-animateur-name {
+            display: block;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .enjoy-activites-print-animateur-groupes {
+            display: block;
+            margin-top: 0.16rem;
+            color: #555;
+            font-size: 6.8pt;
+            line-height: 1.2;
+            font-weight: 500;
+        }
+        .enjoy-activites-print-card {
+            margin: 0 0 0.18rem;
+            padding: 0.24rem 0.3rem;
+            border: 1px solid #aeb8c4;
+            border-radius: 4px;
+            background: #fff !important;
+            color: #1a1a1a;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .enjoy-activites-print-card-color {
+            background: var(--enjoy-activites-print-card-bg, #fff) !important;
+        }
+        .enjoy-activites-print-card-moment {
+            display: block;
+            color: #555;
+            font-size: 6.8pt;
+            line-height: 1.15;
+        }
+        .enjoy-activites-print-card-title {
+            display: block;
+            margin-top: 0.04rem;
+            font-weight: 700;
+            line-height: 1.18;
+        }
+        .enjoy-activites-print-card-meta {
+            display: block;
+            margin-top: 0.08rem;
+            color: #555;
+            font-size: 6.8pt;
+            line-height: 1.18;
+        }
+        .enjoy-activites-print-conflict {
+            border-color: #b7791f;
+            background: #fff8e8 !important;
+        }
+        @media print and (orientation: portrait) {
+            .enjoy-activites-print-table {
+                font-size: 6.5pt;
+            }
+            .enjoy-activites-print-table th,
+            .enjoy-activites-print-table td {
+                padding: 0.18rem 0.2rem;
+            }
+            .enjoy-activites-print-th-animateur {
+                width: 6.2rem;
+            }
+        }
+    `,
     /** Tableau Liste : masque le tableau écran ; adaptation portrait */
     listeTable: `
         .enjoy-no-print { display: none !important; }

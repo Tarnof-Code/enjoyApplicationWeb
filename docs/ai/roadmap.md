@@ -40,6 +40,7 @@
 - [x] **Impression personnalisée liste enfants** : **`ListePrintActions`** (bouton unique → choix filtrée / personnalisée), **`ListeCustomPrintSelection`** (titre + cases lignes)
 - [x] **Impression plannings organisation** : **`ListePlanningsOrganisation`** — fenêtre **1 / 3 / 7 jours** affichée, paysage A4 ; en-tête titre **13pt gras** global **`printPageStyles`**
 - [x] **Impression fiche dossier enfant** : **`DossierEnfant`** — **`PrintTrigger`** + 4 sections ; en-tête **`title-page-split`** (opt-in, sans impact listes)
+- [x] **Impression planning activités (calendrier)** : **`ListeActivites`** — modale **Noir et blanc** / **Couleurs**, preset **`activitesCalendarGrid`**, paysage A4
 - [x] **Commande Cursor `/maj`** : `.cursor/commands/maj.md` — sync Memory Bank (`AI_MEMORY.md` + `docs/ai/`)
 - [x] **Page Profil — refonte UX** : carte circulaire (photo + badge rôle), 3 accordéons (1er ouvert), champs compacts label/value
 - [x] **Profil & Header — rôle contextuel** : **`libelleRoleSurSejour.ts`** — rôle sur le séjour sélectionné (**`headerSejourContext`**) ou rôle système ; **Admin** affiché **Admin**
