@@ -675,6 +675,19 @@ thead .calendrierColHead {
     z-index: 5;
 }
 
+/**
+ * Modale ouverte ou juste fermée : reactstrap met overflow:hidden sur body, ce qui casse le sticky
+ * des <th>. Flux normal le temps de la modale + une frame après fermeture (évite le saut visuel).
+ */
+.listeActivitesRoot[data-modal-open] {
+    thead .calendrierCorner,
+    thead .calendrierColHead {
+        position: static;
+        top: auto;
+        left: auto;
+    }
+}
+
 .calendrierColHeadLabel {
     display: block;
     line-height: 1.25;

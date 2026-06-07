@@ -109,6 +109,58 @@ function itemPasseFiltreGroupeCalendrierPrint(
     return (item.sortie.groupeIds ?? []).some((id) => filtreCalendrierGroupeIds.has(id));
 }
 
+function applyListeActivitesPinnedGeometry(
+    root: HTMLDivElement,
+    stack: HTMLDivElement,
+    options: { mettreAJourHauteurBarre: boolean },
+): void {
+    const hdr = document.querySelector("header");
+    const headerH = hdr?.getBoundingClientRect().height ?? 0;
+    if (headerH > 0) {
+        root.style.setProperty("--liste-act-site-header", `${Math.floor(headerH)}px`);
+    }
+    const rootRect = root.getBoundingClientRect();
+    root.style.setProperty("--liste-act-pinned-left", `${Math.round(rootRect.left)}px`);
+    root.style.setProperty("--liste-act-pinned-width", `${Math.round(rootRect.width)}px`);
+    if (options.mettreAJourHauteurBarre) {
+        const stackH = stack.getBoundingClientRect().height;
+        root.style.setProperty("--liste-act-top-pinned-height", `${stackH}px`);
+    }
+}
+
+/** Attend la fin du scroll-lock reactstrap avant de réactiver le sticky des en-têtes calendrier. */
+function planifierReactivationEnTetesCalendrierSticky(apresLayout: () => void): () => void {
+    let cancelled = false;
+    const executer = () => {
+        if (cancelled) return;
+        requestAnimationFrame(() => {
+            if (cancelled) return;
+            requestAnimationFrame(() => {
+                if (!cancelled) apresLayout();
+            });
+        });
+    };
+
+    if (document.body.classList.contains("modal-open")) {
+        const mo = new MutationObserver(() => {
+            if (!document.body.classList.contains("modal-open")) {
+                mo.disconnect();
+                executer();
+            }
+        });
+        mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+        return () => {
+            cancelled = true;
+            mo.disconnect();
+        };
+    }
+
+    executer();
+    return () => {
+        cancelled = true;
+    };
+}
+
 const ListeActivites: React.FC<ListeActivitesProps> = ({
     activites,
     activitesPrestataires = [],
@@ -1124,6 +1176,40 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
 
     const listeActivitesRootRef = useRef<HTMLDivElement>(null);
     const topPinnedStackRef = useRef<HTMLDivElement>(null);
+    const uneModaleOuverte =
+        modalOpen ||
+        conflitActiviteModalOpen ||
+        retirerSortieModalOpen ||
+        deleteModalOpen ||
+        successModalOpen ||
+        printChoiceModalOpen ||
+        historiqueActiviteModalOpen;
+    /** Garde les en-têtes en flux normal jusqu’à stabilisation du layout après fermeture de modale. */
+    const [attenteReactivationStickyEnTetes, setAttenteReactivationStickyEnTetes] = useState(false);
+    const enTetesCalendrierEnFlux = uneModaleOuverte || attenteReactivationStickyEnTetes;
+    const enTetesCalendrierEnFluxRef = useRef(enTetesCalendrierEnFlux);
+    enTetesCalendrierEnFluxRef.current = enTetesCalendrierEnFlux;
+    const uneModaleOuverteRef = useRef(uneModaleOuverte);
+    uneModaleOuverteRef.current = uneModaleOuverte;
+
+    useLayoutEffect(() => {
+        if (uneModaleOuverte) {
+            setAttenteReactivationStickyEnTetes(true);
+            return;
+        }
+        if (!attenteReactivationStickyEnTetes) return;
+
+        return planifierReactivationEnTetesCalendrierSticky(() => {
+            const root = listeActivitesRootRef.current;
+            const stack = topPinnedStackRef.current;
+            if (root && stack) {
+                applyListeActivitesPinnedGeometry(root, stack, { mettreAJourHauteurBarre: true });
+            }
+            if (!uneModaleOuverteRef.current) {
+                setAttenteReactivationStickyEnTetes(false);
+            }
+        });
+    }, [uneModaleOuverte, attenteReactivationStickyEnTetes]);
 
     /**
      * Hauteur du header du site + géométrie du bloc épinglé (boutons ± filtres) :
@@ -1137,18 +1223,9 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
         let rafId: number | null = null;
 
         const apply = () => {
-            const hdr = document.querySelector("header");
-            const headerH = hdr?.getBoundingClientRect().height ?? 0;
-            /** floor : évite une fente d’un pixel où le contenu défile entre le header fixe et la barre (ceil créait un écart). */
-            if (headerH > 0) {
-                root.style.setProperty("--liste-act-site-header", `${Math.floor(headerH)}px`);
-            }
-            const rootRect = root.getBoundingClientRect();
-            root.style.setProperty("--liste-act-pinned-left", `${Math.round(rootRect.left)}px`);
-            root.style.setProperty("--liste-act-pinned-width", `${Math.round(rootRect.width)}px`);
-            const stackH = stack.getBoundingClientRect().height;
-            /** Pas de ceil ici : comme pour le header (floor ci-dessus), arrondir vers le haut créait une fente sous les filtres où le tableau défilait entre la barre fixe et l’en-tête sticky. Hauteur réelle (px fractionnaires) pour coller au pixel. */
-            root.style.setProperty("--liste-act-top-pinned-height", `${stackH}px`);
+            applyListeActivitesPinnedGeometry(root, stack, {
+                mettreAJourHauteurBarre: !enTetesCalendrierEnFluxRef.current,
+            });
         };
 
         const scheduleApply = () => {
@@ -1342,7 +1419,11 @@ const ListeActivites: React.FC<ListeActivitesProps> = ({
     };
 
     return (
-        <div ref={listeActivitesRootRef} className={styles.listeActivitesRoot}>
+        <div
+            ref={listeActivitesRootRef}
+            className={styles.listeActivitesRoot}
+            {...(enTetesCalendrierEnFlux ? { "data-modal-open": "" } : {})}
+        >
             {peutImprimerPlanningCalendrier ? (
                 <div className={PRINT_GLOBAL_CLASS.only}>
                     <PrintContentRoot
