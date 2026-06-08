@@ -6,7 +6,7 @@ import { setUser } from "../redux/auth/authSlice";
 import { trierUtilisateursParNom } from "../helpers/trierUtilisateurs";
 import { RoleSysteme, RoleSystemeLabels } from "../enums/RoleSysteme";
 import { RoleSejour, RoleSejourLabels } from "../enums/RoleSejour";
-import { ChangePasswordRequest } from "../types/api";
+import { ChangePasswordRequest, ProfilUtilisateurDTO } from "../types/api";
 
 let getAllUsers = async () => {
   const response = await Axios.get("/utilisateurs");
@@ -93,6 +93,91 @@ let getUserByEmail = async (email: string) => {
     }
     return null;
   }
+};
+
+const PHOTO_PROFIL_MAX_BYTES = 2 * 1024 * 1024;
+const PHOTO_PROFIL_TYPES_ACCEPTES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+let uploadPhotoProfil = async (tokenId: string, file: File): Promise<ProfilUtilisateurDTO> => {
+  if (!PHOTO_PROFIL_TYPES_ACCEPTES.includes(file.type as (typeof PHOTO_PROFIL_TYPES_ACCEPTES)[number])) {
+    throw new Error("Format non accepté. Utilisez une image JPEG, PNG ou WebP.");
+  }
+  if (file.size > PHOTO_PROFIL_MAX_BYTES) {
+    throw new Error("La photo ne doit pas dépasser 2 Mo.");
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await Axios.post(`/utilisateurs/${tokenId}/photo-profil`, formData, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data as ProfilUtilisateurDTO;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de l'envoi de la photo de profil",
+      logContext: "Erreur lors de l'upload de la photo de profil",
+    });
+  }
+};
+
+let getPhotoProfilBlobUrl = async (
+  tokenId: string,
+  cacheBust?: number
+): Promise<string | null> => {
+  try {
+    const response = await Axios.get(`/utilisateurs/${tokenId}/photo-profil`, {
+      withCredentials: true,
+      responseType: "blob",
+      params: cacheBust != null ? { _: cacheBust } : undefined,
+    });
+    return URL.createObjectURL(response.data);
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { status?: number } };
+    if (axiosError.response?.status === 404) {
+      return null;
+    }
+    return null;
+  }
+};
+
+let deletePhotoProfil = async (tokenId: string): Promise<void> => {
+  try {
+    const response = await Axios.delete(`/utilisateurs/${tokenId}/photo-profil`, {
+      withCredentials: true,
+    });
+    validateResponseStatus(response, 204);
+    return;
+  } catch (error: unknown) {
+    adaptAxiosError(error, {
+      defaultMessage: "Erreur lors de la suppression de la photo de profil",
+      logContext: "Erreur lors de la suppression de la photo de profil",
+    });
+  }
+};
+
+/** Supprime l'ancienne photo si elle existe (404 ignoré), puis envoie la nouvelle. */
+let remplacerPhotoProfil = async (tokenId: string, file: File): Promise<ProfilUtilisateurDTO> => {
+  try {
+    const response = await Axios.delete(`/utilisateurs/${tokenId}/photo-profil`, {
+      withCredentials: true,
+    });
+    validateResponseStatus(response, 204);
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { status?: number } };
+    if (axiosError.response?.status !== 404) {
+      adaptAxiosError(error, {
+        defaultMessage: "Erreur lors du remplacement de la photo de profil",
+        logContext: "Erreur lors de la suppression de l'ancienne photo de profil",
+      });
+    }
+  }
+
+  return uploadPhotoProfil(tokenId, file);
 };
 
 let changePassword = async (request: ChangePasswordRequest) => {
@@ -191,4 +276,8 @@ export const utilisateurService = {
   deleteUser,
   getUserByEmail,
   changePassword,
+  uploadPhotoProfil,
+  remplacerPhotoProfil,
+  getPhotoProfilBlobUrl,
+  deletePhotoProfil,
 };

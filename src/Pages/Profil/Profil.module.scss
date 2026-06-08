@@ -27,82 +27,169 @@
 }
 
 .summaryCard {
-  border: none !important;
-  border-radius: 50% !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  background: white;
-  width: min(100%, 23.5rem);
-  aspect-ratio: 1;
-  overflow: hidden;
+  border: 1px solid rgba($bleu_principal, 0.14) !important;
+  border-radius: 1.25rem !important;
+  box-shadow:
+    0 4px 14px rgba($bleu_principal, 0.1),
+    0 1px 3px rgba($bleu_secondaire, 0.06);
+  background: transparent;
+  width: 100%;
+  max-width: 17.5rem;
+  overflow: visible;
   position: sticky;
   top: 2rem;
   margin: 0 auto;
 }
 
 .summaryBody {
-  padding: 1.15rem 1rem !important;
-  height: 100%;
+  padding: 0 !important;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      165deg,
+      rgba($bleu_principal, 0.16) 0%,
+      rgba($bleu_secondaire, 0.07) 48%,
+      transparent 72%
+    ),
+    linear-gradient(
+      345deg,
+      rgba($bleu_principal, 0.16) 0%,
+      rgba($bleu_secondaire, 0.07) 48%,
+      transparent 72%
+    ),
+    linear-gradient(
+      180deg,
+      color.mix(#ffffff, $bleu_principal, 90%) 0%,
+      color.mix(#ffffff, $bleu_principal, 96%) 100%
+    ) !important;
 }
 
 .summaryHeader {
   text-align: center;
   width: 100%;
+  padding: 1.6rem 1.15rem 0.65rem;
+  background: transparent;
 
   .avatarWrapper {
     position: relative;
-    width: min(78%, 12.5rem);
+    width: 10.25rem;
     aspect-ratio: 1;
     height: auto;
-    margin: 0 auto 0.65rem;
-    
+    margin: 0 auto;
+
+    .avatarButton {
+      display: block;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: zoom-in;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: scale(1.02);
+      }
+    }
+
     .avatar {
       width: 100%;
       height: 100%;
       object-fit: cover;
       border-radius: 50%;
-      border: 4px solid white;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: none;
+      box-shadow:
+        0 10px 24px rgba($bleu_principal, 0.22),
+        0 0 0 2px rgba($bleu_principal, 0.14);
+      display: block;
+      pointer-events: none;
     }
 
-    .editAvatarBtn {
+    .avatarPlaceholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, rgba($bleu_principal, 0.2), rgba($bleu_secondaire, 0.08));
+      color: $bleu_principal;
+      font-size: 2.75rem;
+    }
+
+    .avatarLoading {
+      opacity: 0.55;
+    }
+
+    .photoInput {
+      display: none;
+    }
+
+    .editAvatarBtn,
+    .deleteAvatarBtn,
+    .recadrerAvatarBtn {
       position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 36px;
-      height: 36px;
+      width: 2rem;
+      height: 2rem;
       border-radius: 50%;
-      background: $action-edit;
       color: white;
-      border: 3px solid white;
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.2s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-size: 0.72rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 10px rgba($bleu_principal, 0.28);
 
-      &:hover {
-        transform: scale(1.1);
-        background: color.adjust($action-edit, $lightness: -8%);
+      &:hover:not(:disabled) {
+        transform: translateY(-1px) scale(1.05);
+        box-shadow: 0 4px 14px rgba($bleu_principal, 0.34);
+      }
+
+      &:disabled {
+        opacity: 0.55;
+        cursor: wait;
       }
     }
-  }
 
-  .profileIdentity {
-    .roleBadge {
-      display: inline-block;
-      padding: 0.35rem 0.9rem;
-      background: rgba($bleu_principal, 0.1);
-      color: $bleu_principal;
-      border-radius: 2rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      line-height: 1.2;
+    .editAvatarBtn {
+      bottom: 0.15rem;
+      right: 0.15rem;
+      background: $action-edit;
     }
+
+    .deleteAvatarBtn {
+      bottom: 0.15rem;
+      left: 0.15rem;
+      background: $action-delete;
+    }
+
+    .recadrerAvatarBtn {
+      top: 0.15rem;
+      right: 0.15rem;
+      background: $action-secondary;
+    }
+  }
+}
+
+.profileIdentity {
+  padding: 0.65rem 1.15rem 1.25rem;
+  text-align: center;
+  background: transparent;
+
+  .roleBadge {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    background: rgba($bleu_principal, 0.12);
+    color: $bleu_secondaire;
+    border: 1px solid rgba($bleu_principal, 0.2);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
   }
 }
 
@@ -374,12 +461,12 @@
   .summaryCard {
     position: static;
     margin-bottom: 1.5rem;
-    width: min(100%, 20rem);
+    max-width: 16rem;
   }
-  
+
   .summaryHeader {
     .avatarWrapper {
-      width: min(76%, 10.5rem);
+      width: 9.25rem;
     }
   }
   
@@ -393,4 +480,72 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+}
+
+.photoPreviewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+}
+
+.photoPreviewImage {
+  max-width: min(92vw, 56rem);
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.photoPreviewActions {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.photoPreviewDelete,
+.photoPreviewClose {
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}
+
+.photoPreviewDelete {
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.photoPreviewClose {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.1rem;
 }

@@ -1,6 +1,6 @@
 import styles from "./Profil.module.scss";
-import { useState } from "react";
-import { Card, CardBody, CardHeader } from "reactstrap";
+import { useEffect, useRef, useState } from "react";
+import { Button, Card, CardBody, CardHeader, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import formaterDate from "../../helpers/formaterDate";
@@ -8,8 +8,9 @@ import dateToISO from "../../helpers/dateToISO";
 import { canEditEmail, getEmailReadOnlyMessage } from "../../helpers/canEditEmail";
 import { libelleRoleBadgeProfil } from "../../helpers/libelleRoleSurSejour";
 import { lireHeaderSejourContext } from "../../helpers/headerSejourContext";
-import { getApiErrorMessage } from "../../helpers/axiosError";
+import { getApiErrorMessage, getUserFacingErrorMessage } from "../../helpers/axiosError";
 import { throwRouteLoaderError } from "../../helpers/routeError";
+import { PhotoProfilRecadrageModal } from "../../components/Profil/PhotoProfilRecadrageModal";
 import { accountService } from "../../services/account.service";
 import { utilisateurService } from "../../services/utilisateur.service";
 import { Navigate, useLoaderData } from "react-router-dom";
@@ -24,6 +25,8 @@ import {
   faClock,
   faCamera,
   faCheck,
+  faCrop,
+  faTrash,
   faTimes,
   faKey,
   faChevronDown,
@@ -45,9 +48,12 @@ interface Utilisateur {
   dateNaissance?: Date;
   dateExpirationCompte?: Date;
   role?: string;
+  photoProfilUrl?: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
+
+const PHOTO_PROFIL_ACCEPT = "image/jpeg,image/png,image/webp";
 
 export async function profilLoader() {
   try {
@@ -106,6 +112,22 @@ const Profil: React.FC = () => {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [openSections, setOpenSections] = useState<Set<number>>(() => new Set([0]));
   const [sejourContext] = useState(() => lireHeaderSejourContext());
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
+  const [photoDeleteModalOpen, setPhotoDeleteModalOpen] = useState(false);
+  const [photoDeleting, setPhotoDeleting] = useState(false);
+  const [photoReloadKey, setPhotoReloadKey] = useState(0);
+  const [recadrageModalOpen, setRecadrageModalOpen] = useState(false);
+  const [recadrageImageUrl, setRecadrageImageUrl] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoOriginaleRef = useRef<File | null>(null);
+  const [photoOriginaleDisponible, setPhotoOriginaleDisponible] = useState(false);
+  const recadrageUrlOwnedRef = useRef(false);
+  const photoFetchGenerationRef = useRef(0);
+  const hasPhotoProfil = Boolean(utilisateur?.photoProfilUrl);
+  const photoBusy = photoUploading || photoDeleting;
 
   const tokenConnecte = accountService.getTokenInfo()?.payload?.sub;
   const roleBadgeLabel = libelleRoleBadgeProfil(
@@ -114,6 +136,181 @@ const Profil: React.FC = () => {
     utilisateur?.role ?? null,
     sejourContext,
   );
+
+  useEffect(() => {
+    const tokenId = utilisateur?.tokenId;
+    if (!tokenId || !utilisateur?.photoProfilUrl) {
+      setPhotoUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return null;
+      });
+      setPhotoLoading(false);
+      return;
+    }
+
+    const generation = ++photoFetchGenerationRef.current;
+    setPhotoLoading(true);
+
+    utilisateurService
+      .getPhotoProfilBlobUrl(tokenId, Date.now())
+      .then((url) => {
+        if (generation !== photoFetchGenerationRef.current) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        setPhotoUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return url;
+        });
+      })
+      .catch(() => {
+        if (generation !== photoFetchGenerationRef.current) return;
+        setPhotoUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return null;
+        });
+      })
+      .finally(() => {
+        if (generation === photoFetchGenerationRef.current) {
+          setPhotoLoading(false);
+        }
+      });
+  }, [utilisateur?.tokenId, utilisateur?.photoProfilUrl, photoReloadKey]);
+
+  useEffect(() => {
+    return () => {
+      setPhotoUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+    };
+  }, []);
+
+  const fermerRecadrageModal = () => {
+    if (recadrageUrlOwnedRef.current && recadrageImageUrl) {
+      URL.revokeObjectURL(recadrageImageUrl);
+    }
+    recadrageUrlOwnedRef.current = false;
+    setRecadrageImageUrl(null);
+    setRecadrageModalOpen(false);
+  };
+
+  const ouvrirRecadrageAvecUrl = (url: string, owned: boolean) => {
+    if (recadrageUrlOwnedRef.current && recadrageImageUrl) {
+      URL.revokeObjectURL(recadrageImageUrl);
+    }
+    recadrageUrlOwnedRef.current = owned;
+    setRecadrageImageUrl(url);
+    setRecadrageModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!photoPreviewOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPhotoPreviewOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [photoPreviewOpen]);
+
+  const handlePhotoInputClick = () => {
+    photoInputRef.current?.click();
+  };
+
+  const handleRecadrerClick = () => {
+    if (photoBusy || !photoOriginaleRef.current) return;
+    ouvrirRecadrageAvecUrl(URL.createObjectURL(photoOriginaleRef.current), true);
+  };
+
+  const handleEnregistrerPhotoRecadree = async (file: File) => {
+    if (!utilisateur?.tokenId) return;
+
+    setPhotoUploading(true);
+    try {
+      const profilMisAJour = await utilisateurService.remplacerPhotoProfil(utilisateur.tokenId, file);
+      const photoProfilUrl =
+        profilMisAJour.photoProfilUrl ?? `/api/v1/utilisateurs/${utilisateur.tokenId}/photo-profil`;
+
+      setUtilisateur((prev) => ({
+        ...prev,
+        photoProfilUrl,
+      }));
+      setInitialUtilisateur((prev) =>
+        prev
+          ? {
+              ...prev,
+              photoProfilUrl,
+            }
+          : prev
+      );
+      fermerRecadrageModal();
+      setPhotoReloadKey((key) => key + 1);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: unknown } };
+      const message = axiosError.response?.data
+        ? getApiErrorMessage(axiosError.response.data, "Erreur lors de l'envoi de la photo")
+        : getUserFacingErrorMessage(error, "Erreur lors de l'envoi de la photo");
+      throw new Error(message);
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const handlePhotoDeleteClick = () => {
+    setPhotoDeleteModalOpen(true);
+  };
+
+  const handleConfirmPhotoDelete = async () => {
+    if (!utilisateur?.tokenId) return;
+
+    setPhotoDeleting(true);
+    setErrorMessage(null);
+    try {
+      await utilisateurService.deletePhotoProfil(utilisateur.tokenId);
+      photoOriginaleRef.current = null;
+      setPhotoOriginaleDisponible(false);
+      setUtilisateur((prev) => ({
+        ...prev,
+        photoProfilUrl: null,
+      }));
+      setInitialUtilisateur((prev) =>
+        prev
+          ? {
+              ...prev,
+              photoProfilUrl: null,
+            }
+          : prev
+      );
+      setPhotoPreviewOpen(false);
+      setPhotoDeleteModalOpen(false);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: unknown } };
+      const message = axiosError.response?.data
+        ? getApiErrorMessage(axiosError.response.data, "Erreur lors de la suppression de la photo")
+        : getUserFacingErrorMessage(error, "Erreur lors de la suppression de la photo");
+      setErrorMessage(message);
+    } finally {
+      setPhotoDeleting(false);
+    }
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !utilisateur?.tokenId) return;
+
+    setErrorMessage(null);
+    photoOriginaleRef.current = file;
+    setPhotoOriginaleDisponible(true);
+    ouvrirRecadrageAvecUrl(URL.createObjectURL(file), true);
+  };
 
   const toggleSection = (sectionIndex: number) => {
     setOpenSections((prev) => {
@@ -299,20 +496,76 @@ const Profil: React.FC = () => {
                 <CardBody className={styles.summaryBody}>
                   <div className={styles.summaryHeader}>
                     <div className={styles.avatarWrapper}>
-                      <img
-                        src="https://bootdey.com/img/Content/avatar/avatar1.png"
-                        alt="Avatar"
-                        className={styles.avatar}
+                      {photoUrl ? (
+                        <button
+                          type="button"
+                          className={styles.avatarButton}
+                          onClick={() => setPhotoPreviewOpen(true)}
+                          title="Voir la photo en grand"
+                          aria-label="Voir la photo en grand"
+                        >
+                          <img
+                            key={photoUrl}
+                            src={photoUrl}
+                            alt="Photo de profil"
+                            className={styles.avatar}
+                          />
+                        </button>
+                      ) : (
+                        <div
+                          className={`${styles.avatar} ${styles.avatarPlaceholder} ${photoLoading ? styles.avatarLoading : ""}`}
+                          aria-hidden={!photoLoading}
+                        >
+                          <FontAwesomeIcon icon={faUser} />
+                        </div>
+                      )}
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept={PHOTO_PROFIL_ACCEPT}
+                        className={styles.photoInput}
+                        onChange={handlePhotoChange}
+                        aria-label="Choisir une photo de profil"
                       />
-                      <button className={styles.editAvatarBtn} title="Modifier la photo">
+                      {hasPhotoProfil && photoOriginaleDisponible ? (
+                        <button
+                          type="button"
+                          className={styles.recadrerAvatarBtn}
+                          title="Recadrer la photo"
+                          onClick={handleRecadrerClick}
+                          disabled={photoBusy}
+                          aria-label="Recadrer la photo"
+                        >
+                          <FontAwesomeIcon icon={faCrop} />
+                        </button>
+                      ) : null}
+                      {hasPhotoProfil ? (
+                        <button
+                          type="button"
+                          className={styles.deleteAvatarBtn}
+                          title="Supprimer la photo"
+                          onClick={handlePhotoDeleteClick}
+                          disabled={photoBusy}
+                          aria-label="Supprimer la photo"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={styles.editAvatarBtn}
+                        title="Modifier la photo"
+                        onClick={handlePhotoInputClick}
+                        disabled={photoBusy}
+                      >
                         <FontAwesomeIcon icon={faCamera} />
                       </button>
                     </div>
-                    <div className={styles.profileIdentity}>
-                      <span className={styles.roleBadge}>
-                        {roleBadgeLabel}
-                      </span>
-                    </div>
+                  </div>
+                  <div className={styles.profileIdentity}>
+                    <span className={styles.roleBadge}>
+                      {roleBadgeLabel}
+                    </span>
                   </div>
                 </CardBody>
               </Card>
@@ -357,6 +610,75 @@ const Profil: React.FC = () => {
         onClose={() => setPasswordModalOpen(false)}
         tokenId={utilisateur?.tokenId || ""}
       />
+      {photoPreviewOpen && photoUrl ? (
+        <div
+          className={styles.photoPreviewOverlay}
+          onClick={() => setPhotoPreviewOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo de profil agrandie"
+        >
+          <div className={styles.photoPreviewActions}>
+            <button
+              type="button"
+              className={styles.photoPreviewDelete}
+              onClick={(event) => {
+                event.stopPropagation();
+                handlePhotoDeleteClick();
+              }}
+              disabled={photoBusy}
+              aria-label="Supprimer la photo"
+            >
+              <FontAwesomeIcon icon={faTrash} />
+              <span>Supprimer</span>
+            </button>
+            <button
+              type="button"
+              className={styles.photoPreviewClose}
+              onClick={() => setPhotoPreviewOpen(false)}
+              aria-label="Fermer"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+          </div>
+          <img
+            src={photoUrl}
+            alt="Photo de profil agrandie"
+            className={styles.photoPreviewImage}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
+      <PhotoProfilRecadrageModal
+        isOpen={recadrageModalOpen}
+        imageUrl={recadrageImageUrl}
+        onClose={fermerRecadrageModal}
+        onSave={handleEnregistrerPhotoRecadree}
+        saving={photoUploading}
+      />
+      <Modal
+        isOpen={photoDeleteModalOpen}
+        toggle={() => !photoDeleting && setPhotoDeleteModalOpen(false)}
+      >
+        <ModalHeader toggle={() => !photoDeleting && setPhotoDeleteModalOpen(false)}>
+          Supprimer la photo de profil
+        </ModalHeader>
+        <ModalBody>
+          <p>Voulez-vous vraiment supprimer votre photo de profil ?</p>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="secondary"
+            onClick={() => setPhotoDeleteModalOpen(false)}
+            disabled={photoDeleting}
+          >
+            Annuler
+          </Button>
+          <Button color="danger" onClick={handleConfirmPhotoDelete} disabled={photoDeleting}>
+            {photoDeleting ? "Suppression…" : "Confirmer la suppression"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };

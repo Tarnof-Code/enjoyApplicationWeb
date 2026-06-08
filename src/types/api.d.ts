@@ -59,7 +59,9 @@ export interface ProfilUtilisateurDTO {
   email: string;
   telephone: string;
   dateNaissance: string; 
-  dateExpirationCompte: string; 
+  dateExpirationCompte: string;
+  /** URL relative API ou null si aucune photo (ex. `/api/v1/utilisateurs/{tokenId}/photo-profil`). */
+  photoProfilUrl?: string | null;
 }
 
 /**

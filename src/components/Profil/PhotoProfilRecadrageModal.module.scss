@@ -1,0 +1,44 @@
+@use "../../variables" as *;
+
+.recadrageBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.viewport {
+  width: min(100%, 18rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: none;
+  box-shadow:
+    0 10px 24px rgba($bleu_principal, 0.2),
+    0 0 0 2px rgba($bleu_principal, 0.14);
+  background: linear-gradient(145deg, rgba($bleu_principal, 0.14), rgba($bleu_secondaire, 0.06));
+  cursor: grab;
+  touch-action: none;
+}
+
+.viewportDragging {
+  cursor: grabbing;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6c757d;
+  text-align: center;
+}

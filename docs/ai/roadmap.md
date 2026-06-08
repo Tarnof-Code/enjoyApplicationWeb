@@ -52,5 +52,6 @@
 - [x] **Activités — enfants participants** : **`ActiviteEnfantsParticipantsModal`**, **`enfantIds`** / **`ActiviteDto.enfants`**, icône vue liste + calendrier, conflits créneau **`idsEnfantsDejaAffectesAutreActivite`**, helpers **`listeActivitesUtils`**
 - [x] **Page Profil — refonte UX** : carte circulaire (photo + badge rôle), 3 accordéons (1er ouvert), champs compacts label/value
 - [x] **Profil & Header — rôle contextuel** : **`libelleRoleSurSejour.ts`** — rôle sur le séjour sélectionné (**`headerSejourContext`**) ou rôle système ; **Admin** affiché **Admin**
+- [x] **Profil — photo de profil** : upload/recadrage (**`PhotoProfilRecadrageModal`**, **`photoProfilRecadrage.ts`**), blob authentifié, lightbox, suppression ; API **`/utilisateurs/{tokenId}/photo-profil`** ; carte rectangulaire dégradé bleu Enjoy
 - [ ] Évolution des **plannings** (affectations avancées, vues additionnelles au-delà du calendrier activités + grilles direction actuels)
 - [ ] Optimiser les performances des listes si nécessaire (virtualisation si beaucoup d'éléments)
